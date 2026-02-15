@@ -7,6 +7,7 @@ const tangentAPI = {
     close: (id: string) => ipcRenderer.invoke('session:close', id),
     select: (id: string) => ipcRenderer.invoke('session:select', id),
     rename: (id: string, name: string) => ipcRenderer.invoke('session:rename', id, name),
+    scanExternal: () => ipcRenderer.invoke('session:scanExternal'),
 
     onCreated: (cb: (session: any) => void) => {
       const handler = (_: any, session: any) => cb(session)

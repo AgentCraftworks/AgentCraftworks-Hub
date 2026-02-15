@@ -21,6 +21,7 @@ export function registerIpcHandlers(deps: {
   ipcMain.handle('session:close', (_, id: string) => sessionManager.close(id))
   ipcMain.handle('session:select', (_, id: string) => sessionManager.select(id))
   ipcMain.handle('session:rename', (_, id: string, name: string) => sessionStore.rename(id, name))
+  ipcMain.handle('session:scanExternal', () => sessionManager.scanExternal())
 
   // Forward store events to renderer
   sessionStore.on('created', (session) => {

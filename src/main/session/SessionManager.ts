@@ -3,11 +3,13 @@ import path from 'path'
 import { SessionStore } from './SessionStore'
 import { PtyManager } from '../pty/PtyManager'
 import { StatusEngine } from '../status/StatusEngine'
+import { ExternalScanner } from './ExternalScanner'
 import type { Session } from '@shared/types'
 
 export class SessionManager {
   private activeSessionId: string | null = null
   private engines = new Map<string, StatusEngine>()
+  private externalScanner = new ExternalScanner()
 
   constructor(
     private store: SessionStore,
@@ -97,6 +99,21 @@ export class SessionManager {
     return this.activeSessionId
       ? this.store.get(this.activeSessionId)
       : undefined
+  }
+
+  /**
+   * Scan for externally-launched agent sessions (Claude Code, Copilot CLI).
+   * Returns newly discovered sessions that were added to the store.
+   */
+  scanExternal(): Session[] {
+    const knownPaths = new Set(
+      this.store.getAll().map(s => s.folderPath)
+    )
+    const discovered = this.externalScanner.scan(knownPaths)
+    for (const session of discovered) {
+      this.store.add(session)
+    }
+    return discovered
   }
 
   private findByPtyId(ptyId: string): Session | undefined {
