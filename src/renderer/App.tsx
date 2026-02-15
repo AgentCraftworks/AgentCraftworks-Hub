@@ -9,6 +9,7 @@ import { ZOOM } from '@shared/constants'
 export function App(): JSX.Element {
   const { sessions, activeId, createSession, selectSession, closeSession, renameSession } = useSessions()
   const [fontSize, setFontSize] = useState(ZOOM.DEFAULT)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
     <div className="flex flex-col h-screen w-screen">
@@ -26,7 +27,11 @@ export function App(): JSX.Element {
           activeId={activeId}
           fontSize={fontSize}
         />
-        <AgentsSidebar />
+        <AgentsSidebar
+          activeSessionId={activeId}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(prev => !prev)}
+        />
       </div>
       <StatusBar />
     </div>
