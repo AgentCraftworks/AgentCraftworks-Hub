@@ -7,7 +7,7 @@ import { StatusBar } from '@/components/StatusBar/StatusBar'
 import { ZOOM } from '@shared/constants'
 
 export function App(): JSX.Element {
-  const { sessions, activeId, createSession, selectSession, closeSession } = useSessions()
+  const { sessions, activeId, createSession, selectSession, closeSession, renameSession } = useSessions()
   const [fontSize, setFontSize] = useState(ZOOM.DEFAULT)
 
   return (
@@ -19,6 +19,7 @@ export function App(): JSX.Element {
           onSelect={selectSession}
           onClose={closeSession}
           onCreate={createSession}
+          onRename={renameSession}
         />
         <TerminalViewport
           sessions={sessions}
