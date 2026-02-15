@@ -1,7 +1,7 @@
-import path from 'path'
 import { OscParser } from './OscParser'
 import { SystemB } from './SystemB'
 import { SystemA } from './SystemA'
+import { CwdTracker } from './CwdTracker'
 import type { SessionStore } from '../session/SessionStore'
 import type { SessionStatus } from '@shared/types'
 
@@ -21,6 +21,7 @@ export class StatusEngine {
   private oscParser: OscParser
   private systemB: SystemB
   private systemA: SystemA
+  private cwdTracker: CwdTracker
   private systemAActive = false
   private disposed = false
 
@@ -32,6 +33,7 @@ export class StatusEngine {
     this.oscParser = new OscParser()
     this.systemB = new SystemB()
     this.systemA = new SystemA(ptyId)
+    this.cwdTracker = new CwdTracker(sessionId, store)
 
     this.wireOscParser()
     this.wireSystemB()
@@ -46,6 +48,7 @@ export class StatusEngine {
     if (this.disposed) return
     this.oscParser.feed(data)
     this.systemB.feed(data)
+    this.cwdTracker.handleOutput(data)
   }
 
   /**
@@ -98,10 +101,9 @@ export class StatusEngine {
       }
     })
 
-    // OSC CWD changes -> update session CWD
+    // OSC CWD changes -> route through CwdTracker for dedup
     this.oscParser.on('cwd', (cwdPath: string) => {
-      const folderName = path.basename(cwdPath)
-      this.store.updateCwd(this.sessionId, cwdPath, folderName)
+      this.cwdTracker.handleOscCwd(cwdPath)
     })
 
     // BEL events are informational — no status change
