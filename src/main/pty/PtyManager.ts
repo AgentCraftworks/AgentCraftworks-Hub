@@ -21,6 +21,10 @@ export class PtyManager extends EventEmitter {
 
     this.instances.set(id, proc)
 
+    proc.onData((data) => {
+      this.emit('data', id, data)
+    })
+
     proc.onExit(({ exitCode }) => {
       this.instances.delete(id)
       this.emit('exit', id, exitCode)

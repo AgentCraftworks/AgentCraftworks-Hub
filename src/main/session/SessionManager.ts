@@ -2,20 +2,32 @@ import { v4 as uuid } from 'uuid'
 import path from 'path'
 import { SessionStore } from './SessionStore'
 import { PtyManager } from '../pty/PtyManager'
+import { StatusEngine } from '../status/StatusEngine'
 import type { Session } from '@shared/types'
 
 export class SessionManager {
   private activeSessionId: string | null = null
+  private engines = new Map<string, StatusEngine>()
 
   constructor(
     private store: SessionStore,
     private ptyManager: PtyManager
   ) {
+    // Wire PTY data events to the corresponding StatusEngine
+    this.ptyManager.on('data', (ptyId: string, data: string) => {
+      const session = this.findByPtyId(ptyId)
+      if (session) {
+        const engine = this.engines.get(session.id)
+        engine?.feed(data)
+      }
+    })
+
+    // Wire PTY exit events to the corresponding StatusEngine
     this.ptyManager.on('exit', (ptyId: string, exitCode: number) => {
       const session = this.findByPtyId(ptyId)
       if (session) {
-        session.exitCode = exitCode
-        this.store.updateStatus(session.id, 'exited')
+        const engine = this.engines.get(session.id)
+        engine?.handlePtyExit(exitCode)
       }
     })
   }
@@ -44,6 +56,11 @@ export class SessionManager {
     }
 
     this.store.add(session)
+
+    // Create a StatusEngine for the session after adding to store
+    const engine = new StatusEngine(sessionId, ptyId, this.store)
+    this.engines.set(sessionId, engine)
+
     this.activeSessionId = sessionId
     return session
   }
@@ -51,6 +68,13 @@ export class SessionManager {
   close(sessionId: string): void {
     const session = this.store.get(sessionId)
     if (!session) return
+
+    // Dispose the StatusEngine before killing the PTY
+    const engine = this.engines.get(sessionId)
+    if (engine) {
+      engine.dispose()
+      this.engines.delete(sessionId)
+    }
 
     this.ptyManager.kill(session.ptyId)
     this.store.remove(sessionId)
