@@ -146,7 +146,9 @@ export class StatusEngine {
     // Agent detected from output — promote the session
     this.systemB.on('agent-detected', (agentType: 'copilot-cli' | 'claude-code') => {
       const session = this.store.get(this.sessionId)
-      if (session && session.agentType === 'shell') {
+      // Only promote if session is in agent_launching state — prevents false
+      // positives when agent names appear in normal shell output (e.g. `dir`)
+      if (session && session.agentType === 'shell' && session.status === 'agent_launching') {
         this.store.promoteToAgent(this.sessionId, agentType)
       }
     })
