@@ -10,8 +10,8 @@ interface DetectionRule {
 
 const RULES: DetectionRule[] = [
   { priority: 1, pattern: /PS\s+[A-Za-z]:\\[^>]*>\s*$/, status: 'shell_ready' },
-  { priority: 2, pattern: /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏•]/, status: 'processing' },
-  { priority: 3, pattern: /[Tt]hinking/, status: 'processing' },
+  { priority: 2, pattern: /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⊙◐◑◒◓]/, status: 'processing' },
+  { priority: 3, pattern: /[Tt]hinking|Esc to cancel/, status: 'processing' },
   { priority: 4, pattern: /running tool:|executing command:|Reading file|Writing file/i, status: 'tool_executing' },
   { priority: 5, pattern: /(y\/n)|continue\?|allow\?|permit\?|approve\?|Enter to confirm|Other \(type your answer\)/i, status: 'needs_input' },
   { priority: 6, pattern: /^❯\s*/m, status: 'agent_ready' },
@@ -102,8 +102,13 @@ export class SystemB extends EventEmitter {
     for (const rule of RULES) {
       if (!rule.pattern.test(clean)) continue
 
-      // agent_ready needs 300ms silence confirmation
+      // agent_ready needs 300ms silence confirmation.
+      // Skip if currently processing/tool_executing — the ❯ prompt is always
+      // visible in the Copilot CLI TUI input area, even during active work.
       if (rule.status === 'agent_ready') {
+        if (this.currentStatus === 'processing' || this.currentStatus === 'tool_executing') {
+          return // Don't let the always-visible prompt override active work
+        }
         this.pendingReady = true
         this.silenceTimer = setTimeout(() => {
           this.pendingReady = false
