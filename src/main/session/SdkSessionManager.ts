@@ -64,8 +64,7 @@ export class SdkSessionManager {
   private async connectToPort(sessionId: string, port: number): Promise<void> {
     try {
       const client = new CopilotClient({
-        cliUrl: `localhost:${port}`,
-        useLoggedInUser: true
+        cliUrl: `localhost:${port}`
       })
 
       client.onConnectionStateChange((change: ConnectionStateChange) => {
