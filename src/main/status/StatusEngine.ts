@@ -153,8 +153,12 @@ export class StatusEngine {
     })
 
     // Shell command extraction -> update lastActivity with last typed command
+    // Only for shell sessions — agent sessions get activity from OSC titles/SDK
     this.systemB.on('command', (command: string) => {
-      this.store.updateActivity(this.sessionId, command)
+      const session = this.store.get(this.sessionId)
+      if (session && session.agentType === 'shell') {
+        this.store.updateActivity(this.sessionId, command)
+      }
     })
 
     // Agent detected from output — promote the session

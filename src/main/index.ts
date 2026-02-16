@@ -116,7 +116,11 @@ app.whenReady().then(async () => {
               }
             }
 
-            const args = [...(s.agentArgs || [])]
+            // Filter out any stale --ui-server/--port flags from saved args
+            const cleanArgs = (s.agentArgs || []).filter((a: string) =>
+              a !== '--ui-server' && a !== '--port' && a !== '0'
+            )
+            const args = [...cleanArgs]
             // Append --resume to reconnect to the agent's prior conversation
             if (s.agentType !== 'shell' && !args.includes('--resume')) {
               args.push('--resume')
@@ -137,8 +141,8 @@ app.whenReady().then(async () => {
             const agentType = s.agentType !== 'shell' ? s.agentType : undefined
             if (agentType) {
               sessionStore.promoteToAgent(sessionId, agentType)
-              // Save original args (without --ui-server) for display
-              sessionStore.setAgentLaunchInfo(sessionId, s.agentCommand, s.agentArgs || [], s.agentEnv)
+              // Save clean args (without --ui-server) for display
+              sessionStore.setAgentLaunchInfo(sessionId, s.agentCommand, cleanArgs, s.agentEnv)
             }
 
             // Attach SDK for Copilot sessions
