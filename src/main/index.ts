@@ -122,6 +122,12 @@ app.whenReady().then(async () => {
               args.push('--resume')
             }
 
+            // For Copilot, add --ui-server for SDK hybrid mode
+            const isCopilot = s.agentType === 'copilot-cli'
+            if (isCopilot) {
+              args.push('--ui-server', '--port', '0')
+            }
+
             const argsStr = args.map((a: string) => `'${psEscape(a)}'`).join(' ')
             const cmd = argsStr ? `${s.agentCommand} ${argsStr}` : s.agentCommand
             lines.push(cmd)
@@ -131,7 +137,13 @@ app.whenReady().then(async () => {
             const agentType = s.agentType !== 'shell' ? s.agentType : undefined
             if (agentType) {
               sessionStore.promoteToAgent(sessionId, agentType)
-              sessionStore.setAgentLaunchInfo(sessionId, s.agentCommand, args, s.agentEnv)
+              // Save original args (without --ui-server) for display
+              sessionStore.setAgentLaunchInfo(sessionId, s.agentCommand, s.agentArgs || [], s.agentEnv)
+            }
+
+            // Attach SDK for Copilot sessions
+            if (isCopilot) {
+              sdkSessionManager.attachToSession(sessionId, ptyId)
             }
           }
 

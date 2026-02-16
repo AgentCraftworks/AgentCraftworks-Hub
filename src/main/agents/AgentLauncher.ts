@@ -43,11 +43,12 @@ export class AgentLauncher {
     }
 
     // For Copilot agents, append --ui-server --port 0 to enable hybrid PTY+SDK mode
+    // These flags are added to the PTY command only, NOT saved in launch info
     const isCopilot = isCopilotAgent(agent)
     const extraArgs = isCopilot ? ['--ui-server', '--port', '0'] : []
-    const allArgs = [...agent.args, ...extraArgs]
+    const cmdArgs = [...agent.args, ...extraArgs]
 
-    const args = allArgs.map(a => `'${psEscape(a)}'`).join(' ')
+    const args = cmdArgs.map(a => `'${psEscape(a)}'`).join(' ')
     const cmd = args ? `${agent.command} ${args}` : agent.command
     lines.push(cmd)
 
@@ -63,7 +64,8 @@ export class AgentLauncher {
 
     if (agentType !== 'shell') {
       this.sessionStore.promoteToAgent(targetSessionId, agentType)
-      this.sessionStore.setAgentLaunchInfo(targetSessionId, agent.command, allArgs, agent.env)
+      // Save original args (without --ui-server flags) for display and restore
+      this.sessionStore.setAgentLaunchInfo(targetSessionId, agent.command, agent.args, agent.env)
     }
 
     // For Copilot, attach the SDK to watch for the ui-server port
