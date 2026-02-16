@@ -119,45 +119,105 @@ The key requirement is: **any structured, machine-parseable signal emitted inlin
 
 ### Copilot SDK as a longer-term solution
 
-The [Copilot SDK](https://github.com/github/copilot-sdk) (`github/copilot-sdk`) already defines the exact event taxonomy that would solve this problem. When running Copilot CLI in server mode, the SDK communicates via JSON-RPC notifications (`session.event`) with structured `SessionEvent` objects. The relevant event types map directly to Tangent's internal statuses:
+The [Copilot SDK](https://github.com/github/copilot-sdk) (`@github/copilot-sdk` on npm) already defines the exact event taxonomy that solves this problem. The SDK communicates with Copilot CLI running in server mode via JSON-RPC over stdio or TCP. Session events are typed TypeScript discriminated unions generated from `session-events.schema.json`.
 
-| SDK Event | Tangent Status | Description |
-|---|---|---|
-| `session.idle` | `agent_ready` | Agent finished processing, ready for input |
-| `assistant.turn_start` | `processing` | Started processing user request |
-| `assistant.message_delta` | `processing` | Streaming LLM response tokens |
-| `assistant.turn_end` | `agent_ready` | Finished processing turn |
-| `tool.invocation_start` | `tool_executing` | Agent invoking a tool (file read, shell cmd, etc.) |
-| `tool.invocation_end` | `processing` | Tool finished, back to LLM processing |
-| `tool.invocation_error` | `failed` | Tool execution failed |
-| `session.error` | `failed` | Session-level error |
-| (permission request) | `needs_input` | Agent needs user approval |
+**Complete event taxonomy from SDK source (`nodejs/src/generated/session-events.ts`):**
 
-**How Tangent could integrate with the SDK:**
+The SDK defines 30+ `SessionEvent` types. The ones relevant to status detection are:
 
-Instead of spawning Copilot CLI as a raw PTY process and scraping its terminal output, Tangent would:
+| SDK Event Type | Tangent Status | Data Fields | Notes |
+|---|---|---|---|
+| `session.idle` | `agent_ready` | `{}` (ephemeral) | Definitive "ready for input" signal |
+| `session.error` | `failed` | `errorType`, `message`, `stack?`, `statusCode?` | Structured error with stack trace |
+| `session.warning` | *(informational)* | `warningType`, `message` | Non-fatal warnings |
+| `session.shutdown` | `exited` | `shutdownType`, `totalPremiumRequests`, `modelMetrics`, `codeChanges` | Rich shutdown telemetry |
+| `assistant.turn_start` | `processing` | `turnId` | Start of LLM processing |
+| `assistant.message_delta` | `processing` | `messageId`, `deltaContent` | Streaming response tokens (ephemeral) |
+| `assistant.message` | `processing` | `messageId`, `content`, `toolRequests?` | Final assembled message |
+| `assistant.intent` | *(activity update)* | `intent` | Agent's current intent (e.g., "Fixing CSS") |
+| `assistant.reasoning_delta` | `processing` | `reasoningId`, `deltaContent` | Streaming thinking tokens |
+| `assistant.turn_end` | → triggers `session.idle` | `turnId` | End of LLM processing |
+| `assistant.usage` | *(metrics — Issue #1)* | `model`, `inputTokens`, `outputTokens`, `cacheReadTokens`, `cost`, `quotaSnapshots` | Per-request token/cost metrics |
+| `tool.execution_start` | `tool_executing` | `toolCallId`, `toolName`, `arguments?`, `mcpServerName?` | Tool name + args for activity display |
+| `tool.execution_progress` | `tool_executing` | `toolCallId`, `progressMessage` | Live progress within a tool |
+| `tool.execution_partial_result` | `tool_executing` | `toolCallId`, `partialOutput` | Streaming tool output |
+| `tool.execution_complete` | `processing` | `toolCallId`, `success`, `result?`, `error?` | Includes structured result content |
+| `subagent.started` | `processing` | `toolCallId`, `agentName`, `agentDisplayName` | Sub-agent spawned |
+| `subagent.completed` | `processing` | `toolCallId`, `agentName` | Sub-agent finished |
+| `subagent.failed` | *(informational)* | `toolCallId`, `error` | Sub-agent error |
+| `session.compaction_start` | *(informational)* | `{}` | Context compaction began |
+| `session.compaction_complete` | *(informational)* | `preCompactionTokens`, `postCompactionTokens`, `tokensRemoved` | Compaction metrics |
+| `session.context_changed` | *(CWD update)* | `cwd`, `gitRoot?`, `repository?`, `branch?` | Replaces OSC CWD tracking |
+| `session.title_changed` | *(activity update)* | `title` | Session title change |
+| `session.usage_info` | *(metrics — Issue #1)* | `tokenLimit`, `currentTokens`, `messagesLength` | Context window utilization |
+| `session.truncation` | *(metrics)* | `tokenLimit`, `tokensRemovedDuringTruncation`, `messagesRemovedDuringTruncation` | Message truncation stats |
 
-1. **Start Copilot CLI in server mode** — the SDK exposes a JSON-RPC server over stdio or TCP
-2. **Connect as an SDK client** — using `@github/copilot-sdk` (TypeScript) to create a session
-3. **Register event handlers** — structured callbacks for each state transition
-4. **Render terminal output separately** — the SDK streams `assistant.message_delta` events with the actual text content, which Tangent would render in xterm.js
+The SDK also handles **permission requests** via a dedicated `onPermissionRequest` handler (not an event) — the agent calls this when it needs approval for shell commands, file writes, MCP calls, or URL fetches. This maps directly to Tangent's `needs_input` status. Similarly, **user input requests** via `onUserInputRequest` handle the `ask_user` tool.
+
+**Additionally, the SDK solves Issue #1 (metrics) for free.** The `assistant.usage` event provides per-request token counts, costs, and quota snapshots. The `session.shutdown` event provides complete session-level metrics including total premium requests, API duration, and code changes (lines added/removed, files modified). The `session.usage_info` event provides real-time context window utilization.
+
+**How Tangent would integrate (from actual SDK API in `nodejs/src/session.ts`):**
 
 ```typescript
 import { CopilotClient } from '@github/copilot-sdk'
 
-const client = new CopilotClient()
-const session = await client.createSession({ model: 'gpt-4' })
+// SDK manages CLI process lifecycle automatically
+const client = new CopilotClient({
+  useStdio: true,      // communicate via stdin/stdout pipes
+  cwd: sessionFolder,  // working directory
+})
 
+const session = await client.createSession({
+  model: 'gpt-4',
+  streaming: true,     // enable assistant.message_delta events
+
+  // Permission requests → drives needs_input status
+  onPermissionRequest: async (request) => {
+    store.updateStatus(sessionId, 'needs_input')
+    store.updateActivity(sessionId, `${request.kind}: approve?`)
+    const approved = await showPermissionDialog(request)
+    store.updateStatus(sessionId, 'processing')
+    return { kind: approved ? 'approved' : 'denied-interactively-by-user' }
+  },
+
+  // User input requests → drives needs_input status
+  onUserInputRequest: async (request) => {
+    store.updateStatus(sessionId, 'needs_input')
+    const answer = await showInputDialog(request.question, request.choices)
+    return { answer, wasFreeform: !request.choices?.includes(answer) }
+  },
+})
+
+// Typed event handlers — no regex, no debounce, no heuristics
 session.on('assistant.turn_start', () => {
   store.updateStatus(sessionId, 'processing')
 })
 
-session.on('tool.invocation_start', (event) => {
-  store.updateStatus(sessionId, 'tool_executing')
-  store.updateActivity(sessionId, event.data.tool_name)
+session.on('assistant.intent', (event) => {
+  store.updateActivity(sessionId, event.data.intent)
 })
 
-session.on('tool.invocation_end', () => {
+session.on('assistant.message_delta', (event) => {
+  // Write streamed text to xterm.js for display
+  terminal.write(event.data.deltaContent)
+})
+
+session.on('tool.execution_start', (event) => {
+  store.updateStatus(sessionId, 'tool_executing')
+  store.updateActivity(sessionId, `${event.data.toolName}`)
+})
+
+session.on('tool.execution_progress', (event) => {
+  store.updateActivity(sessionId, event.data.progressMessage)
+})
+
+session.on('tool.execution_complete', (event) => {
+  // Display tool results (terminal output, file contents, etc.)
+  if (event.data.result?.contents) {
+    for (const content of event.data.result.contents) {
+      if (content.type === 'terminal') terminal.write(content.text)
+    }
+  }
   store.updateStatus(sessionId, 'processing')
 })
 
@@ -165,9 +225,31 @@ session.on('session.idle', () => {
   store.updateStatus(sessionId, 'agent_ready')
 })
 
-session.on('session.error', () => {
+session.on('session.error', (event) => {
   store.updateStatus(sessionId, 'failed')
+  store.updateActivity(sessionId, event.data.message)
 })
+
+// Metrics (solves Issue #1)
+session.on('assistant.usage', (event) => {
+  store.updateMetrics(sessionId, {
+    inputTokens: event.data.inputTokens,
+    outputTokens: event.data.outputTokens,
+    cacheReadTokens: event.data.cacheReadTokens,
+    cost: event.data.cost,
+    quota: event.data.quotaSnapshots,
+  })
+})
+
+session.on('session.context_changed', (event) => {
+  store.updateCwd(sessionId, event.data.cwd)
+})
+
+// Send user message
+await session.send({ prompt: userInput })
+
+// Or send and wait for completion
+const response = await session.sendAndWait({ prompt: userInput }, 60_000)
 ```
 
 **This would eliminate the entire StatusEngine for SDK-based sessions** — no SystemB output scraping, no regex rules, no debounce timers, no hysteresis, no transition validation. The SDK provides deterministic, typed events with zero ambiguity.
@@ -176,17 +258,19 @@ session.on('session.error', () => {
 
 | Consideration | Details |
 |---|---|
-| **Terminal rendering** | Today Tangent gets free terminal rendering because Copilot CLI writes directly to the PTY. With the SDK, Tangent would need to render assistant output itself (write `message_delta` text to xterm.js). This is actually better — we get full control over formatting. |
-| **Tool output** | Tool invocations (shell commands, file reads) produce output that Copilot CLI currently renders inline. The SDK would need to provide this output as event data so Tangent can display it. |
-| **PTY passthrough** | For shell commands the agent runs, Tangent may still need a PTY — but it would be a controlled sub-PTY managed by the SDK, not the primary session PTY. |
-| **Backward compatibility** | The SDK approach is a fundamentally different architecture (API client vs. PTY wrapper). Tangent would need to support both paths during the transition — SDK mode for new integrations, PTY+SystemB for legacy/fallback. |
-| **SDK maturity** | The Copilot SDK is relatively new. We need to validate that it's stable enough for production use and that the event taxonomy is complete for our needs. |
-| **Authentication** | The SDK handles GitHub auth internally. Tangent would need to pass through auth tokens or delegate to the SDK's auth flow. |
+| **Terminal rendering** | Today Tangent gets free terminal rendering because Copilot CLI writes directly to the PTY. With the SDK, Tangent renders `assistant.message_delta` and `tool.execution_complete` content itself via xterm.js. This is actually better — full control over formatting, and tool results include structured `contents` (text, terminal output with exit codes, images, resource links). |
+| **Tool output** | The SDK's `tool.execution_complete` event includes rich `result.contents` with typed entries: `text`, `terminal` (with exit code and cwd), `image` (base64), `resource_link`, and `resource`. This is far richer than what we can scrape from PTY output. |
+| **Permission UX** | The SDK's `onPermissionRequest` handler receives structured `{ kind: "shell" | "write" | "mcp" | "read" | "url" }` requests. Tangent can show a native approval dialog instead of trying to detect `(y/n)` prompts from output text. |
+| **Sub-agents** | The SDK emits `subagent.started/completed/failed` events — Tangent can show which sub-agent is running. Currently invisible via PTY scraping. |
+| **Hooks** | SDK supports `onPreToolUse`, `onPostToolUse`, `onSessionStart`, `onSessionEnd`, `onErrorOccurred` hooks. Tangent could use these to intercept and modify tool behavior or add custom logic. |
+| **Authentication** | SDK supports multiple auth methods: GitHub OAuth (stored from `copilot` CLI login), environment variables (`GH_TOKEN`), and BYOK (bring your own key). Tangent would pass `githubToken` or set `useLoggedInUser: true`. |
+| **Backward compatibility** | The SDK approach is a fundamentally different architecture (API client vs. PTY wrapper). Tangent would need to support both paths during transition — SDK mode for Copilot, PTY+SystemB for shell sessions and Claude Code. |
+| **SDK maturity** | Currently in "Technical Preview". The event schema is auto-generated and well-typed. Available on npm as `@github/copilot-sdk`. |
 
 **Recommended phased approach:**
 
 1. **Now (Issue #2 above):** Ask Copilot CLI to emit OSC escape sequences for status. This is a small, backward-compatible change that works within the existing PTY architecture. It immediately reduces Tangent's fragility.
 
-2. **Near-term:** Prototype a Copilot SDK integration in Tangent as an alternative session type (`sdk-session` vs. `pty-session`). Validate the event taxonomy covers all status needs. Identify gaps.
+2. **Near-term:** Prototype a Copilot SDK integration in Tangent as an alternative session type (`sdk-session` vs. `pty-session`). The SDK manages the CLI process lifecycle automatically via `CopilotClient({ useStdio: true })`. Validate the event taxonomy covers all status needs. Identify gaps.
 
-3. **Long-term:** Migrate fully to the SDK for Copilot sessions. Keep the PTY path for raw shell sessions and other agents (Claude Code) that don't have an SDK. SystemB becomes a fallback for non-SDK agents only.
+3. **Long-term:** Migrate fully to the SDK for Copilot sessions. Keep the PTY path for raw shell sessions and other agents (Claude Code) that don't have an SDK. SystemB becomes a fallback for non-SDK agents only. The SDK also eliminates the need for Issue #1 (metrics) since `assistant.usage`, `session.usage_info`, and `session.shutdown` events provide all metrics data natively.
