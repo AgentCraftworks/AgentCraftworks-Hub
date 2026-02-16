@@ -88,7 +88,12 @@ export class StatusEngine {
 
     // OSC 9;4 progress signals — high-priority status hints.
     // Windows Terminal spec: 0=hidden, 1=normal, 2=error, 3=indeterminate, 4=warning
-    // Copilot CLI emits: state 3 (indeterminate) when thinking, state 0 (hidden) when idle.
+    // Copilot CLI emits: state 3 (indeterminate) when thinking, state 0 (hidden) between turns.
+    //
+    // IMPORTANT: State 0 (hidden) does NOT reliably mean "idle" for agent sessions.
+    // The CLI clears progress between individual tool calls within the same turn,
+    // causing flicker. Only state 3 → processing is reliable from OSC.
+    // For idle detection, we rely on SystemB prompt detection (❯ + silence).
     this.oscParser.on('progress', (state: number) => {
       let status: SessionStatus | null = null
       switch (state) {
@@ -96,13 +101,18 @@ export class StatusEngine {
         case 1: // normal -> processing
           status = 'processing'
           break
-        case 0: // hidden -> agent_ready (CLI sends this when idle)
-          status = 'agent_ready'
+        case 0: {
+          // hidden — only trust for shell sessions. For agent sessions,
+          // the CLI clears progress between tool calls mid-turn, which
+          // would falsely set agent_ready while the agent is still working.
+          const session = this.store.get(this.sessionId)
+          if (session && session.agentType === 'shell') {
+            status = 'agent_ready'
+          }
           break
+        }
         case 2: {
-          // OSC 9;4;2 = error progress. Only trust this for shell sessions.
-          // During agent sessions, PowerShell shell integration emits spurious
-          // error progress signals that don't reflect actual agent failure.
+          // error — only trust for shell sessions (spurious during agent sessions)
           const session = this.store.get(this.sessionId)
           if (session && session.agentType === 'shell') {
             status = 'failed'
