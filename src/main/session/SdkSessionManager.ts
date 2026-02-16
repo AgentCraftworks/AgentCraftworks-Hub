@@ -72,7 +72,10 @@ export class SdkSessionManager {
       })
 
       this.clients.set(sessionId, client)
-      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      // Establish TCP connection to the embedded server
+      await client.start()
+      sdkLog(`SDK connected to port ${port} for session ${sessionId}`)
 
       const fgSessionId = await client.getForegroundSessionId()
       if (fgSessionId) {

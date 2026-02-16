@@ -24,6 +24,7 @@ export class StatusEngine {
   private cwdTracker: CwdTracker
   private systemAActive = false
   private disposed = false
+  private oscIdleTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(
     private sessionId: string,
@@ -69,6 +70,10 @@ export class StatusEngine {
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
+    if (this.oscIdleTimer) {
+      clearTimeout(this.oscIdleTimer)
+      this.oscIdleTimer = null
+    }
     this.oscParser.removeAllListeners()
     this.systemB.dispose()
     this.systemA.dispose()
@@ -92,26 +97,38 @@ export class StatusEngine {
 
     // OSC 9;4 progress signals — high-priority status hints.
     // Windows Terminal spec: 0=hidden, 1=normal, 2=error, 3=indeterminate, 4=warning
-    // Copilot CLI emits: state 3 (indeterminate) when thinking, state 0 (hidden) between turns.
+    // Copilot CLI emits: state 3 (indeterminate) when thinking, state 0 (hidden) when done.
     //
-    // IMPORTANT: State 0 (hidden) does NOT reliably mean "idle" for agent sessions.
-    // The CLI clears progress between individual tool calls within the same turn,
-    // causing flicker. Only state 3 → processing is reliable from OSC.
-    // For idle detection, we rely on SystemB prompt detection (❯ + silence).
+    // For agent sessions, state 0 is debounced (800ms) to avoid mid-turn flicker
+    // when CLI clears progress between individual tool calls. If state 3 arrives
+    // during the debounce window, the idle transition is cancelled.
     this.oscParser.on('progress', (state: number) => {
-      let status: SessionStatus | null = null
       switch (state) {
         case 3: // indeterminate -> processing (CLI sends this when thinking)
         case 1: // normal -> processing
-          status = 'processing'
+          // Cancel any pending idle transition — agent is actively working
+          if (this.oscIdleTimer) {
+            clearTimeout(this.oscIdleTimer)
+            this.oscIdleTimer = null
+          }
+          this.store.updateStatus(this.sessionId, 'processing')
           break
         case 0: {
-          // hidden — only trust for shell sessions. For agent sessions,
-          // the CLI clears progress between tool calls mid-turn, which
-          // would falsely set agent_ready while the agent is still working.
+          // hidden — agent turn complete or idle
           const session = this.store.get(this.sessionId)
-          if (session && session.agentType === 'shell') {
-            status = 'agent_ready'
+          if (!session) break
+          if (session.agentType === 'shell') {
+            // Shell sessions: immediate transition
+            this.store.updateStatus(this.sessionId, 'agent_ready')
+          } else {
+            // Agent sessions: debounce to avoid mid-turn flicker when
+            // CLI clears progress between individual tool calls.
+            // If no new processing signal arrives within 800ms, commit idle.
+            if (this.oscIdleTimer) clearTimeout(this.oscIdleTimer)
+            this.oscIdleTimer = setTimeout(() => {
+              this.oscIdleTimer = null
+              this.store.updateStatus(this.sessionId, 'agent_ready')
+            }, 800)
           }
           break
         }
@@ -119,14 +136,10 @@ export class StatusEngine {
           // error — only trust for shell sessions (spurious during agent sessions)
           const session = this.store.get(this.sessionId)
           if (session && session.agentType === 'shell') {
-            status = 'failed'
+            this.store.updateStatus(this.sessionId, 'failed')
           }
           break
         }
-      }
-
-      if (status) {
-        this.store.updateStatus(this.sessionId, status)
       }
     })
 

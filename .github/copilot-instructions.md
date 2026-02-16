@@ -91,6 +91,15 @@ To add a new status: update `types.ts` → `transitions.ts` → `statusMapping.t
 
 Three fields (`folderPath`, `folderName`, `name`) update atomically. Agent detection must NOT change the session name. Manual renames set `isRenamed: true` and are sticky.
 
+### Copilot SDK & CLI Source
+
+Tangent integrates with the Copilot SDK and CLI via a hybrid PTY+SDK architecture. The source repos are available locally for modifications:
+
+- **Copilot SDK**: `d:\git\tools\copilot-sdk\nodejs` — `CopilotClient`, `CopilotSession`, JSON-RPC protocol
+- **Copilot CLI (agent runtime)**: `d:\git\tools\copilot-agent-runtime` — TUI app, `--ui-server` embedded server, OSC signals
+
+After modifying SDK source: rebuild with `npm run build` in the SDK dir, then `npm install` in Tangent.
+
 ## Key Conventions
 
 ### Error Handling
