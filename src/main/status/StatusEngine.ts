@@ -80,8 +80,12 @@ export class StatusEngine {
     this.oscParser.on('title', (title: string) => {
       const session = this.store.get(this.sessionId)
       if (!session || session.agentType === 'shell') return
-      const clean = title.trim()
+      let clean = title.trim()
+      // Strip Copilot CLI's emoji prefix (🤖) from the title to get just the intent
+      clean = clean.replace(/^🤖\s*/, '').replace(/^Copilot:\s*/i, '')
       if (clean && clean.length < 100 && !clean.includes('\x1b') && !clean.includes('\x07')) {
+        // Don't overwrite activity with just the app name
+        if (clean === 'GitHub Copilot' || clean === 'Copilot') return
         this.store.updateActivity(this.sessionId, clean)
       }
     })

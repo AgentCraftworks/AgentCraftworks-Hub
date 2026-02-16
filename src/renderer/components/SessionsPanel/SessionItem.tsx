@@ -127,7 +127,7 @@ export function SessionItem({
         {!isRenaming && (
           <div className="text-xs truncate italic" style={{ color: 'var(--text-secondary)' }}>
             {session.agentType !== 'shell' && (!session.lastActivity || session.lastActivity.includes('cmd.exe'))
-              ? 'Waiting...'
+              ? (session.status === 'processing' || session.status === 'tool_executing' ? 'Thinking...' : 'Waiting...')
               : session.lastActivity || 'idle'}
           </div>
         )}
