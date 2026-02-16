@@ -48,6 +48,8 @@ export class SessionStore extends EventEmitter {
     const session = this.sessions.get(id)
     if (!session) return
 
+    if (session.status === newStatus) return
+
     if (!canTransition(session.status, newStatus)) {
       console.warn(
         `[SessionStore] Invalid transition: ${session.status} -> ${newStatus} (session ${id})`
