@@ -116,3 +116,77 @@ ESC ] 9001 ; status=ready ST
 ```
 
 The key requirement is: **any structured, machine-parseable signal emitted inline with terminal output that tells us the current agent state.** The specific encoding matters less than the fact that it exists.
+
+### Copilot SDK as a longer-term solution
+
+The [Copilot SDK](https://github.com/github/copilot-sdk) (`github/copilot-sdk`) already defines the exact event taxonomy that would solve this problem. When running Copilot CLI in server mode, the SDK communicates via JSON-RPC notifications (`session.event`) with structured `SessionEvent` objects. The relevant event types map directly to Tangent's internal statuses:
+
+| SDK Event | Tangent Status | Description |
+|---|---|---|
+| `session.idle` | `agent_ready` | Agent finished processing, ready for input |
+| `assistant.turn_start` | `processing` | Started processing user request |
+| `assistant.message_delta` | `processing` | Streaming LLM response tokens |
+| `assistant.turn_end` | `agent_ready` | Finished processing turn |
+| `tool.invocation_start` | `tool_executing` | Agent invoking a tool (file read, shell cmd, etc.) |
+| `tool.invocation_end` | `processing` | Tool finished, back to LLM processing |
+| `tool.invocation_error` | `failed` | Tool execution failed |
+| `session.error` | `failed` | Session-level error |
+| (permission request) | `needs_input` | Agent needs user approval |
+
+**How Tangent could integrate with the SDK:**
+
+Instead of spawning Copilot CLI as a raw PTY process and scraping its terminal output, Tangent would:
+
+1. **Start Copilot CLI in server mode** — the SDK exposes a JSON-RPC server over stdio or TCP
+2. **Connect as an SDK client** — using `@github/copilot-sdk` (TypeScript) to create a session
+3. **Register event handlers** — structured callbacks for each state transition
+4. **Render terminal output separately** — the SDK streams `assistant.message_delta` events with the actual text content, which Tangent would render in xterm.js
+
+```typescript
+import { CopilotClient } from '@github/copilot-sdk'
+
+const client = new CopilotClient()
+const session = await client.createSession({ model: 'gpt-4' })
+
+session.on('assistant.turn_start', () => {
+  store.updateStatus(sessionId, 'processing')
+})
+
+session.on('tool.invocation_start', (event) => {
+  store.updateStatus(sessionId, 'tool_executing')
+  store.updateActivity(sessionId, event.data.tool_name)
+})
+
+session.on('tool.invocation_end', () => {
+  store.updateStatus(sessionId, 'processing')
+})
+
+session.on('session.idle', () => {
+  store.updateStatus(sessionId, 'agent_ready')
+})
+
+session.on('session.error', () => {
+  store.updateStatus(sessionId, 'failed')
+})
+```
+
+**This would eliminate the entire StatusEngine for SDK-based sessions** — no SystemB output scraping, no regex rules, no debounce timers, no hysteresis, no transition validation. The SDK provides deterministic, typed events with zero ambiguity.
+
+**Tradeoffs and open questions:**
+
+| Consideration | Details |
+|---|---|
+| **Terminal rendering** | Today Tangent gets free terminal rendering because Copilot CLI writes directly to the PTY. With the SDK, Tangent would need to render assistant output itself (write `message_delta` text to xterm.js). This is actually better — we get full control over formatting. |
+| **Tool output** | Tool invocations (shell commands, file reads) produce output that Copilot CLI currently renders inline. The SDK would need to provide this output as event data so Tangent can display it. |
+| **PTY passthrough** | For shell commands the agent runs, Tangent may still need a PTY — but it would be a controlled sub-PTY managed by the SDK, not the primary session PTY. |
+| **Backward compatibility** | The SDK approach is a fundamentally different architecture (API client vs. PTY wrapper). Tangent would need to support both paths during the transition — SDK mode for new integrations, PTY+SystemB for legacy/fallback. |
+| **SDK maturity** | The Copilot SDK is relatively new. We need to validate that it's stable enough for production use and that the event taxonomy is complete for our needs. |
+| **Authentication** | The SDK handles GitHub auth internally. Tangent would need to pass through auth tokens or delegate to the SDK's auth flow. |
+
+**Recommended phased approach:**
+
+1. **Now (Issue #2 above):** Ask Copilot CLI to emit OSC escape sequences for status. This is a small, backward-compatible change that works within the existing PTY architecture. It immediately reduces Tangent's fragility.
+
+2. **Near-term:** Prototype a Copilot SDK integration in Tangent as an alternative session type (`sdk-session` vs. `pty-session`). Validate the event taxonomy covers all status needs. Identify gaps.
+
+3. **Long-term:** Migrate fully to the SDK for Copilot sessions. Keep the PTY path for raw shell sessions and other agents (Claude Code) that don't have an SDK. SystemB becomes a fallback for non-SDK agents only.
