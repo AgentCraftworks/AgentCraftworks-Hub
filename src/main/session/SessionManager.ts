@@ -1,6 +1,7 @@
 import { v4 as uuid } from 'uuid'
 import path from 'path'
 import { SessionStore } from './SessionStore'
+import { SdkSessionManager } from './SdkSessionManager'
 import { PtyManager } from '../pty/PtyManager'
 import { StatusEngine } from '../status/StatusEngine'
 import { ExternalScanner } from './ExternalScanner'
@@ -10,6 +11,7 @@ export class SessionManager {
   private activeSessionId: string | null = null
   private engines = new Map<string, StatusEngine>()
   private externalScanner = new ExternalScanner()
+  private _sdkManager: SdkSessionManager | null = null
 
   constructor(
     private store: SessionStore,
@@ -34,6 +36,14 @@ export class SessionManager {
     })
   }
 
+  setSdkManager(sdkManager: SdkSessionManager): void {
+    this._sdkManager = sdkManager
+  }
+
+  get sdkManager(): SdkSessionManager | null {
+    return this._sdkManager
+  }
+
   create(cwd?: string): Session {
     const workingDir = cwd || process.env.USERPROFILE || 'C:\\'
     const folderName = path.basename(workingDir)
@@ -44,6 +54,7 @@ export class SessionManager {
 
     const session: Session = {
       id: sessionId,
+      kind: 'shell',
       agentType: 'shell',
       name: folderName,
       folderName,
@@ -70,6 +81,9 @@ export class SessionManager {
   close(sessionId: string): void {
     const session = this.store.get(sessionId)
     if (!session) return
+
+    // Clean up SDK connection if attached
+    this._sdkManager?.closeSession(sessionId)
 
     // Dispose the StatusEngine before killing the PTY
     const engine = this.engines.get(sessionId)

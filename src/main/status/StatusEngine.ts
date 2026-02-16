@@ -75,25 +75,40 @@ export class StatusEngine {
   }
 
   private wireOscParser(): void {
-    // OSC title changes -> update lastActivity
+    // OSC title changes -> update lastActivity only for agent sessions
+    // Shell sessions use command extraction instead (more useful than process title)
     this.oscParser.on('title', (title: string) => {
-      this.store.updateActivity(this.sessionId, title)
+      const session = this.store.get(this.sessionId)
+      if (!session || session.agentType === 'shell') return
+      const clean = title.trim()
+      if (clean && clean.length < 100 && !clean.includes('\x1b') && !clean.includes('\x07')) {
+        this.store.updateActivity(this.sessionId, clean)
+      }
     })
 
-    // OSC progress signals: high-priority status hints
+    // OSC 9;4 progress signals — high-priority status hints.
+    // Windows Terminal spec: 0=hidden, 1=normal, 2=error, 3=indeterminate, 4=warning
+    // Copilot CLI emits: state 3 (indeterminate) when thinking, state 0 (hidden) when idle.
     this.oscParser.on('progress', (state: number) => {
       let status: SessionStatus | null = null
       switch (state) {
-        case 1: // indeterminate -> processing
-        case 2: // normal -> processing
+        case 3: // indeterminate -> processing (CLI sends this when thinking)
+        case 1: // normal -> processing
           status = 'processing'
           break
-        case 0: // hidden -> agent_ready
+        case 0: // hidden -> agent_ready (CLI sends this when idle)
           status = 'agent_ready'
           break
-        case 3: // error -> failed
-          status = 'failed'
+        case 2: {
+          // OSC 9;4;2 = error progress. Only trust this for shell sessions.
+          // During agent sessions, PowerShell shell integration emits spurious
+          // error progress signals that don't reflect actual agent failure.
+          const session = this.store.get(this.sessionId)
+          if (session && session.agentType === 'shell') {
+            status = 'failed'
+          }
           break
+        }
       }
 
       if (status) {
@@ -122,6 +137,20 @@ export class StatusEngine {
     this.systemB.on('activity', (activity: string) => {
       this.store.updateActivity(this.sessionId, activity)
     })
+
+    // Shell command extraction -> update lastActivity with last typed command
+    this.systemB.on('command', (command: string) => {
+      this.store.updateActivity(this.sessionId, command)
+    })
+
+    // Agent detected from output — promote the session
+    this.systemB.on('agent-detected', (agentType: 'copilot-cli' | 'claude-code') => {
+      const session = this.store.get(this.sessionId)
+      if (session && session.agentType === 'shell') {
+        this.store.promoteToAgent(this.sessionId, agentType)
+      }
+    })
+
   }
 
   private wireSystemA(): void {

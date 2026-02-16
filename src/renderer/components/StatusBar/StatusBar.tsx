@@ -31,6 +31,12 @@ function truncateRight(text: string, maxLen: number): string {
   return text.slice(0, maxLen - 1) + '\u2026'
 }
 
+function formatTokens(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k`
+  return String(count)
+}
+
 export function StatusBar({ sessions, activeSession }: StatusBarProps) {
   const uiStatus = useMemo(
     () => (activeSession ? mapStatusToUI(activeSession.status) : null),
@@ -100,8 +106,21 @@ export function StatusBar({ sessions, activeSession }: StatusBarProps) {
       {/* Spacer */}
       <span className="flex-1" />
 
-      {/* Right section: CWD + keyboard hint */}
+      {/* Right section: Metrics + CWD + keyboard hint */}
       <div className="flex items-center gap-2 shrink-0">
+        {activeSession?.metrics && (activeSession.metrics.inputTokens > 0 || activeSession.metrics.outputTokens > 0) && (
+          <>
+            <span style={{ color: 'var(--text-muted)' }} title="Token usage (input / output)">
+              {formatTokens(activeSession.metrics.inputTokens)}/{formatTokens(activeSession.metrics.outputTokens)}
+            </span>
+            {activeSession.metrics.cost > 0 && (
+              <span style={{ color: 'var(--text-muted)' }} title="Estimated cost">
+                ${activeSession.metrics.cost.toFixed(4)}
+              </span>
+            )}
+            <span className="mx-0.5" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
+          </>
+        )}
         {cwdPath && (
           <span className="max-w-[200px] truncate" style={{ color: 'var(--text-muted)' }} title={activeSession?.folderPath}>
             {cwdPath}

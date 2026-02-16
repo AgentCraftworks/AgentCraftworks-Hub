@@ -9,12 +9,12 @@ export const STATUS_FILE_MAP: Record<StatusFile['status'], SessionStatus> = {
   error: 'failed'
 }
 
-// OSC 9;4 progress state codes
+// OSC 9;4 progress state codes (Windows Terminal spec)
 export const OSC_PROGRESS_STATES = {
   0: 'hidden',
-  1: 'indeterminate',
-  2: 'normal',
-  3: 'error',
+  1: 'normal',
+  2: 'error',
+  3: 'indeterminate',
   4: 'warning'
 } as const
 
