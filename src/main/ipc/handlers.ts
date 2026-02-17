@@ -109,6 +109,17 @@ export function registerIpcHandlers(deps: {
     shell.openPath(folderPath)
   })
 
+  ipcMain.handle('shell:openEditor', (_, { folderPath }: { folderPath: string }) => {
+    const editor = configStore.getEditor()
+    spawn(editor, [folderPath], { shell: true, detached: true, stdio: 'ignore' }).unref()
+  })
+
+  ipcMain.handle('shell:getEditor', () => configStore.getEditor())
+
+  ipcMain.handle('shell:setEditor', (_, { editor }: { editor: string }) => {
+    configStore.setEditor(editor)
+  })
+
   // --- App ---
   let zoomLevel = 14
   ipcMain.handle('app:getZoom', () => zoomLevel)

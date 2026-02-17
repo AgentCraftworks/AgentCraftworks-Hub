@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { AgentGroup } from '@shared/types'
+import type { ProjectFolder } from '@shared/types'
 
 export function useAgents() {
-  const [groups, setGroups] = useState<AgentGroup[]>([])
+  const [groups, setGroups] = useState<ProjectFolder[]>([])
 
   useEffect(() => {
-    window.tangentAPI.agents.getGroups().then((loaded: AgentGroup[]) => {
+    window.tangentAPI.agents.getGroups().then((loaded: ProjectFolder[]) => {
       setGroups(loaded)
     })
 
-    const unsubscribe = window.tangentAPI.agents.onUpdated((updated: AgentGroup[]) => {
+    const unsubscribe = window.tangentAPI.agents.onUpdated((updated: ProjectFolder[]) => {
       setGroups(updated)
     })
 
@@ -18,7 +18,7 @@ export function useAgents() {
     }
   }, [])
 
-  const saveGroups = useCallback(async (updatedGroups: AgentGroup[]) => {
+  const saveGroups = useCallback(async (updatedGroups: ProjectFolder[]) => {
     await window.tangentAPI.agents.saveGroups(updatedGroups)
   }, [])
 

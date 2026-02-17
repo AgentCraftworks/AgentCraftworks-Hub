@@ -35,6 +35,7 @@ sessionStore.on('agent-promoted', ({ id, agentType, ptyId }: { id: string; agent
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
+    title: 'Tangent',
     width: 1200,
     height: 800,
     minWidth: 600,

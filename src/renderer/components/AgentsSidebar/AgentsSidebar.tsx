@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { useAgents } from '@/hooks/useAgents'
 import { AgentItem } from './AgentItem'
 import { AgentForm } from './AgentForm'
-import type { AgentProfile, AgentGroup } from '@shared/types'
+import type { AgentProfile, ProjectFolder } from '@shared/types'
 
 interface AgentsSidebarProps {
   activeSessionId: string | null
@@ -19,13 +19,15 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
   const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [pendingPrefill, setPendingPrefill] = useState<AgentProfile | null>(null)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dropIndex, setDropIndex] = useState<number | null>(null)
   const popupRef = useRef<HTMLDivElement>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
   const groupPickerRef = useRef<HTMLDivElement>(null)
 
-  const openGroup: AgentGroup | undefined = openGroupIndex !== null ? groups[openGroupIndex] : undefined
+  const openGroup: ProjectFolder | undefined = openGroupIndex !== null ? groups[openGroupIndex] : undefined
 
-  // Ctrl+1-9: toggle agent group tabs
+  // Ctrl+1-9: toggle project folder tabs
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (!e.ctrlKey || e.shiftKey || e.altKey) return
@@ -74,7 +76,7 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
 
   const handlePickNewGroup = useCallback(() => {
     if (!pendingPrefill) return
-    const newGroup: AgentGroup = { id: uuidv4(), name: 'New Group', agents: [] }
+    const newGroup: ProjectFolder = { id: uuidv4(), name: 'New Project', agents: [] }
     const updated = [...groups, newGroup]
     saveGroups(updated)
     setOpenGroupIndex(updated.length - 1)
@@ -93,12 +95,65 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
     setEditingAgent(null)
   }, [])
 
-  // --- Group operations ---
+  // --- Drag-and-drop reorder handlers ---
+
+  const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
+    setDragIndex(index)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    const rect = e.currentTarget.getBoundingClientRect()
+    const midY = rect.top + rect.height / 2
+    const target = e.clientY < midY ? index : index + 1
+    setDropIndex(target)
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    if (dragIndex === null || dropIndex === null) return
+    if (dragIndex === dropIndex || dragIndex + 1 === dropIndex) {
+      setDragIndex(null)
+      setDropIndex(null)
+      return
+    }
+    const updated = [...groups]
+    const [moved] = updated.splice(dragIndex, 1)
+    const insertAt = dropIndex > dragIndex ? dropIndex - 1 : dropIndex
+    updated.splice(insertAt, 0, moved)
+    saveGroups(updated)
+
+    // Keep the open tab tracking the moved item
+    if (openGroupIndex !== null) {
+      if (openGroupIndex === dragIndex) {
+        setOpenGroupIndex(insertAt)
+      } else {
+        const min = Math.min(dragIndex, insertAt)
+        const max = Math.max(dragIndex, insertAt)
+        if (openGroupIndex >= min && openGroupIndex <= max) {
+          setOpenGroupIndex(openGroupIndex + (dragIndex > insertAt ? 1 : -1))
+        }
+      }
+    }
+
+    setDragIndex(null)
+    setDropIndex(null)
+  }, [dragIndex, dropIndex, groups, saveGroups, openGroupIndex])
+
+  const handleDragEnd = useCallback(() => {
+    setDragIndex(null)
+    setDropIndex(null)
+  }, [])
+
+  // --- Project operations ---
 
   const addGroup = useCallback(() => {
-    const newGroup: AgentGroup = {
+    const newGroup: ProjectFolder = {
       id: uuidv4(),
-      name: `Group ${groups.length + 1}`,
+      name: `Project ${groups.length + 1}`,
       agents: []
     }
     const updated = [...groups, newGroup]
@@ -131,7 +186,7 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
     saveGroups(updated)
   }, [groups, saveGroups])
 
-  const startRenameGroup = useCallback((group: AgentGroup) => {
+  const startRenameGroup = useCallback((group: ProjectFolder) => {
     setRenamingGroupId(group.id)
     setRenameValue(group.name)
   }, [])
@@ -216,7 +271,7 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
 
   return (
     <div className="flex h-full shrink-0">
-      {/* Group picker — shown when saving an agent from a session */}
+      {/* Project picker — shown when saving an agent from a session */}
       {pendingPrefill && (
         <div
           ref={groupPickerRef}
@@ -225,7 +280,7 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
         >
           <div className="p-3 border-b border-[var(--bg-hover)]">
             <div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
-              Save Agent To
+              Save to Project
             </div>
             <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
               {pendingPrefill.name}
@@ -252,7 +307,7 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
               className="flex-1 px-2 py-1.5 text-sm rounded border border-[var(--bg-hover)] hover:bg-[var(--bg-hover)] transition-colors"
               style={{ color: 'var(--text-secondary)' }}
             >
-              + New Group
+              + New Project
             </button>
             <button
               onClick={() => setPendingPrefill(null)}
@@ -272,7 +327,7 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
           className="w-[240px] h-full flex flex-col border-l border-[var(--bg-hover)]"
           style={{ background: 'var(--bg-secondary)' }}
         >
-          {/* Group header */}
+          {/* Project header */}
           <div className="flex items-center justify-between p-3 border-b border-[var(--bg-hover)]">
             {renamingGroupId === openGroup.id ? (
               <input
@@ -323,7 +378,7 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
                 onClick={() => startRenameGroup(openGroup)}
                 className="text-xs px-1 py-0.5 rounded hover:bg-[var(--bg-hover)] transition-colors"
                 style={{ color: 'var(--text-muted)' }}
-                title="Rename group"
+                title="Rename"
               >
                 &#9998;
               </button>
@@ -332,7 +387,7 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
                   onClick={() => deleteGroup(openGroup.id)}
                   className="text-xs px-1 py-0.5 rounded hover:bg-[var(--bg-hover)] transition-colors"
                   style={{ color: 'var(--error)' }}
-                  title="Delete group"
+                  title="Delete"
                 >
                   &times;
                 </button>
@@ -360,7 +415,7 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
                 className="text-xs p-3 text-center"
                 style={{ color: 'var(--text-muted)' }}
               >
-                No agents in this group
+                No agents in this project
               </div>
             )}
           </div>
@@ -393,16 +448,38 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
         style={{ background: 'var(--bg-secondary)' }}
       >
         {groups.map((group, idx) => (
-          <AgentTab
-            key={group.id}
-            name={group.name}
-            iconPath={group.iconPath}
-            isOpen={openGroupIndex === idx}
-            onClick={() => handleTabClick(idx)}
-          />
+          <div key={group.id} className="relative w-full flex flex-col items-center">
+            {/* Drop indicator line — before this tab */}
+            {dropIndex === idx && dragIndex !== null && dragIndex !== idx && dragIndex + 1 !== idx && (
+              <div
+                className="absolute top-0 left-1 right-1 h-0.5 rounded-full z-10"
+                style={{ background: 'var(--accent)' }}
+              />
+            )}
+            <AgentTab
+              name={group.name}
+              iconPath={group.iconPath}
+              isOpen={openGroupIndex === idx}
+              isDragging={dragIndex === idx}
+              title={idx < 9 ? `Ctrl+${idx + 1}` : undefined}
+              onClick={() => handleTabClick(idx)}
+              draggable
+              onDragStart={(e) => handleDragStart(e, idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
+            />
+            {/* Drop indicator line — after the last tab */}
+            {dropIndex === idx + 1 && dragIndex !== null && dragIndex !== idx && dragIndex !== idx + 1 && idx === groups.length - 1 && (
+              <div
+                className="absolute bottom-0 left-1 right-1 h-0.5 rounded-full z-10"
+                style={{ background: 'var(--accent)' }}
+              />
+            )}
+          </div>
         ))}
 
-        {/* Add group button */}
+        {/* Add project button */}
         <button
           onClick={addGroup}
           className="w-8 h-8 flex items-center justify-center rounded transition-all"
@@ -412,8 +489,8 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
           }}
           onMouseEnter={(e) => { e.currentTarget.style.opacity = '1' }}
           onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7' }}
-          title="Add group"
-          aria-label="Add group"
+          title="Add project"
+          aria-label="Add project"
         >
           <span className="text-lg">+</span>
         </button>
@@ -438,7 +515,19 @@ function parseGroupName(name: string): { emoji: string | null; text: string } {
 
 // --- Vertical Tab Component ---
 
-function AgentTab({ name, iconPath, isOpen, onClick }: { name: string; iconPath?: string; isOpen: boolean; onClick: () => void }) {
+function AgentTab({ name, title, iconPath, isOpen, isDragging, onClick, draggable, onDragStart, onDragOver, onDrop, onDragEnd }: {
+  name: string
+  title?: string
+  iconPath?: string
+  isOpen: boolean
+  isDragging?: boolean
+  onClick: () => void
+  draggable?: boolean
+  onDragStart?: (e: React.DragEvent) => void
+  onDragOver?: (e: React.DragEvent) => void
+  onDrop?: (e: React.DragEvent) => void
+  onDragEnd?: () => void
+}) {
   const [hovered, setHovered] = useState(false)
   const { emoji, text } = parseGroupName(name)
   const initial = text.charAt(0).toUpperCase()
@@ -449,13 +538,20 @@ function AgentTab({ name, iconPath, isOpen, onClick }: { name: string; iconPath?
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="w-9 flex flex-col items-center gap-1 py-2 rounded cursor-pointer"
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      className="w-9 flex flex-col items-center gap-1 py-2 rounded"
       style={{
+        cursor: isDragging ? 'grabbing' : 'grab',
+        opacity: isDragging ? 0.4 : 1,
         background: isOpen ? 'var(--bg-hover)' : hovered ? 'rgba(255,255,255,0.06)' : 'transparent',
         borderLeft: isOpen ? '2px solid var(--accent)' : hovered ? '2px solid rgba(255,255,255,0.3)' : '2px solid transparent',
         transition: 'background 150ms ease, border-color 150ms ease'
       }}
-      title={name}
+      title={title ?? name}
     >
       {/* Icon: .ico/.png file, emoji, or first letter */}
       {iconPath ? (

@@ -85,7 +85,10 @@ const tangentAPI = {
 
   shell: {
     openInVSCode: (folderPath: string) => ipcRenderer.invoke('shell:openInVSCode', folderPath),
-    openInExplorer: (folderPath: string) => ipcRenderer.invoke('shell:openInExplorer', folderPath)
+    openInExplorer: (folderPath: string) => ipcRenderer.invoke('shell:openInExplorer', folderPath),
+    openEditor: (folderPath: string) => ipcRenderer.invoke('shell:openEditor', { folderPath }),
+    getEditor: () => ipcRenderer.invoke('shell:getEditor'),
+    setEditor: (editor: string) => ipcRenderer.invoke('shell:setEditor', { editor })
   },
 
   dialog: {

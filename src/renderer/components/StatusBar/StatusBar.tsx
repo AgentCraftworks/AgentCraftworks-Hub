@@ -1,6 +1,14 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import type { Session } from '@shared/types'
 import { mapStatusToUI } from '@shared/statusMapping'
+
+declare const tangentAPI: {
+  shell: {
+    openEditor: (folderPath: string) => Promise<void>
+    getEditor: () => Promise<string>
+    setEditor: (editor: string) => Promise<void>
+  }
+}
 
 interface StatusBarProps {
   sessions: Session[]
@@ -38,6 +46,11 @@ function formatTokens(count: number): string {
 }
 
 export function StatusBar({ sessions, activeSession }: StatusBarProps) {
+  const [editorPopupOpen, setEditorPopupOpen] = useState(false)
+  const [editorValue, setEditorValue] = useState('')
+  const popupRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
   const uiStatus = useMemo(
     () => (activeSession ? mapStatusToUI(activeSession.status) : null),
     [activeSession]
@@ -68,6 +81,44 @@ export function StatusBar({ sessions, activeSession }: StatusBarProps) {
   const cwdPath = activeSession
     ? truncatePathLeft(activeSession.folderPath || '', 50)
     : ''
+
+  const handleEditorClick = useCallback(() => {
+    if (activeSession?.folderPath) {
+      tangentAPI.shell.openEditor(activeSession.folderPath)
+    }
+  }, [activeSession?.folderPath])
+
+  const handleEditorContextMenu = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault()
+    const current = await tangentAPI.shell.getEditor()
+    setEditorValue(current)
+    setEditorPopupOpen(true)
+  }, [])
+
+  const handleEditorSave = useCallback(async () => {
+    if (editorValue.trim()) {
+      await tangentAPI.shell.setEditor(editorValue.trim())
+    }
+    setEditorPopupOpen(false)
+  }, [editorValue])
+
+  useEffect(() => {
+    if (editorPopupOpen && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [editorPopupOpen])
+
+  useEffect(() => {
+    if (!editorPopupOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+        setEditorPopupOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [editorPopupOpen])
 
   return (
     <div
@@ -124,6 +175,44 @@ export function StatusBar({ sessions, activeSession }: StatusBarProps) {
         {cwdPath && (
           <span className="max-w-[200px] truncate" style={{ color: 'var(--text-muted)' }} title={activeSession?.folderPath}>
             {cwdPath}
+          </span>
+        )}
+        {activeSession?.folderPath && (
+          <span className="relative">
+            <button
+              onClick={handleEditorClick}
+              onContextMenu={handleEditorContextMenu}
+              className="hover:underline cursor-pointer"
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 'inherit' }}
+              title="Open in editor (right-click to configure)"
+            >
+              Editor
+            </button>
+            {editorPopupOpen && (
+              <div
+                ref={popupRef}
+                className="absolute bottom-6 right-0 p-2 rounded shadow-lg border border-[var(--bg-hover)] z-50 flex items-center gap-1"
+                style={{ background: 'var(--bg-secondary)' }}
+              >
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={editorValue}
+                  onChange={(e) => setEditorValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleEditorSave(); if (e.key === 'Escape') setEditorPopupOpen(false) }}
+                  className="px-1.5 py-0.5 text-xs rounded border border-[var(--bg-hover)]"
+                  style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', width: '120px' }}
+                  placeholder="e.g. code"
+                />
+                <button
+                  onClick={handleEditorSave}
+                  className="px-1.5 py-0.5 text-xs rounded cursor-pointer"
+                  style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                >
+                  Save
+                </button>
+              </div>
+            )}
           </span>
         )}
         <span className="mx-1" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>

@@ -4,6 +4,7 @@ import { homedir } from 'os'
 
 export interface TangentConfig {
   startFolder?: string
+  editor?: string
 }
 
 const CONFIG_DIR = join(homedir(), '.tangent')
@@ -36,6 +37,14 @@ export class ConfigStore {
 
   getStartFolder(): string {
     return this.config.startFolder || homedir()
+  }
+
+  getEditor(): string {
+    return this.config.editor || 'code'
+  }
+
+  setEditor(editor: string): void {
+    this.save({ editor })
   }
 
   save(updates: Partial<TangentConfig>): void {

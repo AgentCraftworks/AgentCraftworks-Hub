@@ -83,15 +83,16 @@ export interface AgentProfile {
   cwdPath?: string
 }
 
-export interface AgentGroup {
+export interface ProjectFolder {
   id: string
   name: string
   agents: AgentProfile[]
+  iconPath?: string
 }
 
 export interface AgentStoreData {
   version: 2
-  groups: AgentGroup[]
+  groups: ProjectFolder[]
 }
 
 // === Status File (System A) ===
