@@ -2,6 +2,8 @@ import type { SessionStatus } from './types'
 
 const VALID_TRANSITIONS = new Set<string>([
   'shell_ready->agent_launching',
+  'shell_ready->agent_ready',
+  'shell_ready->processing',
   'agent_launching->agent_ready',
   'agent_launching->processing',
   'agent_launching->tool_executing',
