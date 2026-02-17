@@ -53,6 +53,14 @@ export class StatusEngine {
   }
 
   /**
+   * Called when an authoritative signal (SDK, external) clears needs_input.
+   * Tells SystemB to suppress stale TUI redraws for a cooldown period.
+   */
+  clearNeedsInput(): void {
+    this.systemB.clearNeedsInput()
+  }
+
+  /**
    * Handle PTY process exit. Immediately set status to 'exited'.
    */
   handlePtyExit(exitCode: number): void {

@@ -38,6 +38,11 @@ export class SessionManager {
 
   setSdkManager(sdkManager: SdkSessionManager): void {
     this._sdkManager = sdkManager
+    // When SDK clears needs_input, tell the StatusEngine to suppress stale redraws
+    sdkManager.setNeedsInputClearedCallback((sessionId) => {
+      const engine = this.engines.get(sessionId)
+      engine?.clearNeedsInput()
+    })
   }
 
   get sdkManager(): SdkSessionManager | null {

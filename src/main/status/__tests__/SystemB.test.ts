@@ -360,6 +360,35 @@ describe('SystemB', () => {
       vi.advanceTimersByTime(600)
       expect(statusChanges).toContain('needs_input')
     })
+
+    it('spinner characters override needs_input and start cooldown', () => {
+      // Get into needs_input
+      systemB.feed('Asking user something')
+      vi.advanceTimersByTime(600)
+      expect(statusChanges).toContain('needs_input')
+      statusChanges.length = 0
+
+      // Spinner appears (user answered, Copilot is thinking)
+      systemB.feed('⠋ Thinking (Esc to cancel)\nAsked user: Which color?')
+      vi.advanceTimersByTime(600)
+
+      expect(statusChanges).toContain('processing')
+      expect(statusChanges).not.toContain('needs_input')
+    })
+
+    it('text-only processing does not override needs_input', () => {
+      // Get into needs_input
+      systemB.feed('Asking user something')
+      vi.advanceTimersByTime(600)
+      expect(statusChanges).toContain('needs_input')
+      statusChanges.length = 0
+
+      // "Thinking" text without spinner (stale TUI redraw)
+      systemB.feed('Thinking about it')
+      vi.advanceTimersByTime(600)
+
+      expect(statusChanges).not.toContain('processing')
+    })
   })
 
   describe('dispose', () => {

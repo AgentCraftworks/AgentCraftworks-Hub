@@ -57,6 +57,7 @@ export class SessionStore extends EventEmitter {
       return
     }
 
+    console.log(`[SessionStore] Status: ${session.status} -> ${newStatus} (session ${id.slice(0,8)})`)
     session.status = newStatus
     session.updatedAt = Date.now()
     this.emit('updated', session)

@@ -24,11 +24,17 @@ export class SdkSessionManager {
   private clients = new Map<string, CopilotClient>()
   private sessions = new Map<string, CopilotSession>()
   private watching = new Set<string>()
+  private onNeedsInputCleared?: (sessionId: string) => void
 
   constructor(
     private store: SessionStore,
     private ptyManager: PtyManager
   ) {}
+
+  /** Register a callback for when SDK clears needs_input (tells SystemB to cooldown). */
+  setNeedsInputClearedCallback(cb: (sessionId: string) => void): void {
+    this.onNeedsInputCleared = cb
+  }
 
   attachToSession(sessionId: string, ptyId: string): void {
     // Prevent duplicate connections
@@ -84,6 +90,14 @@ export class SdkSessionManager {
         sdkLog(`User input requested for session ${sessionId}: ${info.question}`)
         this.store.updateStatus(sessionId, 'needs_input')
         this.store.updateActivity(sessionId, info.question)
+      })
+
+      // Detect when the user answers → processing (agent resumes)
+      client.onUserInputCompleted((info) => {
+        sdkLog(`User input completed for session ${sessionId}: ${info.answer}`)
+        this.onNeedsInputCleared?.(sessionId)
+        this.store.updateStatus(sessionId, 'processing')
+        this.store.updateActivity(sessionId, `Answered: ${info.answer}`)
       })
 
       this.clients.set(sessionId, client)

@@ -19,6 +19,11 @@ const RULES: DetectionRule[] = [
   { priority: 8, pattern: /^Error:|^FATAL:|command not found$|ENOENT|CommandNotFoundException/m, status: 'failed' },
 ]
 
+// Spinner characters are real-time indicators — they only appear when
+// Copilot is actively animating. These can override needs_input because
+// they prove the agent is actually processing (not just stale text).
+const SPINNER_PATTERN = /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⊙◐◑◒◓]/
+
 /** Strip ANSI escape sequences from text for clean pattern matching. */
 function stripAnsi(text: string): string {
   // eslint-disable-next-line no-control-regex
@@ -148,10 +153,14 @@ export class SystemB extends EventEmitter {
       }
 
       // processing is eager (no extra delay beyond 500ms hold)
-      // But don't let processing override needs_input — the TUI redraws
-      // include stale text that could match processing patterns
+      // Spinner characters (rule 2) can override needs_input because they are
+      // real-time indicators. Text-based matches like "Thinking" (rule 3) cannot
+      // override needs_input because they persist in TUI redraws.
       if (rule.status === 'processing') {
-        if (this.currentStatus === 'needs_input') return
+        if (this.currentStatus === 'needs_input') {
+          if (!SPINNER_PATTERN.test(clean)) return // Only spinners can override
+          this.needsInputCooldownUntil = Date.now() + 3000
+        }
         // Clear any pending failed count
         this.failedMatchCount = 0
         this.tryTransition('processing')
