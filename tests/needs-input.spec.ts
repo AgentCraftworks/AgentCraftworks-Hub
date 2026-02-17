@@ -102,5 +102,25 @@ test.describe('needs_input status detection', () => {
     // Verify the dot color is the attention color (orange)
     const dotStyle = await pulsingDot.first().getAttribute('style')
     expect(dotStyle).toContain('--attention')
+
+    // Step 7: Answer the question — press 1 to select first color
+    await page.keyboard.press('1')
+    await page.waitForTimeout(500)
+    await page.keyboard.press('Enter')
+
+    // Step 8: Wait for Copilot to resume processing — attention dot should disappear
+    // Give it up to 20 seconds for the status to change
+    let cleared = false
+    for (let i = 0; i < 10; i++) {
+      await page.waitForTimeout(2000)
+      const stillPulsing = await page.locator('.animate-pulse-fast').count()
+      if (stillPulsing === 0) {
+        cleared = true
+        break
+      }
+    }
+
+    await page.screenshot({ path: 'tests/screenshots/needs-input-07-cleared.png' })
+    expect(cleared).toBe(true)
   })
 })

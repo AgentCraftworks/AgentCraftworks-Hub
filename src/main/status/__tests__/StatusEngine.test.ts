@@ -240,6 +240,38 @@ describe('StatusEngine OSC progress handling', () => {
     engine.dispose()
   })
 
+  it('OSC state 3 (indeterminate) clears needs_input — user answered, Copilot resumed', () => {
+    const { store, sessionId } = createStoreWithSession('copilot-cli')
+    store.updateStatus(sessionId, 'agent_ready')
+    store.updateStatus(sessionId, 'needs_input')
+    const engine = new StatusEngine(sessionId, 'pty-1', store)
+
+    // User answers the question, Copilot starts thinking (OSC state 3)
+    engine.feed('\x1b]9;4;3;0\x07')
+
+    // needs_input should be cleared — processing is the new authoritative state
+    expect(store.get(sessionId)?.status).toBe('processing')
+
+    engine.dispose()
+  })
+
+  it('OSC state 0 debounce clears needs_input after user answers and Copilot finishes', () => {
+    const { store, sessionId } = createStoreWithSession('copilot-cli')
+    store.updateStatus(sessionId, 'agent_ready')
+    store.updateStatus(sessionId, 'needs_input')
+    const engine = new StatusEngine(sessionId, 'pty-1', store)
+
+    // User answers → Copilot thinks → finishes
+    engine.feed('\x1b]9;4;3;0\x07')
+    expect(store.get(sessionId)?.status).toBe('processing')
+
+    engine.feed('\x1b]9;4;0;0\x07')
+    vi.advanceTimersByTime(800)
+    expect(store.get(sessionId)?.status).toBe('agent_ready')
+
+    engine.dispose()
+  })
+
   it('OSC title is ignored for shell sessions', () => {
     const { store, sessionId } = createStoreWithSession('shell')
     store.updateStatus(sessionId, 'agent_ready')

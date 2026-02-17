@@ -111,13 +111,10 @@ export class StatusEngine {
             clearTimeout(this.oscIdleTimer)
             this.oscIdleTimer = null
           }
-          // Don't override needs_input — user is being asked a question
-          {
-            const session = this.store.get(this.sessionId)
-            if (!session || session.status !== 'needs_input') {
-              this.store.updateStatus(this.sessionId, 'processing')
-            }
-          }
+          // OSC progress is authoritative — always transition to processing.
+          // This clears needs_input when the user answers and Copilot resumes thinking.
+          // (SystemB's processing guard handles stale TUI redraw noise separately.)
+          this.store.updateStatus(this.sessionId, 'processing')
           break
         case 0: {
           // hidden — agent turn complete or idle
