@@ -23,6 +23,7 @@ function sdkLog(msg: string): void {
 export class SdkSessionManager {
   private clients = new Map<string, CopilotClient>()
   private sessions = new Map<string, CopilotSession>()
+  private watching = new Set<string>()
 
   constructor(
     private store: SessionStore,
@@ -30,6 +31,13 @@ export class SdkSessionManager {
   ) {}
 
   attachToSession(sessionId: string, ptyId: string): void {
+    // Prevent duplicate connections
+    if (this.clients.has(sessionId) || this.watching.has(sessionId)) {
+      sdkLog(`Already watching/connected session ${sessionId}, skipping duplicate attach`)
+      return
+    }
+    this.watching.add(sessionId)
+
     sdkLog(`Watching PTY ${ptyId} for ui-server port (session ${sessionId})`)
 
     let stdout = ''
@@ -106,6 +114,7 @@ export class SdkSessionManager {
 
   private async subscribeToSession(tangentSessionId: string, client: CopilotClient, sdkSessionId: string): Promise<void> {
     try {
+      sdkLog(`Subscribing to SDK session ${sdkSessionId} for Tangent session ${tangentSessionId}`)
       const sdkSession = await client.resumeSession(sdkSessionId, { streaming: true })
       this.sessions.set(tangentSessionId, sdkSession)
 
@@ -118,11 +127,20 @@ export class SdkSessionManager {
       this.wireSessionEvents(tangentSessionId, sdkSession)
       sdkLog(`SDK events wired for ${tangentSessionId}`)
     } catch (err) {
-      sdkLog(`Failed to subscribe: ${(err as Error).message}`)
+      const msg = (err as Error).message
+      sdkLog(`Failed to subscribe: ${msg}`)
+
+      // If session not found, retry after a delay — the TUI session may not
+      // be registered with the server yet (race between TUI init and SDK connect)
+      if (msg.includes('Session not found')) {
+        sdkLog(`Will retry subscribe in 3s for ${tangentSessionId}`)
+        setTimeout(() => this.retrySubscribe(tangentSessionId, client), 3000)
+      }
     }
   }
 
   async closeSession(sessionId: string): Promise<void> {
+    this.watching.delete(sessionId)
     this.sessions.delete(sessionId)
     const client = this.clients.get(sessionId)
     if (client) {
