@@ -294,6 +294,47 @@ describe('StatusEngine OSC progress handling', () => {
     engine.dispose()
   })
 
+  it('OSC state 0 clears needs_input when agent finishes (no state 3 in between)', () => {
+    const { store, sessionId } = createStoreWithSession('copilot-cli')
+    store.updateStatus(sessionId, 'agent_ready')
+    store.updateStatus(sessionId, 'needs_input')
+    const engine = new StatusEngine(sessionId, 'pty-1', store)
+
+    // Short LLM call: no OSC state 3 fired, just state 0 (done)
+    engine.feed('\x1b]9;4;0;0\x07')
+
+    // needs_input should still be active during debounce (question still on screen)
+    expect(store.get(sessionId)?.status).toBe('needs_input')
+
+    // But SystemB detects the ❯ prompt (no more question text in new output)
+    // Simulate: 800ms debounce fires, and no fresh needs_input text re-applied
+    vi.advanceTimersByTime(800)
+    expect(store.get(sessionId)?.status).toBe('agent_ready')
+
+    engine.dispose()
+  })
+
+  it('needs_input cancels pending OSC idle timer', () => {
+    const { store, sessionId } = createStoreWithSession('copilot-cli')
+    store.updateStatus(sessionId, 'agent_ready')
+    store.updateStatus(sessionId, 'processing')
+    const engine = new StatusEngine(sessionId, 'pty-1', store)
+
+    // OSC state 0 fires (turn done, debounce starts)
+    engine.feed('\x1b]9;4;0;0\x07')
+    expect(store.get(sessionId)?.status).toBe('processing') // debounced
+
+    // SystemB detects needs_input BEFORE debounce fires
+    engine.feed('Asking user: Which color?\nOther (type your answer)')
+    expect(store.get(sessionId)?.status).toBe('needs_input')
+
+    // The debounce timer should have been cancelled — status stays needs_input
+    vi.advanceTimersByTime(800)
+    expect(store.get(sessionId)?.status).toBe('needs_input')
+
+    engine.dispose()
+  })
+
   it('OSC title is ignored for shell sessions', () => {
     const { store, sessionId } = createStoreWithSession('shell')
     store.updateStatus(sessionId, 'agent_ready')

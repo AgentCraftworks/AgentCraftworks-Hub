@@ -140,14 +140,16 @@ export class StatusEngine {
             // Agent sessions: debounce to avoid mid-turn flicker when
             // CLI clears progress between individual tool calls.
             // If no new processing signal arrives within 800ms, commit idle.
-            // But don't override needs_input — the user is being asked a question.
             if (this.oscIdleTimer) clearTimeout(this.oscIdleTimer)
             this.oscIdleTimer = setTimeout(() => {
               this.oscIdleTimer = null
               const current = this.store.get(this.sessionId)
-              if (current && current.status !== 'needs_input') {
-                this.store.updateStatus(this.sessionId, 'agent_ready')
+              if (!current) return
+              // OSC state 0 is authoritative — clear any status including needs_input
+              if (current.status === 'needs_input') {
+                this.systemB.clearNeedsInput()
               }
+              this.store.updateStatus(this.sessionId, 'agent_ready')
             }, 800)
           }
           break
@@ -176,6 +178,12 @@ export class StatusEngine {
     // System B status: only use if System A is not active
     this.systemB.on('status', (status: SessionStatus) => {
       if (!this.systemAActive) {
+        // When needs_input is set, cancel any pending OSC idle timer —
+        // the agent is waiting for user input, not idling.
+        if (status === 'needs_input' && this.oscIdleTimer) {
+          clearTimeout(this.oscIdleTimer)
+          this.oscIdleTimer = null
+        }
         this.store.updateStatus(this.sessionId, status)
       }
     })
