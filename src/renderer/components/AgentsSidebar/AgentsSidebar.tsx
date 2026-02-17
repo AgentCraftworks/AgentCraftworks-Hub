@@ -44,6 +44,27 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
     return () => window.removeEventListener('keydown', handleKey, { capture: true })
   }, [groups.length])
 
+  // 1-9 (no modifier): launch Nth agent in open group
+  useEffect(() => {
+    if (openGroupIndex === null || !openGroup) return
+    const handleAgentKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.shiftKey || e.altKey || e.metaKey) return
+      // Don't intercept if user is typing in an input
+      if ((e.target as HTMLElement).tagName === 'INPUT') return
+      const digit = e.key.match(/^[1-9]$/)
+      if (!digit) return
+      const idx = parseInt(digit[0], 10) - 1
+      if (idx >= openGroup.agents.length) return
+      e.preventDefault()
+      if (activeSessionId) {
+        launchAgent(openGroup.agents[idx].id, activeSessionId)
+        setOpenGroupIndex(null)
+      }
+    }
+    window.addEventListener('keydown', handleAgentKey, { capture: true })
+    return () => window.removeEventListener('keydown', handleAgentKey, { capture: true })
+  }, [openGroupIndex, openGroup, activeSessionId, launchAgent])
+
   // Close popup when clicking outside
   useEffect(() => {
     if (openGroupIndex === null) return

@@ -13,7 +13,7 @@ const RULES: DetectionRule[] = [
   { priority: 2, pattern: /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⊙◐◑◒◓]/, status: 'processing' },
   { priority: 3, pattern: /[Tt]hinking/, status: 'processing' },
   { priority: 4, pattern: /running tool:|executing command:|Reading file|Writing file/i, status: 'tool_executing' },
-  { priority: 5, pattern: /(y\/n)|continue\?|allow\?|permit\?|approve\?|Enter to confirm|Other \(type your answer\)|to select/i, status: 'needs_input' },
+  { priority: 5, pattern: /Asking user|Other \(type your answer\)|to select|Enter to confirm|(y\/n)|continue\?|allow\?|permit\?|approve\?/i, status: 'needs_input' },
   { priority: 6, pattern: /^❯\s*/m, status: 'agent_ready' },
   { priority: 7, pattern: /^›\s*/m, status: 'agent_ready' },
   { priority: 8, pattern: /^Error:|^FATAL:|command not found$|ENOENT|CommandNotFoundException/m, status: 'failed' },
@@ -147,7 +147,10 @@ export class SystemB extends EventEmitter {
       }
 
       // processing is eager (no extra delay beyond 500ms hold)
+      // But don't let processing override needs_input — the TUI redraws
+      // include stale text that could match processing patterns
       if (rule.status === 'processing') {
+        if (this.currentStatus === 'needs_input') return
         // Clear any pending failed count
         this.failedMatchCount = 0
         this.tryTransition('processing')

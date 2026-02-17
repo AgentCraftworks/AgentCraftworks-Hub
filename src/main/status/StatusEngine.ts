@@ -111,7 +111,13 @@ export class StatusEngine {
             clearTimeout(this.oscIdleTimer)
             this.oscIdleTimer = null
           }
-          this.store.updateStatus(this.sessionId, 'processing')
+          // Don't override needs_input — user is being asked a question
+          {
+            const session = this.store.get(this.sessionId)
+            if (!session || session.status !== 'needs_input') {
+              this.store.updateStatus(this.sessionId, 'processing')
+            }
+          }
           break
         case 0: {
           // hidden — agent turn complete or idle
@@ -124,10 +130,14 @@ export class StatusEngine {
             // Agent sessions: debounce to avoid mid-turn flicker when
             // CLI clears progress between individual tool calls.
             // If no new processing signal arrives within 800ms, commit idle.
+            // But don't override needs_input — the user is being asked a question.
             if (this.oscIdleTimer) clearTimeout(this.oscIdleTimer)
             this.oscIdleTimer = setTimeout(() => {
               this.oscIdleTimer = null
-              this.store.updateStatus(this.sessionId, 'agent_ready')
+              const current = this.store.get(this.sessionId)
+              if (current && current.status !== 'needs_input') {
+                this.store.updateStatus(this.sessionId, 'agent_ready')
+              }
             }, 800)
           }
           break
