@@ -325,6 +325,43 @@ describe('SystemB', () => {
     })
   })
 
+  describe('needs_input cooldown', () => {
+    it('clearNeedsInput prevents re-entry for cooldown period', () => {
+      // Get into needs_input
+      systemB.feed('Asking user something')
+      vi.advanceTimersByTime(600)
+      expect(statusChanges).toContain('needs_input')
+      statusChanges.length = 0
+
+      // OSC signal cleared needs_input — tell SystemB
+      systemB.clearNeedsInput()
+
+      // TUI redraw still contains stale "Asking user" text
+      systemB.feed('Asking user something')
+      vi.advanceTimersByTime(600)
+
+      // Should NOT re-enter needs_input during cooldown
+      expect(statusChanges).not.toContain('needs_input')
+    })
+
+    it('needs_input is allowed again after cooldown expires', () => {
+      systemB.feed('Asking user something')
+      vi.advanceTimersByTime(600)
+      expect(statusChanges).toContain('needs_input')
+      statusChanges.length = 0
+
+      systemB.clearNeedsInput()
+
+      // Wait for cooldown to expire (3 seconds)
+      vi.advanceTimersByTime(3000)
+
+      // Now a fresh needs_input should work
+      systemB.feed('Asking user a new question')
+      vi.advanceTimersByTime(600)
+      expect(statusChanges).toContain('needs_input')
+    })
+  })
+
   describe('dispose', () => {
     it('cleans up timers and listeners', () => {
       systemB.feed('❯ ') // starts a silence timer

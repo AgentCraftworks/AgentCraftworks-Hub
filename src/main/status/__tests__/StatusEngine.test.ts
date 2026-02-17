@@ -272,6 +272,28 @@ describe('StatusEngine OSC progress handling', () => {
     engine.dispose()
   })
 
+  it('stale TUI redraws with needs_input text do not re-enter needs_input after OSC clears it', () => {
+    const { store, sessionId } = createStoreWithSession('copilot-cli')
+    store.updateStatus(sessionId, 'agent_ready')
+    store.updateStatus(sessionId, 'needs_input')
+    const engine = new StatusEngine(sessionId, 'pty-1', store)
+
+    // OSC state 3 clears needs_input → processing
+    engine.feed('\x1b]9;4;3;0\x07')
+    expect(store.get(sessionId)?.status).toBe('processing')
+
+    // TUI redraws the screen — stale "Asking user" text is still visible
+    engine.feed('Asking user Which color?\nOther (type your answer)')
+    expect(store.get(sessionId)?.status).toBe('processing') // NOT needs_input
+
+    // Copilot finishes processing
+    engine.feed('\x1b]9;4;0;0\x07')
+    vi.advanceTimersByTime(800)
+    expect(store.get(sessionId)?.status).toBe('agent_ready')
+
+    engine.dispose()
+  })
+
   it('OSC title is ignored for shell sessions', () => {
     const { store, sessionId } = createStoreWithSession('shell')
     store.updateStatus(sessionId, 'agent_ready')

@@ -51,6 +51,7 @@ export class SystemB extends EventEmitter {
   private failedMatchCount = 0
   private failedFirstMatchTime = 0
   private agentDetected = false
+  private needsInputCooldownUntil = 0
 
   feed(data: string): void {
     // Update rolling buffer
@@ -158,7 +159,9 @@ export class SystemB extends EventEmitter {
       }
 
       // needs_input is urgent — override hold timer to draw attention immediately
+      // But respect cooldown after OSC cleared needs_input (stale TUI redraws)
       if (rule.status === 'needs_input') {
+        if (Date.now() < this.needsInputCooldownUntil) return
         this.lastTransitionTime = 0 // Reset hold to force immediate transition
         this.tryTransition('needs_input')
         return
@@ -167,6 +170,18 @@ export class SystemB extends EventEmitter {
       // All other statuses: apply with hold check
       this.tryTransition(rule.status)
       return // First matching rule wins
+    }
+  }
+
+  /**
+   * Called by StatusEngine when an authoritative signal (OSC progress) clears
+   * needs_input. Prevents SystemB from re-entering needs_input due to stale
+   * TUI redraws that still contain the question text.
+   */
+  clearNeedsInput(): void {
+    this.needsInputCooldownUntil = Date.now() + 3000
+    if (this.currentStatus === 'needs_input') {
+      this.currentStatus = null // Allow next transition without same-status check
     }
   }
 

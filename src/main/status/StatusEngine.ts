@@ -112,8 +112,13 @@ export class StatusEngine {
             this.oscIdleTimer = null
           }
           // OSC progress is authoritative — always transition to processing.
-          // This clears needs_input when the user answers and Copilot resumes thinking.
-          // (SystemB's processing guard handles stale TUI redraw noise separately.)
+          // If leaving needs_input, tell SystemB to suppress stale TUI redraws.
+          {
+            const session = this.store.get(this.sessionId)
+            if (session?.status === 'needs_input') {
+              this.systemB.clearNeedsInput()
+            }
+          }
           this.store.updateStatus(this.sessionId, 'processing')
           break
         case 0: {
