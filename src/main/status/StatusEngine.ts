@@ -88,7 +88,7 @@ export class StatusEngine {
       let clean = title.trim()
       // Strip Copilot CLI's emoji prefix (🤖) from the title to get just the intent
       clean = clean.replace(/^🤖\s*/, '').replace(/^Copilot:\s*/i, '')
-      if (clean && clean.length < 100 && !clean.includes('\x1b') && !clean.includes('\x07')) {
+      if (clean && clean.length >= 3 && clean.length < 100 && !clean.includes('\x1b') && !clean.includes('\x07')) {
         // Don't overwrite activity with just the app name
         if (clean === 'GitHub Copilot' || clean === 'Copilot') return
         this.store.updateActivity(this.sessionId, clean)

@@ -18,8 +18,10 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
   const [showForm, setShowForm] = useState(false)
   const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [pendingPrefill, setPendingPrefill] = useState<AgentProfile | null>(null)
   const popupRef = useRef<HTMLDivElement>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
+  const groupPickerRef = useRef<HTMLDivElement>(null)
 
   const openGroup: AgentGroup | undefined = openGroupIndex !== null ? groups[openGroupIndex] : undefined
 
@@ -55,19 +57,31 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
     return () => window.removeEventListener('mousedown', handleClick)
   }, [openGroupIndex])
 
-  // Handle prefill: open first group and show form with pre-filled values
+  // Handle prefill: show group picker so user chooses where to save
   useEffect(() => {
     if (!prefillAgent) return
-    // Open the first group (or create one if none exist)
-    if (groups.length === 0) {
-      const newGroup: AgentGroup = { id: uuidv4(), name: 'Agents', agents: [] }
-      saveGroups([newGroup])
-    }
-    setOpenGroupIndex(0)
-    setEditingAgent(prefillAgent)
-    setShowForm(true)
+    setPendingPrefill(prefillAgent)
     onPrefillConsumed?.()
   }, [prefillAgent])
+
+  const handlePickGroup = useCallback((groupIndex: number) => {
+    if (!pendingPrefill) return
+    setOpenGroupIndex(groupIndex)
+    setEditingAgent(pendingPrefill)
+    setShowForm(true)
+    setPendingPrefill(null)
+  }, [pendingPrefill])
+
+  const handlePickNewGroup = useCallback(() => {
+    if (!pendingPrefill) return
+    const newGroup: AgentGroup = { id: uuidv4(), name: 'New Group', agents: [] }
+    const updated = [...groups, newGroup]
+    saveGroups(updated)
+    setOpenGroupIndex(updated.length - 1)
+    setEditingAgent(pendingPrefill)
+    setShowForm(true)
+    setPendingPrefill(null)
+  }, [pendingPrefill, groups, saveGroups])
 
   // --- Tab click ---
   const handleTabClick = useCallback((index: number) => {
@@ -202,6 +216,55 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
 
   return (
     <div className="flex h-full shrink-0">
+      {/* Group picker — shown when saving an agent from a session */}
+      {pendingPrefill && (
+        <div
+          ref={groupPickerRef}
+          className="w-[220px] h-full flex flex-col border-l border-[var(--bg-hover)]"
+          style={{ background: 'var(--bg-secondary)' }}
+        >
+          <div className="p-3 border-b border-[var(--bg-hover)]">
+            <div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+              Save Agent To
+            </div>
+            <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+              {pendingPrefill.name}
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto px-1 py-1">
+            {groups.map((group, idx) => (
+              <button
+                key={group.id}
+                onClick={() => handlePickGroup(idx)}
+                className="w-full text-left px-3 py-2 mb-0.5 rounded text-sm hover:bg-[var(--bg-hover)] transition-colors"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                {group.name}
+                <span className="text-xs ml-1" style={{ color: 'var(--text-muted)' }}>
+                  ({group.agents.length})
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="p-2 border-t border-[var(--bg-hover)] flex gap-2">
+            <button
+              onClick={handlePickNewGroup}
+              className="flex-1 px-2 py-1.5 text-sm rounded border border-[var(--bg-hover)] hover:bg-[var(--bg-hover)] transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              + New Group
+            </button>
+            <button
+              onClick={() => setPendingPrefill(null)}
+              className="px-2 py-1.5 text-sm rounded border border-[var(--bg-hover)] hover:bg-[var(--bg-hover)] transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Popup panel (appears to the left of tabs) */}
       {openGroupIndex !== null && openGroup && (
         <div

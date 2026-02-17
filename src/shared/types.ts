@@ -79,7 +79,8 @@ export interface AgentProfile {
   args: string[]
   env?: Record<string, string>
   cwdMode: 'activeSession'
-  launchTarget: 'currentTab' | 'newTab'
+  launchTarget: 'currentTab' | 'newTab' | 'path'
+  cwdPath?: string
 }
 
 export interface AgentGroup {

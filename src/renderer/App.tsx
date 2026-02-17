@@ -22,7 +22,6 @@ export function App(): JSX.Element {
   const [prefillAgent, setPrefillAgent] = useState<AgentProfile | null>(null)
 
   const handleCreateAgentFromSession = useCallback((session: Session) => {
-    // Build a pre-filled agent profile from the session's info
     const command = session.agentCommand || ''
     const args = session.agentArgs || []
     const agent: AgentProfile = {
@@ -32,7 +31,8 @@ export function App(): JSX.Element {
       args,
       env: session.agentEnv,
       cwdMode: 'activeSession',
-      launchTarget: session.folderPath ? 'newTab' : 'currentTab',
+      launchTarget: 'path',
+      cwdPath: session.folderPath || '',
     }
     setPrefillAgent(agent)
   }, [])

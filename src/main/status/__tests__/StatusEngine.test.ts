@@ -225,6 +225,21 @@ describe('StatusEngine OSC progress handling', () => {
     engine.dispose()
   })
 
+  it('OSC title ignores short titles (< 3 chars) for agent sessions', () => {
+    const { store, sessionId } = createStoreWithSession('copilot-cli')
+    store.updateStatus(sessionId, 'agent_ready')
+    store.updateActivity(sessionId, 'Real activity')
+    const engine = new StatusEngine(sessionId, 'pty-1', store)
+
+    engine.feed('\x1b]2;a\x07')
+    expect(store.get(sessionId)?.lastActivity).toBe('Real activity')
+
+    engine.feed('\x1b]2;ab\x07')
+    expect(store.get(sessionId)?.lastActivity).toBe('Real activity')
+
+    engine.dispose()
+  })
+
   it('OSC title is ignored for shell sessions', () => {
     const { store, sessionId } = createStoreWithSession('shell')
     store.updateStatus(sessionId, 'agent_ready')
