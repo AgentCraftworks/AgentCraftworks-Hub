@@ -28,13 +28,24 @@ describe('mapStatusToUI', () => {
   })
 
   describe('idle status (amber, static)', () => {
-    it.each(['agent_launching', 'agent_ready', 'needs_input'] as SessionStatus[])('%s → idle', (status) => {
+    it.each(['agent_launching', 'agent_ready'] as SessionStatus[])('%s → idle', (status) => {
       const ui = mapStatusToUI(status)
       expect(ui.label).toBe('idle')
       expect(ui.dotVisible).toBe(true)
       expect(ui.dotColor).toBe('--idle')
       expect(ui.dotAnimation).toBe('none')
       expect(ui.barColor).toBe('--idle')
+    })
+  })
+
+  describe('attention status (orange, fast pulse)', () => {
+    it('needs_input → attention', () => {
+      const ui = mapStatusToUI('needs_input')
+      expect(ui.label).toBe('attention')
+      expect(ui.dotVisible).toBe(true)
+      expect(ui.dotColor).toBe('--attention')
+      expect(ui.dotAnimation).toBe('pulse-fast')
+      expect(ui.barColor).toBe('--attention')
     })
   })
 

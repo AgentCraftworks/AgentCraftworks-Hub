@@ -79,6 +79,13 @@ export class SdkSessionManager {
         sdkLog(`SDK connection: ${change.previousState} → ${change.currentState} (${change.reason ?? ''})`)
       })
 
+      // Detect when the agent asks the user a question → needs_input
+      client.onUserInputRequested((info) => {
+        sdkLog(`User input requested for session ${sessionId}: ${info.question}`)
+        this.store.updateStatus(sessionId, 'needs_input')
+        this.store.updateActivity(sessionId, info.question)
+      })
+
       this.clients.set(sessionId, client)
 
       // Establish TCP connection to the embedded server

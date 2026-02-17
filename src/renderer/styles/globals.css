@@ -14,6 +14,7 @@
   --running: #3fb950;
   --error: #ff4444;
   --idle: #ffb800;
+  --attention: #ff6a33;
 
   --font-mono: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', monospace;
   --font-ui: system-ui, -apple-system, sans-serif;

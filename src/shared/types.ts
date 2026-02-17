@@ -12,7 +12,7 @@ export type SessionStatus =
 
 export type AgentType = 'copilot-cli' | 'claude-code' | 'shell'
 
-export type UIStatusLabel = 'shell' | 'running' | 'idle' | 'error'
+export type UIStatusLabel = 'shell' | 'running' | 'idle' | 'attention' | 'error'
 
 // === Session Kind ===
 

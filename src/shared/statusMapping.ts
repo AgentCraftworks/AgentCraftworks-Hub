@@ -32,7 +32,6 @@ export function mapStatusToUI(status: SessionStatus): UIStatusIndicator {
 
     case 'agent_launching':
     case 'agent_ready':
-    case 'needs_input':
       return {
         label: 'idle',
         dotVisible: true,
@@ -43,6 +42,19 @@ export function mapStatusToUI(status: SessionStatus): UIStatusIndicator {
         bgTintSelected: 'rgba(255, 184, 0, 0.10)',
         bgTintHover: 'rgba(255, 184, 0, 0.07)',
         glowShadow: 'inset 0 0 12px rgba(255, 184, 0, 0.06), 0 0 8px rgba(255, 184, 0, 0.03)'
+      }
+
+    case 'needs_input':
+      return {
+        label: 'attention',
+        dotVisible: true,
+        dotColor: '--attention',
+        dotAnimation: 'pulse-fast',
+        barColor: '--attention',
+        bgTint: 'rgba(255, 106, 51, 0.06)',
+        bgTintSelected: 'rgba(255, 106, 51, 0.12)',
+        bgTintHover: 'rgba(255, 106, 51, 0.09)',
+        glowShadow: 'inset 0 0 12px rgba(255, 106, 51, 0.08), 0 0 8px rgba(255, 106, 51, 0.04)'
       }
 
     case 'failed':
