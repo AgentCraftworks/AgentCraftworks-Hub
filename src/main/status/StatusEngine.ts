@@ -145,7 +145,6 @@ export class StatusEngine {
               this.oscIdleTimer = null
               const current = this.store.get(this.sessionId)
               if (!current) return
-              // OSC state 0 is authoritative — clear any status including needs_input
               if (current.status === 'needs_input') {
                 this.systemB.clearNeedsInput()
               }
@@ -178,12 +177,6 @@ export class StatusEngine {
     // System B status: only use if System A is not active
     this.systemB.on('status', (status: SessionStatus) => {
       if (!this.systemAActive) {
-        // When needs_input is set, cancel any pending OSC idle timer —
-        // the agent is waiting for user input, not idling.
-        if (status === 'needs_input' && this.oscIdleTimer) {
-          clearTimeout(this.oscIdleTimer)
-          this.oscIdleTimer = null
-        }
         this.store.updateStatus(this.sessionId, status)
       }
     })

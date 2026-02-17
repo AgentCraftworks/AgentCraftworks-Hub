@@ -2,13 +2,25 @@ import type { AgentProfile } from '@shared/types'
 import type { PtyManager } from '../pty/PtyManager'
 import type { SessionStore } from '../session/SessionStore'
 import type { SessionManager } from '../session/SessionManager'
+import { existsSync } from 'fs'
 
 function psEscape(value: string): string {
   return value.replace(/'/g, "''")
 }
 
+// Local dev build of Copilot CLI — used by Tangent only, not installed globally
+const LOCAL_CLI_PATH = 'D:\\git\\tools\\copilot-agent-runtime\\dist-cli\\index.js'
+
 function isCopilotAgent(agent: AgentProfile): boolean {
   return agent.command.includes('copilot')
+}
+
+function resolveCopilotCommand(agent: AgentProfile): string {
+  // Use local dev build if available
+  if (isCopilotAgent(agent) && existsSync(LOCAL_CLI_PATH)) {
+    return `node '${psEscape(LOCAL_CLI_PATH)}'`
+  }
+  return agent.command
 }
 
 export class AgentLauncher {
@@ -48,8 +60,9 @@ export class AgentLauncher {
     const extraArgs = isCopilot ? ['--ui-server', '--port', '0'] : []
     const cmdArgs = [...agent.args, ...extraArgs]
 
+    const resolvedCmd = resolveCopilotCommand(agent)
     const args = cmdArgs.map(a => `'${psEscape(a)}'`).join(' ')
-    const cmd = args ? `${agent.command} ${args}` : agent.command
+    const cmd = args ? `${resolvedCmd} ${args}` : resolvedCmd
     lines.push(cmd)
 
     const payload = lines.join('\r') + '\r'

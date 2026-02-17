@@ -34,6 +34,7 @@ test.afterAll(async () => {
 
 test.describe('needs_input status detection', () => {
   test('ask_user prompt turns session status orange', async () => {
+    test.setTimeout(180000) // 3 minutes for full flow with local CLI build
     // Step 1: Open Demos project folder (Ctrl+3)
     await page.keyboard.press('Control+3')
     await page.waitForTimeout(500)
@@ -44,12 +45,10 @@ test.describe('needs_input status detection', () => {
     await page.waitForTimeout(2000)
     await page.screenshot({ path: 'tests/screenshots/needs-input-02-agent-launched.png' })
 
-    // Step 3: Wait for Copilot to boot — look for the TUI prompt or banner
-    // Give it up to 60 seconds to boot
+    // Step 3: Wait for Copilot to boot — look for the TUI banner
     let copilotReady = false
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 60; i++) {
       await page.waitForTimeout(2000)
-      // Use innerText for readable text from xterm (textContent gives raw spans)
       const termText = await page.locator('.xterm:visible .xterm-screen').first().innerText().catch(() => '')
       if (termText && (termText.includes('Describe a task') || termText.includes('to mention') || termText.includes('GitHub Copilot'))) {
         copilotReady = true
@@ -60,10 +59,13 @@ test.describe('needs_input status detection', () => {
     await page.screenshot({ path: 'tests/screenshots/needs-input-03-copilot-ready.png' })
     expect(copilotReady).toBe(true)
 
+    // Wait for MCP servers and prompt to fully initialize
+    await page.waitForTimeout(5000)
+
     // Step 4: Focus terminal and type the prompt
     const xtermEl = page.locator('.xterm:visible').first()
     await xtermEl.click()
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
 
     // Type the message
     await page.keyboard.type('ask me to choose from 4 different colors', { delay: 30 })
@@ -108,11 +110,10 @@ test.describe('needs_input status detection', () => {
     await page.waitForTimeout(500)
     await page.keyboard.press('Enter')
 
-    // Step 8: Wait for Copilot to resume processing — attention dot should disappear
-    // Give it up to 20 seconds for the status to change
+    // Step 8: Status must clear within 10 seconds of answering
     let cleared = false
     for (let i = 0; i < 10; i++) {
-      await page.waitForTimeout(2000)
+      await page.waitForTimeout(1000)
       const stillPulsing = await page.locator('.animate-pulse-fast').count()
       if (stillPulsing === 0) {
         cleared = true

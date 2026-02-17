@@ -376,18 +376,20 @@ describe('SystemB', () => {
       expect(statusChanges).not.toContain('needs_input')
     })
 
-    it('text-only processing does not override needs_input', () => {
-      // Get into needs_input
+    it('needs_input is suppressed when ❯ prompt is present (stale text)', () => {
+      // Get into needs_input first via a chunk without ❯
       systemB.feed('Asking user something')
       vi.advanceTimersByTime(600)
       expect(statusChanges).toContain('needs_input')
       statusChanges.length = 0
 
-      // "Thinking" text without spinner (stale TUI redraw)
-      systemB.feed('Thinking about it')
+      // TUI redraws full screen: has both "Asked user" AND ❯ prompt
+      // This means the question is historical — suppress needs_input
+      systemB.feed('Asked user: Which color?\n❯ ')
       vi.advanceTimersByTime(600)
 
-      expect(statusChanges).not.toContain('processing')
+      // needs_input should not re-trigger; agent_ready should fire via silence timer
+      expect(statusChanges).not.toContain('needs_input')
     })
   })
 

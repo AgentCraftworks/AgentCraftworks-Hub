@@ -169,8 +169,11 @@ export class SystemB extends EventEmitter {
 
       // needs_input is urgent — override hold timer to draw attention immediately
       // But respect cooldown after OSC cleared needs_input (stale TUI redraws)
+      // Also skip if the ❯ prompt is present — means the agent is idle and the
+      // needs_input text is historical (part of completed conversation)
       if (rule.status === 'needs_input') {
         if (Date.now() < this.needsInputCooldownUntil) return
+        if (/^[❯›]\s*/m.test(clean)) return // Agent prompt visible → stale text
         this.lastTransitionTime = 0 // Reset hold to force immediate transition
         this.tryTransition('needs_input')
         return

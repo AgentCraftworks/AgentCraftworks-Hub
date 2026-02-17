@@ -294,43 +294,58 @@ describe('StatusEngine OSC progress handling', () => {
     engine.dispose()
   })
 
-  it('OSC state 0 clears needs_input when agent finishes (no state 3 in between)', () => {
+  it('OSC state 0 clears needs_input (agent finished after user answered)', () => {
     const { store, sessionId } = createStoreWithSession('copilot-cli')
     store.updateStatus(sessionId, 'agent_ready')
     store.updateStatus(sessionId, 'needs_input')
     const engine = new StatusEngine(sessionId, 'pty-1', store)
 
-    // Short LLM call: no OSC state 3 fired, just state 0 (done)
+    // OSC state 0 fires — agent turn complete
     engine.feed('\x1b]9;4;0;0\x07')
-
-    // needs_input should still be active during debounce (question still on screen)
-    expect(store.get(sessionId)?.status).toBe('needs_input')
-
-    // But SystemB detects the ❯ prompt (no more question text in new output)
-    // Simulate: 800ms debounce fires, and no fresh needs_input text re-applied
     vi.advanceTimersByTime(800)
     expect(store.get(sessionId)?.status).toBe('agent_ready')
 
     engine.dispose()
   })
 
-  it('needs_input cancels pending OSC idle timer', () => {
+  it('OSC state 0 clears needs_input after processing occurred', () => {
     const { store, sessionId } = createStoreWithSession('copilot-cli')
     store.updateStatus(sessionId, 'agent_ready')
-    store.updateStatus(sessionId, 'processing')
+    store.updateStatus(sessionId, 'needs_input')
     const engine = new StatusEngine(sessionId, 'pty-1', store)
 
-    // OSC state 0 fires (turn done, debounce starts)
+    // User answers → Copilot thinks (state 3) → finishes (state 0)
+    engine.feed('\x1b]9;4;3;0\x07')
+    expect(store.get(sessionId)?.status).toBe('processing')
+
+    engine.feed('\x1b]9;4;0;0\x07')
+    vi.advanceTimersByTime(800)
+    expect(store.get(sessionId)?.status).toBe('agent_ready')
+
+    engine.dispose()
+  })
+
+  it('OSC idle timer fires after processing cleared needs_input stale redraw', () => {
+    const { store, sessionId } = createStoreWithSession('copilot-cli')
+    store.updateStatus(sessionId, 'agent_ready')
+    store.updateStatus(sessionId, 'needs_input')
+    const engine = new StatusEngine(sessionId, 'pty-1', store)
+
+    // User answered → Copilot thinks (state 3 sets processingAfterNeedsInput flag)
+    engine.feed('\x1b]9;4;3;0\x07')
+    expect(store.get(sessionId)?.status).toBe('processing')
+
+    // Copilot finishes (state 0), debounce starts
     engine.feed('\x1b]9;4;0;0\x07')
     expect(store.get(sessionId)?.status).toBe('processing') // debounced
 
-    // SystemB detects needs_input BEFORE debounce fires
-    engine.feed('Asking user: Which color?\nOther (type your answer)')
-    expect(store.get(sessionId)?.status).toBe('needs_input')
+    // Stale TUI redraw with "Asked user" text during debounce
+    // SystemB tries needs_input but cooldown blocks it (from state 3 clearNeedsInput)
+    engine.feed('Asked user: Which color?\nOther (type your answer)')
 
-    // The debounce timer should have been cancelled — status stays needs_input
+    // The debounce timer fires and transitions to agent_ready
     vi.advanceTimersByTime(800)
-    expect(store.get(sessionId)?.status).toBe('needs_input')
+    expect(store.get(sessionId)?.status).toBe('agent_ready')
 
     engine.dispose()
   })
