@@ -25,6 +25,14 @@ sessionManager.setSdkManager(sdkSessionManager)
 const agentStore = new AgentStore()
 const agentLauncher = new AgentLauncher(ptyManager, sessionStore, sessionManager)
 
+// When an agent is auto-detected from output (user typed `copilot` manually),
+// attach the SDK to watch for the ui-server port
+sessionStore.on('agent-promoted', ({ id, agentType, ptyId }: { id: string; agentType: string; ptyId: string }) => {
+  if (agentType === 'copilot-cli' && ptyId) {
+    sdkSessionManager.attachToSession(id, ptyId)
+  }
+})
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,

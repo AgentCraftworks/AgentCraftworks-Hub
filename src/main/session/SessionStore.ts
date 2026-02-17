@@ -80,6 +80,8 @@ export class SessionStore extends EventEmitter {
       session.updatedAt = Date.now()
       this.emit('updated', session)
     }
+
+    this.emit('agent-promoted', { id, agentType, ptyId: session.ptyId })
   }
 
   /**
@@ -91,6 +93,18 @@ export class SessionStore extends EventEmitter {
 
     session.name = newName
     session.isRenamed = true
+    session.updatedAt = Date.now()
+    this.emit('updated', session)
+  }
+
+  /**
+   * Auto-set session name (non-sticky). Skipped if user has manually renamed.
+   */
+  setAutoName(id: string, name: string): void {
+    const session = this.sessions.get(id)
+    if (!session || session.isRenamed) return
+
+    session.name = name
     session.updatedAt = Date.now()
     this.emit('updated', session)
   }

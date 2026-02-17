@@ -11,6 +11,7 @@ interface SessionItemProps {
   onClose: () => void
   onRename: (name: string) => void
   onRenameCancel: () => void
+  onCreateAgent?: () => void
 }
 
 export function SessionItem({
@@ -21,11 +22,13 @@ export function SessionItem({
   onSelect,
   onClose,
   onRename,
-  onRenameCancel
+  onRenameCancel,
+  onCreateAgent
 }: SessionItemProps) {
   const ui = mapStatusToUI(session.status)
   const [renameValue, setRenameValue] = useState(session.name)
   const renameInputRef = useRef<HTMLInputElement>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   const bgStyle = isActive ? ui.bgTintSelected : ui.bgTint
   const borderLeft = ui.barColor ? `3px solid var(${ui.barColor})` : '3px solid transparent'
@@ -60,9 +63,28 @@ export function SessionItem({
     }
   }
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ x: e.clientX, y: e.clientY })
+  }
+
+  // Close context menu on outside click or scroll
+  useEffect(() => {
+    if (!contextMenu) return
+    const close = () => setContextMenu(null)
+    window.addEventListener('mousedown', close)
+    window.addEventListener('scroll', close, true)
+    return () => {
+      window.removeEventListener('mousedown', close)
+      window.removeEventListener('scroll', close, true)
+    }
+  }, [contextMenu])
+
   return (
     <div
       onClick={onSelect}
+      onContextMenu={handleContextMenu}
       className={`relative flex items-center gap-2 px-3 py-2 mb-1 rounded cursor-pointer group ${barAnimClass} ${isHighlighted ? 'ring-1 ring-[var(--accent)]' : ''}`}
       style={{
         background: bgStyle,
@@ -142,6 +164,36 @@ export function SessionItem({
         >
           ×
         </button>
+      )}
+
+      {/* Context menu */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 py-1 rounded shadow-lg border border-[var(--bg-hover)] min-w-[180px]"
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+            background: 'var(--bg-secondary)',
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {onCreateAgent && (
+            <button
+              onClick={() => { setContextMenu(null); onCreateAgent() }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--bg-hover)] transition-colors"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Save as Agent...
+            </button>
+          )}
+          <button
+            onClick={() => { setContextMenu(null); onClose() }}
+            className="w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--bg-hover)] transition-colors"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            Close Session
+          </button>
+        </div>
       )}
     </div>
   )

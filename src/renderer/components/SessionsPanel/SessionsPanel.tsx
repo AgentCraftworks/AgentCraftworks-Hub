@@ -10,6 +10,7 @@ interface SessionsPanelProps {
   onClose: (id: string) => void
   onCreate: () => void
   onRename: (id: string, name: string) => void
+  onCreateAgent?: (session: Session) => void
   width: number
   onWidthChange: (w: number) => void
   onCollapse: () => void
@@ -20,7 +21,7 @@ const MAX_WIDTH = 500
 
 const RECENT_THRESHOLD_MS = 48 * 60 * 60 * 1000 // 48 hours
 
-export function SessionsPanel({ sessions, activeId, onSelect, onClose, onCreate, onRename, width, onWidthChange, onCollapse }: SessionsPanelProps) {
+export function SessionsPanel({ sessions, activeId, onSelect, onClose, onCreate, onRename, onCreateAgent, width, onWidthChange, onCollapse }: SessionsPanelProps) {
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1)
   const [filterOpen, setFilterOpen] = useState(false)
   const [filterValue, setFilterValue] = useState('')
@@ -198,6 +199,7 @@ export function SessionsPanel({ sessions, activeId, onSelect, onClose, onCreate,
             onClose={() => onClose(session.id)}
             onRename={(name) => handleRename(session.id, name)}
             onRenameCancel={handleRenameCancel}
+            onCreateAgent={onCreateAgent ? () => onCreateAgent(session) : undefined}
           />
         )
       })}

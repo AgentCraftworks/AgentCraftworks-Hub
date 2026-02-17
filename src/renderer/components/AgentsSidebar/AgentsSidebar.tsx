@@ -7,9 +7,11 @@ import type { AgentProfile, AgentGroup } from '@shared/types'
 
 interface AgentsSidebarProps {
   activeSessionId: string | null
+  prefillAgent?: AgentProfile | null
+  onPrefillConsumed?: () => void
 }
 
-export function AgentsSidebar({ activeSessionId }: AgentsSidebarProps) {
+export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed }: AgentsSidebarProps) {
   const { groups, saveGroups, launchAgent } = useAgents()
   const [openGroupIndex, setOpenGroupIndex] = useState<number | null>(null)
   const [editingAgent, setEditingAgent] = useState<AgentProfile | null>(null)
@@ -52,6 +54,20 @@ export function AgentsSidebar({ activeSessionId }: AgentsSidebarProps) {
     window.addEventListener('mousedown', handleClick)
     return () => window.removeEventListener('mousedown', handleClick)
   }, [openGroupIndex])
+
+  // Handle prefill: open first group and show form with pre-filled values
+  useEffect(() => {
+    if (!prefillAgent) return
+    // Open the first group (or create one if none exist)
+    if (groups.length === 0) {
+      const newGroup: AgentGroup = { id: uuidv4(), name: 'Agents', agents: [] }
+      saveGroups([newGroup])
+    }
+    setOpenGroupIndex(0)
+    setEditingAgent(prefillAgent)
+    setShowForm(true)
+    onPrefillConsumed?.()
+  }, [prefillAgent])
 
   // --- Tab click ---
   const handleTabClick = useCallback((index: number) => {

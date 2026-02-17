@@ -30,9 +30,10 @@ function stripAnsi(text: string): string {
 }
 
 // Agent detection patterns for output-based agent promotion
+// These patterns match the actual TUI banner output, not casual mentions in dir/ls
 const AGENT_DETECT_PATTERNS: { pattern: RegExp; agentType: 'copilot-cli' | 'claude-code' }[] = [
-  { pattern: /GitHub Copilot|copilot-cli/i, agentType: 'copilot-cli' },
-  { pattern: /Claude Code|claude-code|anthropic/i, agentType: 'claude-code' },
+  { pattern: /GitHub Copilot v\d|Describe a task to get started/i, agentType: 'copilot-cli' },
+  { pattern: /Claude Code|claude-code.*v\d|anthropic/i, agentType: 'claude-code' },
 ]
 
 // Activity extraction — only match when preceded by a clear action indicator

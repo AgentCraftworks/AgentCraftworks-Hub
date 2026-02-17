@@ -175,13 +175,18 @@ export class StatusEngine {
     })
 
     // Agent detected from output — promote the session
+    // Allowed from shell_ready (user typed command manually) or agent_launching (sidebar)
     this.systemB.on('agent-detected', (agentType: 'copilot-cli' | 'claude-code') => {
       const session = this.store.get(this.sessionId)
-      // Only promote if session is in agent_launching state — prevents false
-      // positives when agent names appear in normal shell output (e.g. `dir`)
-      if (session && session.agentType === 'shell' && session.status === 'agent_launching') {
-        this.store.promoteToAgent(this.sessionId, agentType)
-      }
+      if (!session || session.agentType !== 'shell') return
+      if (session.status !== 'shell_ready' && session.status !== 'agent_launching') return
+
+      this.store.promoteToAgent(this.sessionId, agentType)
+      // If the TUI banner is visible, the agent is ready for input
+      this.store.updateStatus(this.sessionId, 'agent_ready')
+
+      // Set a default display name for manually-started agents (non-sticky)
+      this.store.setAutoName(this.sessionId, agentType === 'copilot-cli' ? 'Copilot' : 'Claude Code')
     })
 
   }

@@ -136,11 +136,25 @@ describe('SystemB', () => {
   })
 
   describe('agent detection', () => {
-    it('emits agent-detected for Copilot CLI', () => {
+    it('emits agent-detected for Copilot CLI banner', () => {
       const agents: string[] = []
       systemB.on('agent-detected', (agentType: string) => agents.push(agentType))
-      systemB.feed('Welcome to GitHub Copilot CLI')
+      systemB.feed('GitHub Copilot v0.0.411-0')
       expect(agents).toContain('copilot-cli')
+    })
+
+    it('emits agent-detected for Copilot via task prompt', () => {
+      const agents: string[] = []
+      systemB.on('agent-detected', (agentType: string) => agents.push(agentType))
+      systemB.feed('Describe a task to get started.')
+      expect(agents).toContain('copilot-cli')
+    })
+
+    it('does NOT emit agent-detected for casual mention of GitHub Copilot', () => {
+      const agents: string[] = []
+      systemB.on('agent-detected', (agentType: string) => agents.push(agentType))
+      systemB.feed('GitHub Copilot')
+      expect(agents).toHaveLength(0)
     })
 
     it('emits agent-detected for Claude Code', () => {
@@ -153,8 +167,8 @@ describe('SystemB', () => {
     it('only detects agent once per session', () => {
       const agents: string[] = []
       systemB.on('agent-detected', (agentType: string) => agents.push(agentType))
-      systemB.feed('GitHub Copilot')
-      systemB.feed('GitHub Copilot')
+      systemB.feed('GitHub Copilot v0.0.411-0')
+      systemB.feed('GitHub Copilot v0.0.411-0')
       expect(agents).toHaveLength(1)
     })
   })
