@@ -11,9 +11,9 @@ interface DetectionRule {
 const RULES: DetectionRule[] = [
   { priority: 1, pattern: /PS\s+[A-Za-z]:\\[^>]*>\s*$/, status: 'shell_ready' },
   { priority: 2, pattern: /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⊙◐◑◒◓]/, status: 'processing' },
-  { priority: 3, pattern: /[Tt]hinking|Esc to cancel/, status: 'processing' },
+  { priority: 3, pattern: /[Tt]hinking/, status: 'processing' },
   { priority: 4, pattern: /running tool:|executing command:|Reading file|Writing file/i, status: 'tool_executing' },
-  { priority: 5, pattern: /(y\/n)|continue\?|allow\?|permit\?|approve\?|Enter to confirm|Other \(type your answer\)/i, status: 'needs_input' },
+  { priority: 5, pattern: /(y\/n)|continue\?|allow\?|permit\?|approve\?|Enter to confirm|Other \(type your answer\)|to select/i, status: 'needs_input' },
   { priority: 6, pattern: /^❯\s*/m, status: 'agent_ready' },
   { priority: 7, pattern: /^›\s*/m, status: 'agent_ready' },
   { priority: 8, pattern: /^Error:|^FATAL:|command not found$|ENOENT|CommandNotFoundException/m, status: 'failed' },
@@ -151,6 +151,13 @@ export class SystemB extends EventEmitter {
         // Clear any pending failed count
         this.failedMatchCount = 0
         this.tryTransition('processing')
+        return
+      }
+
+      // needs_input is urgent — override hold timer to draw attention immediately
+      if (rule.status === 'needs_input') {
+        this.lastTransitionTime = 0 // Reset hold to force immediate transition
+        this.tryTransition('needs_input')
         return
       }
 
