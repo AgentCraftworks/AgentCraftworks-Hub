@@ -80,6 +80,11 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
         // Returning false tells xterm to NOT handle the key event,
         // allowing the window-level useKeyboard handler to process it.
         terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+          // Ctrl+Backspace: delete previous word (send ^W to PTY)
+          if (e.ctrlKey && e.key === 'Backspace' && !e.shiftKey && !e.altKey && e.type === 'keydown') {
+            window.tangentAPI.terminal.write(session.id, '\x17')
+            return false
+          }
           if (!e.ctrlKey) return true
           const key = e.key.toLowerCase()
           // Ctrl+V: handled by useKeyboard (clipboard paste to PTY)
