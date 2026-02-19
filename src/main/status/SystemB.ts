@@ -57,6 +57,7 @@ export class SystemB extends EventEmitter {
   private failedFirstMatchTime = 0
   private agentDetected = false
   private needsInputCooldownUntil = 0
+  private lastShellCommand = ''
 
   feed(data: string): void {
     // Update rolling buffer
@@ -93,7 +94,7 @@ export class SystemB extends EventEmitter {
       for (const { pattern, agentType } of AGENT_DETECT_PATTERNS) {
         if (pattern.test(clean)) {
           this.agentDetected = true
-          this.emit('agent-detected', agentType)
+          this.emit('agent-detected', agentType, this.lastShellCommand)
           break
         }
       }
@@ -102,7 +103,8 @@ export class SystemB extends EventEmitter {
     // Extract shell commands from PS prompt lines (e.g., "PS C:\git> cd foo")
     const cmdMatch = clean.match(SHELL_COMMAND_PATTERN)
     if (cmdMatch) {
-      this.emit('command', cmdMatch[1].trim())
+      this.lastShellCommand = cmdMatch[1].trim()
+      this.emit('command', this.lastShellCommand)
     }
 
     // Run detection rules in priority order

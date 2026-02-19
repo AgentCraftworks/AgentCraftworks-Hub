@@ -197,7 +197,7 @@ export class StatusEngine {
 
     // Agent detected from output — promote the session
     // Allowed from shell_ready (user typed command manually) or agent_launching (sidebar)
-    this.systemB.on('agent-detected', (agentType: 'copilot-cli' | 'claude-code') => {
+    this.systemB.on('agent-detected', (agentType: 'copilot-cli' | 'claude-code', shellCommand: string) => {
       const session = this.store.get(this.sessionId)
       if (!session || session.agentType !== 'shell') return
       if (session.status !== 'shell_ready' && session.status !== 'agent_launching') return
@@ -208,6 +208,14 @@ export class StatusEngine {
 
       // Set a default display name for manually-started agents (non-sticky)
       this.store.setAutoName(this.sessionId, agentType === 'copilot-cli' ? 'Copilot' : 'Claude Code')
+
+      // Store the original command/args from the shell prompt for "Save as Agent"
+      if (shellCommand) {
+        const parts = shellCommand.split(/\s+/)
+        const command = parts[0]
+        const args = parts.slice(1)
+        this.store.setAgentLaunchInfo(this.sessionId, command, args)
+      }
     })
 
   }
