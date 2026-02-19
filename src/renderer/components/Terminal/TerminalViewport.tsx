@@ -100,8 +100,12 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
             return true // No selection — let xterm handle (PTY: ^C, SDK: line buffer handles it)
           }
           // Let xterm ignore these — they're app shortcuts
-          if (key === 'b' || key === 'n' || key === 'w' || key === 'tab' ||
+          if (key === 'b' || key === 'n' || key === 'tab' ||
               key === '=' || key === '+' || key === '-' || key === '0') {
+            return false
+          }
+          // Ctrl+Shift+W: close session (app shortcut, don't send to terminal)
+          if (key === 'w' && e.shiftKey) {
             return false
           }
           // Ctrl+Shift+1-9 for agent quick-launch

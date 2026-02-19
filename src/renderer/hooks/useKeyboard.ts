@@ -22,7 +22,8 @@ export interface KeyboardConfig {
  * Shortcuts:
  *   Ctrl+B          Toggle sessions panel visibility
  *   Ctrl+N          New session
- *   Ctrl+W          Close active session
+ *   Ctrl+Shift+W    Close active session
+ *   Ctrl+W          Delete previous word (passed to terminal)
  *   Ctrl+Tab        Next session
  *   Ctrl+Shift+Tab  Previous session
  *   Ctrl+=          Zoom in
@@ -83,8 +84,8 @@ export function useKeyboard(config: KeyboardConfig): void {
         return
       }
 
-      // Ctrl+W: close active session
-      if ((key === 'w' || key === 'W') && !e.shiftKey && !e.altKey) {
+      // Ctrl+Shift+W: close active session (Ctrl+W passes through to terminal for ^W word delete)
+      if ((key === 'w' || key === 'W') && e.shiftKey && !e.altKey) {
         e.preventDefault()
         if (activeId) {
           closeSession(activeId)
