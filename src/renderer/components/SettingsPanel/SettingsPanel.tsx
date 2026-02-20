@@ -35,7 +35,7 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null)
   const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null)
-  const [agentForm, setAgentForm] = useState({ name: '', command: '', args: '', launchTarget: 'currentTab' as AgentProfile['launchTarget'], cwdPath: '' })
+  const [agentForm, setAgentForm] = useState({ name: '', command: '', args: '', cwdPath: '' })
 
   useEffect(() => {
     window.tangentAPI.config.get().then((config: any) => {
@@ -127,14 +127,14 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
       command: '',
       args: [],
       cwdMode: 'activeSession',
-      launchTarget: 'currentTab'
+      launchTarget: 'newTab'
     }
     const updated = folders.map(f =>
       f.id === selectedFolderId ? { ...f, agents: [...f.agents, newAgent] } : f
     )
     saveFolders(updated)
     setEditingAgentId(newAgent.id)
-    setAgentForm({ name: newAgent.name, command: '', args: '', launchTarget: 'currentTab', cwdPath: '' })
+    setAgentForm({ name: newAgent.name, command: '', args: '', cwdPath: '' })
   }, [selectedFolderId, folders, saveFolders])
 
   const handleEditAgent = useCallback((agent: AgentProfile) => {
@@ -143,7 +143,6 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
       name: agent.name,
       command: agent.command,
       args: agent.args.join(' '),
-      launchTarget: agent.launchTarget ?? 'currentTab',
       cwdPath: agent.cwdPath ?? ''
     })
   }, [])
@@ -161,8 +160,8 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
             name: agentForm.name.trim() || 'Untitled',
             command: agentForm.command,
             args: agentForm.args.trim() ? agentForm.args.trim().split(/\s+/) : [],
-            launchTarget: agentForm.launchTarget,
-            cwdPath: agentForm.launchTarget === 'path' ? agentForm.cwdPath : undefined
+            launchTarget: agentForm.cwdPath.trim() ? 'path' as const : 'newTab' as const,
+            cwdPath: agentForm.cwdPath.trim() || undefined
           }
         })
       }
@@ -618,33 +617,30 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="block text-xs" style={{ color: 'var(--text-muted)' }}>Launch Target</label>
-                            <select
-                              value={agentForm.launchTarget}
-                              onChange={(e) => setAgentForm(prev => ({ ...prev, launchTarget: e.target.value as AgentProfile['launchTarget'] }))}
-                              className="w-full text-sm px-2 py-1 rounded"
-                              style={{ color: 'var(--text-primary)', background: 'var(--bg-primary)', border: '1px solid var(--bg-hover)', outline: 'none' }}
-                            >
-                              <option value="currentTab">Current Tab</option>
-                              <option value="newTab">New Tab</option>
-                              <option value="path">Path</option>
-                            </select>
-                          </div>
-                          {agentForm.launchTarget === 'path' && (
-                            <div className="space-y-1">
-                              <label className="block text-xs" style={{ color: 'var(--text-muted)' }}>Folder Path</label>
+                            <label className="block text-xs" style={{ color: 'var(--text-muted)' }}>Working Directory</label>
+                            <div className="flex gap-1">
                               <input
                                 type="text"
                                 value={agentForm.cwdPath}
                                 onChange={(e) => setAgentForm(prev => ({ ...prev, cwdPath: e.target.value }))}
-                                placeholder="/path/to/folder"
-                                className="w-full text-sm px-2 py-1 rounded"
+                                placeholder="e.g. D:\git\myproject"
+                                className="flex-1 text-sm px-2 py-1 rounded"
                                 style={{ color: 'var(--text-primary)', background: 'var(--bg-primary)', border: '1px solid var(--bg-hover)', outline: 'none' }}
                                 onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
                                 onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--bg-hover)')}
                               />
+                              <button
+                                onClick={async () => {
+                                  const selected = await (window as any).tangentAPI.dialog.openFolder()
+                                  if (selected) setAgentForm(prev => ({ ...prev, cwdPath: selected }))
+                                }}
+                                className="px-2 py-1 text-xs rounded shrink-0 cursor-pointer"
+                                style={{ color: 'var(--text-secondary)', border: '1px solid var(--bg-hover)', background: 'none' }}
+                              >
+                                Browse
+                              </button>
                             </div>
-                          )}
+                          </div>
                           <div className="flex gap-2 pt-1">
                             <button
                               onClick={handleSaveAgent}

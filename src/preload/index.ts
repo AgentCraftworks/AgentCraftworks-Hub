@@ -91,6 +91,10 @@ const tangentAPI = {
     setEditor: (editor: string) => ipcRenderer.invoke('shell:setEditor', { editor })
   },
 
+  fs: {
+    suggestDirs: (partial: string): Promise<string[]> => ipcRenderer.invoke('fs:suggestDirs', partial)
+  },
+
   dialog: {
     openFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:openFolder'),
     openFile: (filters?: { name: string; extensions: string[] }[]): Promise<string | null> =>

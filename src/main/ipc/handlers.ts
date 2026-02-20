@@ -1,5 +1,7 @@
 import { ipcMain, BrowserWindow, dialog, shell } from 'electron'
 import { spawn } from 'child_process'
+import { readdirSync, statSync } from 'fs'
+import { join, dirname, basename } from 'path'
 import type { SessionManager } from '../session/SessionManager'
 import type { SessionStore } from '../session/SessionStore'
 import type { PtyManager } from '../pty/PtyManager'
@@ -186,5 +188,31 @@ export function registerIpcHandlers(deps: {
     zoomLevel = Math.max(8, Math.min(32, level))
     getWindow()?.webContents.send('app:zoomChanged', zoomLevel)
     return zoomLevel
+  })
+
+  // --- File system ---
+  ipcMain.handle('fs:suggestDirs', (_, partial: string): string[] => {
+    try {
+      if (!partial) return []
+      const normalized = partial.replace(/\//g, '\\')
+      // If ends with separator, list children of that directory
+      if (normalized.endsWith('\\')) {
+        const entries = readdirSync(normalized, { withFileTypes: true })
+        return entries
+          .filter(e => e.isDirectory())
+          .map(e => join(normalized, e.name))
+          .slice(0, 20)
+      }
+      // Otherwise, list siblings matching the typed prefix
+      const dir = dirname(normalized)
+      const prefix = basename(normalized).toLowerCase()
+      const entries = readdirSync(dir, { withFileTypes: true })
+      return entries
+        .filter(e => e.isDirectory() && e.name.toLowerCase().startsWith(prefix))
+        .map(e => join(dir, e.name))
+        .slice(0, 20)
+    } catch {
+      return []
+    }
   })
 }
