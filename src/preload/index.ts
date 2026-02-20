@@ -94,13 +94,19 @@ const tangentAPI = {
   dialog: {
     openFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:openFolder'),
     openFile: (filters?: { name: string; extensions: string[] }[]): Promise<string | null> =>
-      ipcRenderer.invoke('dialog:openFile', filters)
+      ipcRenderer.invoke('dialog:openFile', filters),
+    saveFile: (options?: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }): Promise<string | null> =>
+      ipcRenderer.invoke('dialog:saveFile', options)
   },
 
   config: {
     get: () => ipcRenderer.invoke('config:get'),
     update: (key: string, value: unknown) => ipcRenderer.invoke('config:update', { key, value }),
     openFile: () => ipcRenderer.invoke('config:openFile'),
+    exportConfig: () => ipcRenderer.invoke('config:export'),
+    importConfig: (bundle: any) => ipcRenderer.invoke('config:import', bundle),
+    writeExport: (filePath: string, bundle: any) => ipcRenderer.invoke('config:writeExport', filePath, bundle),
+    readImport: (filePath: string) => ipcRenderer.invoke('config:readImport', filePath),
     onChanged: (cb: (config: any) => void) => {
       const handler = (_: any, config: any) => cb(config)
       ipcRenderer.on('config:changed', handler)

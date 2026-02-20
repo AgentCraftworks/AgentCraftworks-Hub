@@ -22,6 +22,21 @@ npm run dev        # Development mode with HMR
 npm run dist       # Build installer for your platform
 ```
 
+## CLI
+
+Install: `npm link` (or run `scripts/install-cli.ps1`)
+
+Commands:
+```
+tangent help
+tangent config get
+tangent config set <key> <value>
+tangent projects list
+tangent projects add <name>
+tangent agents list
+tangent agents add <folder> --name <name> --command <cmd>
+```
+
 ## Creating a Release
 
 For maintainers — tag a version and push to trigger the CI/CD pipeline:

@@ -92,7 +92,50 @@ export function registerIpcHandlers(deps: {
     getWindow()?.webContents.send('config:changed', config)
   })
 
+  // --- Config Import/Export ---
+  ipcMain.handle('config:export', async () => {
+    const config = configStore.getAll()
+    const agents = agentStore.getGroups()
+    return { version: 1, config, agents }
+  })
+
+  ipcMain.handle('config:import', async (_, bundle: { version?: number; config?: any; agents?: any }) => {
+    if (bundle.config && typeof bundle.config === 'object') {
+      configStore.save(bundle.config)
+    }
+    if (bundle.agents && Array.isArray(bundle.agents)) {
+      await agentStore.save(bundle.agents)
+      getWindow()?.webContents.send('agents:updated', bundle.agents)
+    }
+    const config = configStore.getAll()
+    getWindow()?.webContents.send('config:changed', config)
+    return { config, agents: agentStore.getGroups() }
+  })
+
+  ipcMain.handle('config:writeExport', async (_, filePath: string, bundle: any) => {
+    const { writeFile } = await import('fs/promises')
+    await writeFile(filePath, JSON.stringify(bundle, null, 2), 'utf-8')
+  })
+
+  ipcMain.handle('config:readImport', async (_, filePath: string) => {
+    const { readFile } = await import('fs/promises')
+    const raw = await readFile(filePath, 'utf-8')
+    return JSON.parse(raw)
+  })
+
   // --- Dialog ---
+  ipcMain.handle('dialog:saveFile', async (_, options?: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => {
+    const win = getWindow()
+    if (!win) return null
+    const result = await dialog.showSaveDialog(win, {
+      defaultPath: options?.defaultPath,
+      filters: options?.filters || [],
+      title: 'Save file'
+    })
+    if (result.canceled || !result.filePath) return null
+    return result.filePath
+  })
+
   ipcMain.handle('dialog:openFolder', async () => {
     const win = getWindow()
     if (!win) return null

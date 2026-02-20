@@ -355,6 +355,67 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                   Open ~/.tangent/config.json in your editor
                 </p>
               </div>
+
+              {/* Import / Export Config */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                  Import / Export
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      const bundle = await window.tangentAPI.config.exportConfig()
+                      const filePath = await window.tangentAPI.dialog.saveFile({
+                        defaultPath: 'tangent-config.json',
+                        filters: [{ name: 'JSON', extensions: ['json'] }]
+                      })
+                      if (!filePath) return
+                      // Write the exported JSON to the chosen path via IPC
+                      await window.tangentAPI.config.writeExport(filePath, bundle)
+                    }}
+                    className="px-3 py-1.5 text-xs rounded cursor-pointer"
+                    style={{
+                      color: 'var(--text-primary)',
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--bg-hover)'
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                  >
+                    Export Config
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const filePath = await window.tangentAPI.dialog.openFile([
+                        { name: 'JSON', extensions: ['json'] }
+                      ])
+                      if (!filePath) return
+                      const bundle = await window.tangentAPI.config.readImport(filePath)
+                      if (!bundle) return
+                      const result = await window.tangentAPI.config.importConfig(bundle)
+                      if (result.config) {
+                        if (result.config.editor) setEditor(result.config.editor)
+                        if (result.config.startFolder) setStartFolder(result.config.startFolder)
+                        if (result.config.fontSize) handleFontSizeChange(result.config.fontSize)
+                      }
+                      if (result.agents) setFolders(result.agents)
+                    }}
+                    className="px-3 py-1.5 text-xs rounded cursor-pointer"
+                    style={{
+                      color: 'var(--text-primary)',
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--bg-hover)'
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                  >
+                    Import Config
+                  </button>
+                </div>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Export or import config.json and agents.json as a single file
+                </p>
+              </div>
             </div>
           )}
           {activeTab === 'projects' && (

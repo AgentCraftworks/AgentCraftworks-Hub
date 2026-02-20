@@ -137,6 +137,125 @@ export class PipeServer {
         return { result: 'ok' }
       }
 
+      case 'agents.edit': {
+        const agentName = request.params?.name as string | undefined
+        const updates = request.params?.updates as Partial<AgentProfile> | undefined
+        if (!agentName) return { error: 'Missing "name" param' }
+        if (!updates || Object.keys(updates).length === 0) {
+          return { error: 'Missing "updates" param' }
+        }
+        const allFolders = this.agentStore.getGroups()
+        let found = false
+        for (const f of allFolders) {
+          const agent = f.agents.find((a) => a.name === agentName)
+          if (agent) {
+            if (updates.name) agent.name = updates.name
+            if (updates.command) agent.command = updates.command
+            if (updates.args) agent.args = updates.args
+            found = true
+            break
+          }
+        }
+        if (!found) return { error: `Agent "${agentName}" not found` }
+        this.agentStore.save(allFolders).catch((err) => {
+          console.warn('[PipeServer] Failed to save agents:', err)
+        })
+        return { result: 'ok' }
+      }
+
+      case 'agents.remove': {
+        const removeName = request.params?.name as string | undefined
+        if (!removeName) return { error: 'Missing "name" param' }
+        const groups = this.agentStore.getGroups()
+        let removed = false
+        for (const f of groups) {
+          const idx = f.agents.findIndex((a) => a.name === removeName)
+          if (idx !== -1) {
+            f.agents.splice(idx, 1)
+            removed = true
+            break
+          }
+        }
+        if (!removed) return { error: `Agent "${removeName}" not found` }
+        this.agentStore.save(groups).catch((err) => {
+          console.warn('[PipeServer] Failed to save agents:', err)
+        })
+        return { result: 'ok' }
+      }
+
+      case 'projects.list':
+        return {
+          result: this.agentStore.getGroups().map((f) => ({
+            id: f.id,
+            name: f.name,
+            agentCount: f.agents.length
+          }))
+        }
+
+      case 'projects.add': {
+        const projName = request.params?.name as string | undefined
+        if (!projName) return { error: 'Missing "name" param' }
+        const projFolders = this.agentStore.getGroups()
+        if (projFolders.find((f) => f.name === projName)) {
+          return { error: `Project "${projName}" already exists` }
+        }
+        projFolders.push({ id: uuid(), name: projName, agents: [] })
+        this.agentStore.save(projFolders).catch((err) => {
+          console.warn('[PipeServer] Failed to save agents:', err)
+        })
+        return { result: 'ok' }
+      }
+
+      case 'projects.remove': {
+        const projRemoveName = request.params?.name as string | undefined
+        if (!projRemoveName) return { error: 'Missing "name" param' }
+        const projRemFolders = this.agentStore.getGroups()
+        const projIdx = projRemFolders.findIndex((f) => f.name === projRemoveName)
+        if (projIdx === -1) return { error: `Project "${projRemoveName}" not found` }
+        projRemFolders.splice(projIdx, 1)
+        this.agentStore.save(projRemFolders).catch((err) => {
+          console.warn('[PipeServer] Failed to save agents:', err)
+        })
+        return { result: 'ok' }
+      }
+
+      case 'projects.rename': {
+        const oldName = request.params?.oldName as string | undefined
+        const newName = request.params?.newName as string | undefined
+        if (!oldName || !newName) return { error: 'Missing "oldName" or "newName" param' }
+        const renameFolders = this.agentStore.getGroups()
+        const target = renameFolders.find((f) => f.name === oldName)
+        if (!target) return { error: `Project "${oldName}" not found` }
+        if (renameFolders.find((f) => f.name === newName)) {
+          return { error: `Project "${newName}" already exists` }
+        }
+        target.name = newName
+        this.agentStore.save(renameFolders).catch((err) => {
+          console.warn('[PipeServer] Failed to save agents:', err)
+        })
+        return { result: 'ok' }
+      }
+
+      case 'config.export': {
+        const config = this.configStore.getAll()
+        const agents = this.agentStore.getGroups()
+        return { result: { version: 1, config, agents } }
+      }
+
+      case 'config.import': {
+        const bundle = request.params as { config?: any; agents?: any } | undefined
+        if (!bundle) return { error: 'Missing params' }
+        if (bundle.config && typeof bundle.config === 'object') {
+          this.configStore.save(bundle.config)
+        }
+        if (bundle.agents && Array.isArray(bundle.agents)) {
+          this.agentStore.save(bundle.agents).catch((err) => {
+            console.warn('[PipeServer] Failed to save agents:', err)
+          })
+        }
+        return { result: 'ok' }
+      }
+
       default:
         return { error: `Unknown method: ${request.method}` }
     }
