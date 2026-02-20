@@ -97,6 +97,17 @@ const tangentAPI = {
       ipcRenderer.invoke('dialog:openFile', filters)
   },
 
+  config: {
+    get: () => ipcRenderer.invoke('config:get'),
+    update: (key: string, value: unknown) => ipcRenderer.invoke('config:update', { key, value }),
+    openFile: () => ipcRenderer.invoke('config:openFile'),
+    onChanged: (cb: (config: any) => void) => {
+      const handler = (_: any, config: any) => cb(config)
+      ipcRenderer.on('config:changed', handler)
+      return () => { ipcRenderer.removeListener('config:changed', handler) }
+    }
+  },
+
   app: {
     getZoom: () => ipcRenderer.invoke('app:getZoom'),
     setZoom: (level: number) => ipcRenderer.invoke('app:setZoom', level),

@@ -76,6 +76,22 @@ export function registerIpcHandlers(deps: {
     return session?.metrics ?? null
   })
 
+  // --- Config ---
+  ipcMain.handle('config:get', () => configStore.getAll())
+  ipcMain.handle('config:update', (_, { key, value }: { key: string; value: unknown }) => {
+    configStore.set(key, value)
+    return configStore.getAll()
+  })
+  ipcMain.handle('config:openFile', () => {
+    const editor = configStore.getEditor()
+    spawn(editor, [configStore.getConfigPath()], { shell: true, detached: true, stdio: 'ignore' }).unref()
+  })
+
+  // Forward config file changes to renderer
+  configStore.on('changed', (config) => {
+    getWindow()?.webContents.send('config:changed', config)
+  })
+
   // --- Dialog ---
   ipcMain.handle('dialog:openFolder', async () => {
     const win = getWindow()

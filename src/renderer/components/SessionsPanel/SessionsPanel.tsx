@@ -217,7 +217,7 @@ export function SessionsPanel({ sessions, activeId, onSelect, onClose, onCreate,
     >
       {/* Header */}
       <div className="p-3 text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-        Sessions ({sessions.length})
+        Sessions
       </div>
 
       {/* Filter */}

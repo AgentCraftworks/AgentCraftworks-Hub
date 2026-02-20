@@ -11,6 +11,7 @@ import { AgentStore } from './agents/AgentStore'
 import { AgentLauncher } from './agents/AgentLauncher'
 import { ConfigStore } from './config/ConfigStore'
 import { registerIpcHandlers } from './ipc/handlers'
+import { PipeServer } from './config/PipeServer'
 
 const SESSIONS_PATH = join(homedir(), '.tangent', 'sessions.json')
 
@@ -24,6 +25,7 @@ const sdkSessionManager = new SdkSessionManager(sessionStore, ptyManager)
 sessionManager.setSdkManager(sdkSessionManager)
 const agentStore = new AgentStore()
 const agentLauncher = new AgentLauncher(ptyManager, sessionStore, sessionManager)
+const pipeServer = new PipeServer(configStore, agentStore)
 
 // When an agent is auto-detected from output (user typed `copilot` manually),
 // attach the SDK to watch for the ui-server port
@@ -82,6 +84,7 @@ app.whenReady().then(async () => {
 
   configStore.load()
   await agentStore.load()
+  pipeServer.start()
   createWindow()
 
   // Restore saved sessions or create a fresh one
@@ -225,6 +228,8 @@ app.on('before-quit', () => {
 })
 
 app.on('window-all-closed', () => {
+  pipeServer.stop()
+  configStore.dispose()
   sdkSessionManager.dispose()
   ptyManager.dispose()
   app.quit()

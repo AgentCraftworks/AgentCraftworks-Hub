@@ -291,13 +291,13 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
   }, [])
 
   return (
-    <div className="flex h-full shrink-0">
+    <div className="relative flex h-full shrink-0">
       {/* Project picker — shown when saving an agent from a session */}
       {pendingPrefill && (
         <div
           ref={groupPickerRef}
-          className="w-[220px] h-full flex flex-col border-l border-[var(--bg-hover)]"
-          style={{ background: 'var(--bg-secondary)' }}
+          className="absolute right-11 top-0 bottom-0 w-[220px] flex flex-col border-l border-[var(--bg-hover)] z-20"
+          style={{ background: 'var(--bg-secondary)', boxShadow: '-4px 0 16px rgba(0, 0, 0, 0.35)' }}
         >
           <div className="p-3 border-b border-[var(--bg-hover)]">
             <div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
@@ -341,12 +341,12 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
         </div>
       )}
 
-      {/* Popup panel (appears to the left of tabs) */}
+      {/* Popup panel (overlays to the left of tabs) */}
       {openGroupIndex !== null && openGroup && (
         <div
           ref={popupRef}
-          className="w-[240px] h-full flex flex-col border-l border-[var(--bg-hover)]"
-          style={{ background: 'var(--bg-secondary)' }}
+          className="absolute right-11 top-0 bottom-0 w-[240px] flex flex-col border-l border-[var(--bg-hover)] z-20"
+          style={{ background: 'var(--bg-secondary)', boxShadow: '-4px 0 16px rgba(0, 0, 0, 0.35)' }}
         >
           {/* Project header */}
           <div className="flex items-center justify-between p-3 border-b border-[var(--bg-hover)]">

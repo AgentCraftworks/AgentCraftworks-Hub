@@ -7,6 +7,7 @@ import { SessionsPanel } from '@/components/SessionsPanel/SessionsPanel'
 import { TerminalViewport } from '@/components/Terminal/TerminalViewport'
 import { AgentsSidebar } from '@/components/AgentsSidebar/AgentsSidebar'
 import { StatusBar } from '@/components/StatusBar/StatusBar'
+import { SettingsPanel } from '@/components/SettingsPanel/SettingsPanel'
 import { PermissionDialog } from '@/components/PermissionDialog'
 import { UserInputDialog } from '@/components/UserInputDialog'
 import { ZOOM } from '@shared/constants'
@@ -20,6 +21,7 @@ export function App(): JSX.Element {
   const [sessionsPanelVisible, setSessionsPanelVisible] = useState(true)
   const [sessionsPanelWidth, setSessionsPanelWidth] = useState(240)
   const [prefillAgent, setPrefillAgent] = useState<AgentProfile | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const handleCreateAgentFromSession = useCallback((session: Session) => {
     const command = session.agentCommand || ''
@@ -35,6 +37,10 @@ export function App(): JSX.Element {
       cwdPath: session.folderPath || '',
     }
     setPrefillAgent(agent)
+  }, [])
+
+  const toggleSettings = useCallback(() => {
+    setSettingsOpen(prev => !prev)
   }, [])
 
   const toggleSessionsPanel = useCallback(() => {
@@ -69,7 +75,7 @@ export function App(): JSX.Element {
   })
 
   return (
-    <div className="flex flex-col h-screen w-screen">
+    <div className="flex flex-col h-screen w-screen relative">
       <div className="flex flex-1 min-h-0">
         {sessionsPanelVisible && (
           <SessionsPanel
@@ -88,7 +94,8 @@ export function App(): JSX.Element {
         <TerminalViewport sessions={sessions} activeId={activeId} fontSize={fontSize} />
         <AgentsSidebar activeSessionId={activeId} prefillAgent={prefillAgent} onPrefillConsumed={() => setPrefillAgent(null)} />
       </div>
-      <StatusBar sessions={sessions} activeSession={activeSession} />
+      <StatusBar sessions={sessions} activeSession={activeSession} onToggleSettings={toggleSettings} />
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} fontSize={fontSize} setFontSize={setFontSize} />}
       {activeSession?.kind === 'copilot-sdk' && (
         <>
           <PermissionDialog sessionId={activeId} />

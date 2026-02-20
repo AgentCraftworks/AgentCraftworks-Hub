@@ -1,10 +1,10 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import type { Session } from '@shared/types'
-import { mapStatusToUI } from '@shared/statusMapping'
 
 declare const tangentAPI: {
   shell: {
     openEditor: (folderPath: string) => Promise<void>
+    openInExplorer: (folderPath: string) => Promise<void>
     getEditor: () => Promise<string>
     setEditor: (editor: string) => Promise<void>
   }
@@ -13,6 +13,7 @@ declare const tangentAPI: {
 interface StatusBarProps {
   sessions: Session[]
   activeSession: Session | undefined
+  onToggleSettings: () => void
 }
 
 /** Agent type label mapping */
@@ -45,30 +46,25 @@ function formatTokens(count: number): string {
   return String(count)
 }
 
-export function StatusBar({ sessions, activeSession }: StatusBarProps) {
+export function StatusBar({ sessions, activeSession, onToggleSettings }: StatusBarProps) {
   const [editorPopupOpen, setEditorPopupOpen] = useState(false)
   const [editorValue, setEditorValue] = useState('')
   const popupRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const uiStatus = useMemo(
-    () => (activeSession ? mapStatusToUI(activeSession.status) : null),
-    [activeSession]
-  )
-
-  // Count non-running sessions (those that are still alive, i.e., not exited and not shell_ready)
-  const nonRunningCount = useMemo(
-    () => sessions.filter(s => s.status !== 'exited' && s.status !== 'shell_ready').length,
-    [sessions]
-  )
-
-  const dotStyle = useMemo(() => {
-    if (!uiStatus || !uiStatus.dotVisible || !uiStatus.dotColor) return undefined
-    return {
-      color: `var(${uiStatus.dotColor})`,
-      animation: uiStatus.dotAnimation !== 'none' ? `${uiStatus.dotAnimation} 2s ease-in-out infinite` : undefined
+  // Count agent sessions by status group (skip shell sessions)
+  const statusCounts = useMemo(() => {
+    let running = 0
+    let idle = 0
+    let error = 0
+    for (const s of sessions) {
+      if (s.agentType === 'shell') continue
+      if (s.status === 'processing' || s.status === 'tool_executing') running++
+      else if (s.status === 'agent_ready' || s.status === 'agent_launching' || s.status === 'needs_input') idle++
+      else if (s.status === 'failed') error++
     }
-  }, [uiStatus])
+    return { running, idle, error }
+  }, [sessions])
 
   const agentLabel = activeSession
     ? AGENT_LABELS[activeSession.agentType] ?? activeSession.agentType
@@ -125,18 +121,29 @@ export function StatusBar({ sessions, activeSession }: StatusBarProps) {
       className="h-6 min-h-6 flex items-center px-3 text-xs border-t border-[var(--bg-hover)]"
       style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
     >
-      {/* Left section: status dot + session counts */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {uiStatus?.dotVisible ? (
-          <span style={dotStyle}>{'\u25CF'}</span>
-        ) : (
+      {/* Left section: per-status colored dots + counts */}
+      <div className="flex items-center gap-2 shrink-0">
+        {statusCounts.running > 0 && (
+          <span className="flex items-center gap-0.5">
+            <span style={{ color: 'var(--running)' }}>{'\u25CF'}</span>
+            <span>{statusCounts.running}</span>
+          </span>
+        )}
+        {statusCounts.idle > 0 && (
+          <span className="flex items-center gap-0.5">
+            <span style={{ color: 'var(--idle)' }}>{'\u25CF'}</span>
+            <span>{statusCounts.idle}</span>
+          </span>
+        )}
+        {statusCounts.error > 0 && (
+          <span className="flex items-center gap-0.5">
+            <span style={{ color: 'var(--error)' }}>{'\u25CF'}</span>
+            <span>{statusCounts.error}</span>
+          </span>
+        )}
+        {statusCounts.running === 0 && statusCounts.idle === 0 && statusCounts.error === 0 && (
           <span style={{ color: 'var(--text-muted)' }}>{'\u25CB'}</span>
         )}
-        <span>
-          {nonRunningCount} active
-        </span>
-        <span style={{ color: 'var(--text-muted)' }}>/</span>
-        <span>{sessions.length} total</span>
       </div>
 
       <span className="mx-2" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
@@ -173,9 +180,14 @@ export function StatusBar({ sessions, activeSession }: StatusBarProps) {
           </>
         )}
         {cwdPath && (
-          <span className="max-w-[200px] truncate" style={{ color: 'var(--text-muted)' }} title={activeSession?.folderPath}>
+          <button
+            className="max-w-[200px] truncate cursor-pointer hover:underline"
+            style={{ color: 'var(--text-muted)', background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 'inherit' }}
+            title={`Open ${activeSession?.folderPath} in file explorer`}
+            onClick={() => activeSession?.folderPath && tangentAPI.shell.openInExplorer(activeSession.folderPath)}
+          >
             {cwdPath}
-          </span>
+          </button>
         )}
         {activeSession?.folderPath && (
           <span className="relative">
@@ -215,6 +227,15 @@ export function StatusBar({ sessions, activeSession }: StatusBarProps) {
             )}
           </span>
         )}
+        <span className="mx-1" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
+        <button
+          onClick={onToggleSettings}
+          className="cursor-pointer flex items-center justify-center"
+          style={{ color: 'var(--text-muted)', background: 'none', border: 'none', font: 'inherit', fontSize: 'inherit', padding: 0 }}
+          title="Settings"
+        >
+          ⚙
+        </button>
         <span className="mx-1" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
         <span style={{ color: 'var(--text-muted)' }}>Ctrl+B panels</span>
       </div>
