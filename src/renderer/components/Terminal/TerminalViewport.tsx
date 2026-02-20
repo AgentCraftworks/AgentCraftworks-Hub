@@ -123,6 +123,11 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
             window.tangentAPI.terminal.write(session.id, '\x17')
             return false
           }
+          // Ctrl+Enter: new line in Copilot CLI input (send \n instead of \r)
+          if (e.ctrlKey && e.key === 'Enter' && !e.shiftKey && !e.altKey && e.type === 'keydown') {
+            window.tangentAPI.terminal.write(session.id, '\n')
+            return false
+          }
           if (!e.ctrlKey) return true
           const key = e.key.toLowerCase()
           // Ctrl+V: handled by useKeyboard (clipboard paste to PTY)
