@@ -1,12 +1,15 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
 import { SdkLineBuffer } from '@shared/SdkLineBuffer'
 import type { SessionKind } from '@shared/types'
 
 // Global registry so other modules (useKeyboard) can access terminal instances
 export const terminalRegistry = new Map<string, Terminal>()
+// Search addon registry for keyboard handler access
+export const searchRegistry = new Map<string, SearchAddon>()
 
 interface TerminalViewportProps {
   sessions: { id: string; kind: SessionKind }[]
@@ -17,6 +20,7 @@ interface TerminalViewportProps {
 interface TerminalInstance {
   terminal: Terminal
   fitAddon: FitAddon
+  searchAddon: SearchAddon
   div: HTMLDivElement
   cleanup: () => void
 }
@@ -24,6 +28,37 @@ interface TerminalInstance {
 export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewportProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const instancesRef = useRef<Map<string, TerminalInstance>>(new Map())
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Toggle search bar
+  const toggleSearch = () => {
+    setSearchOpen(prev => {
+      if (!prev) {
+        setTimeout(() => searchInputRef.current?.focus(), 50)
+      } else {
+        // Clear highlights when closing
+        if (activeId) {
+          const inst = instancesRef.current.get(activeId)
+          inst?.searchAddon.clearDecorations()
+        }
+        setSearchQuery('')
+      }
+      return !prev
+    })
+  }
+
+  const doSearch = (query: string, direction: 'next' | 'prev' = 'next') => {
+    if (!activeId || !query) return
+    const inst = instancesRef.current.get(activeId)
+    if (!inst) return
+    if (direction === 'next') {
+      inst.searchAddon.findNext(query, { caseSensitive: false, regex: false })
+    } else {
+      inst.searchAddon.findPrevious(query, { caseSensitive: false, regex: false })
+    }
+  }
 
   // Create/destroy terminal instances as sessions change
   useEffect(() => {
@@ -38,6 +73,7 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
         inst.div.remove()
         instances.delete(id)
         terminalRegistry.delete(id)
+        searchRegistry.delete(id)
       }
     }
 
@@ -66,6 +102,8 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
         })
         const fitAddon = new FitAddon()
         terminal.loadAddon(fitAddon)
+        const searchAddon = new SearchAddon()
+        terminal.loadAddon(searchAddon)
 
         const div = document.createElement('div')
         div.style.height = '100%'
@@ -106,6 +144,10 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
           }
           // Ctrl+Shift+W: close session (app shortcut, don't send to terminal)
           if (key === 'w' && e.shiftKey) {
+            return false
+          }
+          // Ctrl+Shift+F: terminal search
+          if (key === 'f' && e.shiftKey) {
             return false
           }
           // Ctrl+Shift+1-9 for agent quick-launch
@@ -160,10 +202,12 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
         instances.set(session.id, {
           terminal,
           fitAddon,
+          searchAddon,
           div,
           cleanup: () => cleanupFns.forEach(fn => fn())
         })
         terminalRegistry.set(session.id, terminal)
+        searchRegistry.set(session.id, searchAddon)
       }
     }
   }, [sessions, fontSize])
@@ -208,7 +252,68 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
     }
   }, [fontSize])
 
+  // Listen for Ctrl+Shift+F globally to toggle search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault()
+        toggleSearch()
+      }
+      // Escape closes search
+      if (e.key === 'Escape' && searchOpen) {
+        e.preventDefault()
+        toggleSearch()
+      }
+    }
+    window.addEventListener('keydown', handler, { capture: true })
+    return () => window.removeEventListener('keydown', handler, { capture: true })
+  }, [searchOpen])
+
   return (
-    <div ref={containerRef} className="flex-1 min-w-0 h-full" style={{ background: 'var(--bg-primary)' }} />
+    <div className="flex-1 min-w-0 h-full flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+      {searchOpen && (
+        <div className="flex items-center gap-2 px-3 py-1.5 border-b" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              doSearch(e.target.value)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                doSearch(searchQuery, e.shiftKey ? 'prev' : 'next')
+              }
+              if (e.key === 'Escape') {
+                toggleSearch()
+              }
+            }}
+            placeholder="Search terminal..."
+            className="flex-1 px-2 py-1 text-sm rounded outline-none"
+            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+          />
+          <button
+            onClick={() => doSearch(searchQuery, 'prev')}
+            className="px-1.5 py-0.5 text-xs rounded hover:opacity-80"
+            style={{ color: 'var(--text-secondary)' }}
+            title="Previous (Shift+Enter)"
+          >▲</button>
+          <button
+            onClick={() => doSearch(searchQuery, 'next')}
+            className="px-1.5 py-0.5 text-xs rounded hover:opacity-80"
+            style={{ color: 'var(--text-secondary)' }}
+            title="Next (Enter)"
+          >▼</button>
+          <button
+            onClick={toggleSearch}
+            className="px-1.5 py-0.5 text-xs rounded hover:opacity-80"
+            style={{ color: 'var(--text-secondary)' }}
+            title="Close (Esc)"
+          >✕</button>
+        </div>
+      )}
+      <div ref={containerRef} className="flex-1 min-w-0" />
+    </div>
   )
 }
