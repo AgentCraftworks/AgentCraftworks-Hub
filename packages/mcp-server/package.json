@@ -1,0 +1,25 @@
+{
+  "name": "@agentcraftworks-hub/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server exposing GitHub monitoring data (rate limits, billing, Copilot usage) as tools",
+  "main": "./dist/index.js",
+  "bin": {
+    "hub-mcp-server": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@octokit/rest": "^21.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.9.3"
+  }
+}

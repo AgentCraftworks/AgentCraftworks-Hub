@@ -1,10 +1,13 @@
 {
-  "name": "tangent",
+  "name": "agentcraftworks-hub",
   "version": "0.1.0",
   "private": true,
   "main": "./out/main/index.js",
+  "workspaces": [
+    "packages/*"
+  ],
   "bin": {
-    "tangent": "./scripts/tangent-cli.js"
+    "hub": "./scripts/hub-cli.js"
   },
   "scripts": {
     "dev": "electron-vite dev",
@@ -20,8 +23,8 @@
     "postinstall": "electron-rebuild"
   },
   "build": {
-    "appId": "com.tangent.app",
-    "productName": "Tangent",
+    "appId": "com.agentcraftworks.hub",
+    "productName": "AgentCraftworks Hub",
     "directories": {
       "buildResources": "assets",
       "output": "dist"
@@ -59,8 +62,8 @@
     "npmRebuild": true,
     "publish": {
       "provider": "github",
-      "owner": "charris-msft",
-      "repo": "tangent"
+      "owner": "AgentCraftworks",
+      "repo": "AgentCraftworks-Hub"
     }
   },
   "devDependencies": {
@@ -81,16 +84,19 @@
   },
   "dependencies": {
     "@github/copilot-sdk": "file:vendor/copilot-sdk",
+    "@octokit/rest": "^21.1.1",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-progress": "^0.2.0",
     "@xterm/addon-search": "^0.16.0",
     "@xterm/xterm": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "keytar": "^7.9.0",
     "lucide-react": "^0.564.0",
     "node-pty": "^1.1.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "recharts": "^2.15.3",
     "tailwind-merge": "^3.4.0",
     "uuid": "^13.0.0"
   }

@@ -1,0 +1,27 @@
+{
+  "name": "@agentcraftworks-hub/terminal-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Ink TUI dashboard — runs hub monitor inside VS Code integrated terminal",
+  "main": "./dist/index.js",
+  "bin": {
+    "hub-monitor": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.tsx",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@octokit/rest": "^21.1.1",
+    "ink": "^5.2.1",
+    "react": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.14",
+    "tsx": "^4.19.4",
+    "typescript": "^5.9.3"
+  }
+}
