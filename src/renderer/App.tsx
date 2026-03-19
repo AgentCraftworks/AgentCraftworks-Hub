@@ -10,6 +10,7 @@ import { StatusBar } from '@/components/StatusBar/StatusBar'
 import { SettingsPanel } from '@/components/SettingsPanel/SettingsPanel'
 import { PermissionDialog } from '@/components/PermissionDialog'
 import { UserInputDialog } from '@/components/UserInputDialog'
+import { HubDashboard } from '@/components/dashboard/HubDashboard'
 import { ZOOM } from '@shared/constants'
 import type { AgentProfile, Session } from '@shared/types'
 
@@ -22,6 +23,7 @@ export function App(): JSX.Element {
   const [sessionsPanelWidth, setSessionsPanelWidth] = useState(240)
   const [prefillAgent, setPrefillAgent] = useState<AgentProfile | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [hubOpen, setHubOpen] = useState(false)
 
   const handleCreateAgentFromSession = useCallback((session: Session) => {
     const command = session.agentCommand || ''
@@ -41,6 +43,10 @@ export function App(): JSX.Element {
 
   const toggleSettings = useCallback(() => {
     setSettingsOpen(prev => !prev)
+  }, [])
+
+  const toggleHub = useCallback(() => {
+    setHubOpen(prev => !prev)
   }, [])
 
   const toggleSessionsPanel = useCallback(() => {
@@ -92,9 +98,14 @@ export function App(): JSX.Element {
           />
         )}
         <TerminalViewport sessions={sessions} activeId={activeId} fontSize={fontSize} />
+        {hubOpen && (
+          <div className="absolute inset-0 z-10 bg-[#0d1117]">
+            <HubDashboard />
+          </div>
+        )}
         <AgentsSidebar activeSessionId={activeId} prefillAgent={prefillAgent} onPrefillConsumed={() => setPrefillAgent(null)} />
       </div>
-      <StatusBar sessions={sessions} activeSession={activeSession} onToggleSettings={toggleSettings} />
+      <StatusBar sessions={sessions} activeSession={activeSession} onToggleSettings={toggleSettings} onToggleHub={toggleHub} hubOpen={hubOpen} />
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} fontSize={fontSize} setFontSize={setFontSize} />}
       {activeSession?.kind === 'copilot-sdk' && (
         <>

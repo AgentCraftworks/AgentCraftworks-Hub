@@ -8,8 +8,8 @@ import type { AgentProfile } from '@shared/types'
 
 const PIPE_PATH =
   platform() === 'win32'
-    ? '\\\\.\\pipe\\tangent-config'
-    : '/tmp/tangent-config.sock'
+    ? '\\\\.\\pipe\\agentcraftworks-hub-config'
+    : '/tmp/agentcraftworks-hub-config.sock'
 
 interface RpcRequest {
   method: string

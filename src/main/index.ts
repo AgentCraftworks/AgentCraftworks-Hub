@@ -11,9 +11,10 @@ import { AgentStore } from './agents/AgentStore'
 import { AgentLauncher } from './agents/AgentLauncher'
 import { ConfigStore } from './config/ConfigStore'
 import { registerIpcHandlers } from './ipc/handlers'
+import { registerHubHandlers } from './ipc/hub-handlers'
 import { PipeServer } from './config/PipeServer'
 
-const SESSIONS_PATH = join(homedir(), '.tangent', 'sessions.json')
+const SESSIONS_PATH = join(homedir(), '.agentcraftworks-hub', 'sessions.json')
 
 let mainWindow: BrowserWindow | null = null
 
@@ -37,7 +38,7 @@ sessionStore.on('agent-promoted', ({ id, agentType, ptyId }: { id: string; agent
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    title: 'Tangent',
+    title: 'AgentCraftworks Hub',
     width: 1200,
     height: 800,
     minWidth: 600,
@@ -62,6 +63,8 @@ function createWindow(): void {
     configStore,
     getWindow: () => mainWindow && !mainWindow.isDestroyed() ? mainWindow : null
   })
+
+  registerHubHandlers(() => mainWindow && !mainWindow.isDestroyed() ? mainWindow : null)
 
   if (process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)

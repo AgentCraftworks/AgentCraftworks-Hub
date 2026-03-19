@@ -130,3 +130,32 @@ const tangentAPI = {
 }
 
 contextBridge.exposeInMainWorld('tangentAPI', tangentAPI)
+
+// Hub monitoring API — separate namespace to avoid collisions with Tangent internals
+const hubAPI = {
+  start: (enterprise?: string): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('hub:start', enterprise),
+
+  stop: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('hub:stop'),
+
+  getSnapshot: (): Promise<import('@shared/hub-types').MonitorSnapshot | null> =>
+    ipcRenderer.invoke('hub:getSnapshot'),
+
+  refresh: (): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('hub:refresh'),
+
+  onSnapshot: (cb: (snapshot: import('@shared/hub-types').MonitorSnapshot) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, snapshot: import('@shared/hub-types').MonitorSnapshot) => cb(snapshot)
+    ipcRenderer.on('hub:snapshot', handler)
+    return () => { ipcRenderer.removeListener('hub:snapshot', handler) }
+  },
+
+  onError: (cb: (message: string) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, message: string) => cb(message)
+    ipcRenderer.on('hub:error', handler)
+    return () => { ipcRenderer.removeListener('hub:error', handler) }
+  },
+}
+
+contextBridge.exposeInMainWorld('hubAPI', hubAPI)

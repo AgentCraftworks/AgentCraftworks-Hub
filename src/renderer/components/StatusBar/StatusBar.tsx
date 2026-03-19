@@ -14,6 +14,8 @@ interface StatusBarProps {
   sessions: Session[]
   activeSession: Session | undefined
   onToggleSettings: () => void
+  onToggleHub?: () => void
+  hubOpen?: boolean
 }
 
 /** Agent type label mapping */
@@ -46,7 +48,7 @@ function formatTokens(count: number): string {
   return String(count)
 }
 
-export function StatusBar({ sessions, activeSession, onToggleSettings }: StatusBarProps) {
+export function StatusBar({ sessions, activeSession, onToggleSettings, onToggleHub, hubOpen }: StatusBarProps) {
   const [editorPopupOpen, setEditorPopupOpen] = useState(false)
   const [editorValue, setEditorValue] = useState('')
   const popupRef = useRef<HTMLDivElement>(null)
@@ -236,6 +238,23 @@ export function StatusBar({ sessions, activeSession, onToggleSettings }: StatusB
         >
           ⚙
         </button>
+        {onToggleHub && (
+          <>
+            <span className="mx-1" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
+            <button
+              onClick={onToggleHub}
+              className="cursor-pointer flex items-center justify-center"
+              style={{
+                color: hubOpen ? 'var(--text-primary)' : 'var(--text-muted)',
+                background: 'none', border: 'none', font: 'inherit', fontSize: 'inherit', padding: 0,
+                fontWeight: hubOpen ? 600 : undefined,
+              }}
+              title="Toggle Hub dashboard (API rate limits, billing, Copilot usage)"
+            >
+              Hub
+            </button>
+          </>
+        )}
         <span className="mx-1" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
         <span style={{ color: 'var(--text-muted)' }}>Ctrl+B panels</span>
       </div>
