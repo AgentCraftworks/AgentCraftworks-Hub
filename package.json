@@ -7,7 +7,8 @@
     "packages/*"
   ],
   "bin": {
-    "hub": "./scripts/hub-cli.js"
+    "hub": "./scripts/hub-cli.js",
+    "hub-mcp-server": "./scripts/hub-mcp-server.js"
   },
   "scripts": {
     "dev": "electron-vite dev",
@@ -70,6 +71,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.1.18",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/uuid": "^10.0.0",
@@ -85,6 +87,7 @@
   "dependencies": {
     "@github/copilot-sdk": "file:vendor/copilot-sdk",
     "@octokit/rest": "^21.1.1",
+    "better-sqlite3": "^11.10.0",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-progress": "^0.2.0",
     "@xterm/addon-search": "^0.16.0",
