@@ -21,7 +21,7 @@
     "package": "electron-vite build && electron-builder --dir",
     "dist": "electron-vite build && electron-builder",
     "publish-release": "electron-vite build && electron-builder --publish always",
-    "postinstall": "electron-rebuild"
+    "postinstall": "electron-rebuild --only keytar"
   },
   "build": {
     "appId": "com.agentcraftworks.hub",
