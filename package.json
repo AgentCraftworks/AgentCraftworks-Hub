@@ -21,7 +21,7 @@
     "package": "electron-vite build && electron-builder --dir",
     "dist": "electron-vite build && electron-builder",
     "publish-release": "electron-vite build && electron-builder --publish always",
-    "postinstall": "electron-rebuild --only keytar"
+    "postinstall": "node node_modules/electron-rebuild/lib/cli.js --only keytar || node -e \"process.exit(0)\""
   },
   "build": {
     "appId": "com.agentcraftworks.hub",
