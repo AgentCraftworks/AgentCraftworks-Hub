@@ -229,37 +229,189 @@ Bottom section:
 
 ## 8) Implementation Plan (AgentCraftworks-Hub)
 
-Phase 1: Data foundation
+### 8.1 Workstream A: Data collection and normalization
+
+Goal: collect cross-repo GH-AW workflow definitions and run telemetry into one normalized snapshot.
+
+Deliverables:
 
 1. Add `GhawInsightsPoller` in main process.
-2. Extend `GitHubMonitorService` snapshot with `ghawInsights`.
-3. Add IPC endpoints in `hub-handlers.ts`:
-   - `hub:getGhawSnapshot`
-   - `hub:refreshGhaw`
-4. Extend preload API (`window.hubAPI`) for GHAW snapshot + refresh.
-5. Add shared types in `hub-types.ts`.
+2. Add workflow definition scanner:
+  - read `.github/workflows/ghaw-*.yml`
+  - parse `name`, `on` triggers, schedule cron entries
+3. Add run ingestion logic per repo:
+  - list runs for trailing 30 days
+  - derive conclusion, duration, trigger, run URL
+4. Add local cache/store (`GhawRunStore`) to reduce API pressure and support trend views.
+5. Extend `GitHubMonitorService` snapshot with `ghawInsights`.
 
-Phase 2: UI integration
+### 8.2 Workstream B: Metrics, hotspots, and anomaly engine
 
-6. Add dashboard tabs inside `HubDashboard.tsx`.
-7. Create new components under `src/renderer/components/dashboard/ghaw/`:
-   - `GhawSummaryCards.tsx`
-   - `GhawHotspotsTable.tsx`
-   - `GhawAnomalyFeed.tsx`
-   - `GhawWorkflowCatalog.tsx`
-8. Add `useGhawInsights` hook.
+Goal: compute actionable operational signals, not raw tables only.
 
-Phase 3: Minutes + anomaly quality
+Deliverables:
 
-9. Add trailing-window aggregation logic (7d/30d).
-10. Add job-level OS weighting for billable estimate.
-11. Add dedupe/anomaly rule engine with thresholds configurable.
+1. Aggregators for trailing 7-day and 30-day windows.
+2. Hotspot ranking by weighted score:
+  - run volume
+  - failure rate
+  - skip rate
+  - p95 duration
+3. Anomaly engine (`GhawAnomalyEngine`) implementing rules from Section 6.
+4. Confidence and severity scoring (`info`, `warning`, `critical`) with reason text.
 
-Phase 4: hardening
+### 8.3 Workstream C: Copilot minutes and cost model
 
-12. Add tests for aggregation/anomaly rules.
-13. Add docs and operator notes.
-14. Optional alert integration via existing `AlertService`.
+Goal: show 7d/30d GH-AW minutes and cost in a way users can trust.
+
+Deliverables:
+
+1. Runtime minutes from Actions run duration.
+2. Billable estimate by OS multiplier when job metadata is available.
+3. 2 explicit windows:
+  - trailing 7 days
+  - trailing 30 days
+4. Methodology badge and tooltip text:
+  - `Estimated (run-duration)`
+  - `Enriched (billing-calibrated)` when enterprise billing correlation is available.
+
+### 8.4 Workstream D: Inventory UI and workflow controls
+
+Goal: provide an operational inventory that supports immediate action.
+
+Deliverables:
+
+1. Add tab switch in Hub overlay:
+  - `GitHub Usage`
+  - `GHAW Insights`
+2. Build inventory table with:
+  - repo
+  - workflow
+  - trigger(s)
+  - schedule
+  - current enable/disable state
+  - support status (`toggle-supported`, `toggle-not-supported`)
+3. Add enable/disable control in each inventory row.
+4. Add confirmation modal with impact summary before applying toggle.
+5. Add activity log panel for recent toggle operations.
+
+### 8.5 Workstream E: IPC and preload contracts
+
+Goal: define stable renderer-main contracts for insights and controls.
+
+Deliverables:
+
+1. Add IPC endpoints:
+  - `hub:getGhawSnapshot`
+  - `hub:refreshGhaw`
+  - `hub:setGhawWorkflowEnabled`
+  - `hub:getGhawToggleHistory`
+2. Extend preload `hubAPI` surface with typed methods for above.
+3. Keep existing `hub:getSnapshot` behavior unchanged to avoid regressions.
+
+### 8.6 Workstream F: quality, rollout, and guardrails
+
+Goal: ship safely and avoid new noisy automation.
+
+Deliverables:
+
+1. Unit tests for:
+  - aggregators
+  - anomaly rules
+  - toggle planner logic
+2. Integration tests for IPC handlers and permission-denied states.
+3. Feature flag: `hub.ghawInsights.enabled`.
+4. Progressive rollout:
+  - internal only
+  - selected repos
+  - full org
+
+## 9) Dashboard-driven enable/disable capability
+
+### 9.1 Existing capability status
+
+Many GH-AW workflows already implement `ghaw-config.json` checks (for example, `ghaw-ci-doctor`, `ghaw-workflow-health`, `ghaw-daily-test-improver`, `ghaw-plan`, `ghaw-link-checker`, `ghaw-grumpy-reviewer`, `ghaw-issue-triage`).
+
+There are also workflows without that guard pattern (for example, `ghaw-pr-fix`, `ghaw-branch-policy-guard`, `ghaw-staging-refresh`, `ghaw-changeset`, and repo-specific variants such as `ghaw-playwright`).
+
+Design implication:
+
+- inventory must clearly show whether toggle is supported per workflow.
+- unsupported rows should show `Not yet controllable` with a guided action.
+
+### 9.2 Control-plane design
+
+Source of truth for toggle state:
+
+- `.github/ghaw-config.json` in target repo.
+- key: `workflows[].id` and `workflows[].enabled`.
+
+Write model from dashboard:
+
+1. User flips workflow toggle in inventory.
+2. Hub validates support and target repo permissions.
+3. Hub creates a config patch operation:
+  - update existing workflow entry
+  - or insert new entry if missing
+4. Hub writes via GitHub Contents API on a branch and opens PR (recommended default), or direct commit when allowed by policy.
+5. Inventory refreshes and records operation in toggle history.
+
+Safety defaults:
+
+- PR-based config updates by default.
+- require explicit confirmation for disabling high-criticality workflows.
+- show branch protection warning when direct write is blocked.
+
+### 9.3 Toggle UX behavior
+
+Row actions:
+
+- `Enabled` switch (interactive when supported)
+- `View config` deep-link to `.github/ghaw-config.json`
+- `Explain` action showing why a row is not toggle-supported
+
+Modal content on change:
+
+- workflow name + repo
+- current state -> requested state
+- expected impact on triggers
+- resulting PR/commit target
+
+### 9.4 Backfill and standardization plan
+
+To make toggle capability consistent across all GH-AW workflows:
+
+1. Add config-guard step to workflows missing it.
+2. Ensure each workflow has a unique stable `WORKFLOW_ID`.
+3. Add schema validation for `ghaw-config.json` in CI.
+4. Add linter/check that fails when new `ghaw-*` workflow lacks guard support (unless explicitly exempted).
+
+## 10) Milestones and delivery order
+
+Milestone 1 (Data and read-only insights)
+
+1. Workstream A + B (read-only)
+2. UI tab + inventory read-only table
+3. 7d/30d minutes (estimated mode)
+
+Milestone 2 (Toggle controls)
+
+1. Implement Workstream E toggle IPC and write pipeline
+2. Add row switch, confirmation, operation history
+3. Ship toggle for `toggle-supported` workflows only
+
+Milestone 3 (Coverage hardening)
+
+1. Backfill guard support to non-compliant workflows
+2. Add policy/linter to prevent future drift
+3. Enable org-wide toggle support target
+
+Milestone 4 (Enrichment and alerts)
+
+1. Add billing-calibrated minutes mode
+2. Connect severe anomalies to optional alert channel
+
+## 11) File-Level Change Plan
 
 ## 9) File-Level Change Plan
 
@@ -270,6 +422,8 @@ Main process
 - New: `src/main/github/GhawInsightsPoller.ts`
 - New: `src/main/github/GhawAnomalyEngine.ts`
 - New: `src/main/github/GhawRunStore.ts`
+- New: `src/main/github/GhawConfigService.ts`
+- New: `src/main/github/GhawTogglePlanner.ts`
 
 Preload
 
@@ -284,18 +438,22 @@ Renderer
 - `src/renderer/components/dashboard/HubDashboard.tsx`
 - New: `src/renderer/components/dashboard/ghaw/*`
 - New: `src/renderer/hooks/useGhawInsights.ts`
+- New: `src/renderer/hooks/useGhawWorkflowToggles.ts`
 - Optional typings cleanup for `window.hubAPI`
 
-## 10) Acceptance Criteria
+## 12) Acceptance Criteria
 
 1. User can switch between GitHub Usage and GHAW Insights in Hub.
 2. Dashboard shows top hotspots and anomalies for 7d and 30d.
 3. Dashboard shows estimated GHAW minutes for 7d and 30d, with methodology label.
 4. User can drill into a workflow and inspect recent problematic runs.
 5. Data refresh works from Hub refresh control.
-6. No degradation to existing GitHub Usage panels.
+6. Inventory clearly shows toggle support status per workflow.
+7. User can enable/disable supported workflows from inventory view with confirmation.
+8. Toggle action creates auditable PR/commit and shows resulting link in UI.
+9. No degradation to existing GitHub Usage panels.
 
-## 11) Risks and Mitigations
+## 13) Risks and Mitigations
 
 - API rate pressure from multi-repo run polling:
   - Mitigation: cache, incremental fetches, ETag support, staggered polling.
@@ -303,7 +461,11 @@ Renderer
   - Mitigation: explicitly label estimate methodology and provide confidence note.
 - Enterprise permission differences:
   - Mitigation: partial data rendering with per-panel error states.
+- Config drift across repos (some workflows support toggle, some do not):
+  - Mitigation: show support status in UI and run backfill standardization plan.
+- Unsafe disable of critical workflows:
+  - Mitigation: criticality flags + confirmation + default PR-based change flow.
 
-## 12) Recommended Next Step
+## 14) Recommended Next Step
 
-Implement Phase 1 + Phase 2 behind a feature flag (`hub.ghawInsights.enabled`) to validate data quality and UI ergonomics before enabling anomaly alerts and cost rollups.
+Implement Milestone 1 (read-only insights) and Milestone 2 (toggle controls for already-supported workflows) behind `hub.ghawInsights.enabled`, then start Milestone 3 to standardize toggle support across remaining workflows.
