@@ -249,9 +249,9 @@ export function StatusBar({ sessions, activeSession, onToggleSettings, onToggleH
                 background: 'none', border: 'none', font: 'inherit', fontSize: 'inherit', padding: 0,
                 fontWeight: hubOpen ? 600 : undefined,
               }}
-              title="Toggle Hub dashboard (API rate limits, billing, Copilot usage)"
+              title="Toggle GitHub Usage dashboard (API rate limits, billing, Copilot usage)"
             >
-              Hub
+              GitHub Usage
             </button>
           </>
         )}

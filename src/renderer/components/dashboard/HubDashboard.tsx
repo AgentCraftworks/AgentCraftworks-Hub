@@ -9,9 +9,10 @@ import { RefreshCw, Loader } from 'lucide-react'
 
 interface Props {
   enterprise?: string
+  onClose?: () => void
 }
 
-export function HubDashboard({ enterprise = 'AICraftworks' }: Props) {
+export function HubDashboard({ enterprise = 'AICraftworks', onClose }: Props) {
   const { snapshot, loading, error, lastUpdated, refresh } = useHubMonitor(enterprise)
 
   return (
@@ -23,6 +24,15 @@ export function HubDashboard({ enterprise = 'AICraftworks' }: Props) {
           <span className="text-xs text-white/30">AICraftworks Enterprise</span>
         </div>
         <div className="flex items-center gap-3">
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="text-xs text-white/50 hover:text-white/80 transition-colors"
+              title="Return to main view"
+            >
+              Back to Main
+            </button>
+          )}
           {lastUpdated && (
             <span className="text-[10px] text-white/30">
               Updated {lastUpdated.toLocaleTimeString()}
@@ -49,8 +59,14 @@ export function HubDashboard({ enterprise = 'AICraftworks' }: Props) {
       )}
 
       {/* Dashboard grid — Task Manager style */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-w-5xl mx-auto">
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{ paddingTop: 16, paddingRight: 16, paddingBottom: 16, paddingLeft: 16 }}
+      >
+        <div
+          className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-w-5xl mx-auto"
+          style={{ marginLeft: 20 }}
+        >
           {/* Rate Limit — always full width on smaller, left col on xl */}
           <div className="xl:col-span-1">
             <RateLimitPanel
