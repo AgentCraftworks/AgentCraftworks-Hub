@@ -86,9 +86,9 @@ export interface HubWindowAPI {
     ghScopes: string[]
     missingScopes: string[]
   }>
-  setToken(params: { token: string; enterprise: string }): Promise<{ ok: boolean; error?: string }>
-  clearToken(): Promise<{ ok: boolean }>
-  beginGitHubLogin(params: { enterprise: string }): Promise<{ ok: boolean; error?: string; message?: string }>
+  checkLoginStatus(): Promise<{ authenticated: boolean; scopes: string[]; missingScopes: string[] }>
+  beginGitHubLogin(params: { enterprise: string }): Promise<{ ok: boolean; error?: string }>
+  openDevicePage(): Promise<{ ok: boolean }>
   completeGitHubLogin(params: { enterprise: string }): Promise<{ ok: boolean; error?: string; scopes?: string[]; missingScopes?: string[] }>
   logoutGitHub(): Promise<{ ok: boolean; error?: string }>
   refresh(): Promise<{ ok: boolean; error?: string }>

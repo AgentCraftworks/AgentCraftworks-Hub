@@ -148,14 +148,14 @@ const hubAPI = {
   getTokenConfig: (): Promise<{ hasToken: boolean; enterprise: string; isGhCli: boolean; ghAuthenticated: boolean; ghScopes: string[]; missingScopes: string[] }> =>
     ipcRenderer.invoke('hub:getTokenConfig'),
 
-  setToken: (params: { token: string; enterprise: string }): Promise<{ ok: boolean; error?: string }> =>
-    ipcRenderer.invoke('hub:setToken', params),
+  checkLoginStatus: (): Promise<{ authenticated: boolean; scopes: string[]; missingScopes: string[] }> =>
+    ipcRenderer.invoke('hub:checkLoginStatus'),
 
-  clearToken: (): Promise<{ ok: boolean }> =>
-    ipcRenderer.invoke('hub:clearToken'),
-
-  beginGitHubLogin: (params: { enterprise: string }): Promise<{ ok: boolean; error?: string; message?: string }> =>
+  beginGitHubLogin: (params: { enterprise: string }): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('hub:beginGitHubLogin', params),
+
+  openDevicePage: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('hub:openDevicePage'),
 
   completeGitHubLogin: (params: { enterprise: string }): Promise<{ ok: boolean; error?: string; scopes?: string[]; missingScopes?: string[] }> =>
     ipcRenderer.invoke('hub:completeGitHubLogin', params),

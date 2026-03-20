@@ -1,11 +1,10 @@
-// TokenAuthPanel.tsx — Secure GitHub sign-in for enterprise dashboard access.
-import { useState, useEffect } from 'react'
-import { Key, CheckCircle, AlertCircle, LogIn, RefreshCw, LogOut, Trash2 } from 'lucide-react'
+// TokenAuthPanel.tsx — GitHub OAuth-only sign-in for enterprise dashboard access.
+// Spawns "gh auth login --web" silently (no terminal window) and polls for completion.
+import { useState, useEffect, useRef } from 'react'
+import { CheckCircle, AlertCircle, LogIn, RefreshCw, LogOut, Loader2 } from 'lucide-react'
 
-interface TokenConfig {
-  hasToken: boolean
+interface AuthConfig {
   enterprise: string
-  isGhCli: boolean
   ghAuthenticated: boolean
   ghScopes: string[]
   missingScopes: string[]
@@ -19,15 +18,17 @@ const REQUIRED_SCOPES = [
   { scope: 'read:audit_log', panel: 'Token Activity', required: true },
   { scope: 'read:enterprise', panel: 'Actions Minutes', required: true },
   { scope: 'manage_billing:copilot', panel: 'Copilot Usage & Billing', required: true },
-  { scope: 'read:org', panel: 'Org membership', required: false },
-  { scope: 'repo', panel: 'Repository access', required: false },
 ]
 
+const POLL_INTERVAL_MS = 2500
+
 export function TokenAuthPanel({ onSaved }: Props) {
-  const [config, setConfig] = useState<TokenConfig | null>(null)
+  const [config, setConfig] = useState<AuthConfig | null>(null)
   const [enterprise, setEnterprise] = useState('AICraftworks')
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [polling, setPolling] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   async function loadConfig() {
     const cfg = await window.hubAPI.getTokenConfig()
@@ -37,155 +38,173 @@ export function TokenAuthPanel({ onSaved }: Props) {
 
   useEffect(() => {
     void loadConfig()
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [])
 
-  async function handleBeginLogin() {
-    setSaving(true)
-    setMessage(null)
-    const result = await window.hubAPI.beginGitHubLogin({ enterprise: enterprise.trim() })
-    setSaving(false)
-
-    if (result.ok) {
-      setMessage({ type: 'success', text: result.message ?? 'GitHub login started.' })
-    } else {
-      setMessage({ type: 'error', text: result.error ?? 'Unable to start GitHub login' })
+  function stopPolling() {
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
     }
+    setPolling(false)
   }
 
-  async function handleVerifyLogin() {
-    setSaving(true)
+  function startPolling(ent: string) {
+    setPolling(true)
+    setMessage({ type: 'info', text: 'Your browser opened for GitHub authorization. Waiting for sign-in…' })
+
+    pollRef.current = setInterval(async () => {
+      const status = await window.hubAPI.checkLoginStatus()
+      if (!status.authenticated) return
+
+      stopPolling()
+
+      if (status.missingScopes.length > 0) {
+        setMessage({
+          type: 'error',
+          text: `Signed in, but missing: ${status.missingScopes.join(', ')}. Re-authorize and grant all required scopes.`,
+        })
+      } else {
+        // Complete the login — starts the monitor service
+        await window.hubAPI.completeGitHubLogin({ enterprise: ent })
+        setMessage({ type: 'success', text: 'Signed in with GitHub — enterprise panels are now unlocked.' })
+        onSaved?.()
+      }
+      await loadConfig()
+    }, POLL_INTERVAL_MS)
+  }
+
+  async function handleSignIn() {
+    stopPolling()
+    setBusy(true)
+    setMessage(null)
+
+    const ent = enterprise.trim() || 'AICraftworks'
+    const result = await window.hubAPI.beginGitHubLogin({ enterprise: ent })
+    setBusy(false)
+
+    if (!result.ok) {
+      setMessage({ type: 'error', text: result.error ?? 'Unable to start GitHub login. Is gh CLI installed?' })
+      return
+    }
+
+    startPolling(ent)
+  }
+
+  async function handleVerify() {
+    stopPolling()
+    setBusy(true)
     setMessage(null)
     const result = await window.hubAPI.completeGitHubLogin({ enterprise: enterprise.trim() })
-    setSaving(false)
+    setBusy(false)
 
     if (!result.ok) {
       setMessage({ type: 'error', text: result.error ?? 'GitHub sign-in verification failed.' })
       return
     }
-
     if ((result.missingScopes?.length ?? 0) > 0) {
       setMessage({
         type: 'error',
-        text: `Signed in, but missing scopes: ${result.missingScopes?.join(', ')}. Re-run sign-in and grant all required scopes.`,
+        text: `Signed in, but missing scopes: ${result.missingScopes?.join(', ')}.`,
       })
     } else {
-      setMessage({ type: 'success', text: 'GitHub sign-in verified. Enterprise panels are unlocked.' })
-    }
-
-    await loadConfig()
-    onSaved?.()
-  }
-
-  async function handleLogout() {
-    const result = await window.hubAPI.logoutGitHub()
-    if (!result.ok) {
-      setMessage({ type: 'error', text: result.error ?? 'Failed to log out from GitHub.' })
-      return
+      setMessage({ type: 'success', text: 'Signed in — enterprise panels unlocked.' })
+      onSaved?.()
     }
     await loadConfig()
-    setMessage({ type: 'success', text: 'Logged out from GitHub CLI for dashboard access.' })
   }
 
-  async function handleDisablePat() {
-    await window.hubAPI.clearToken()
+  async function handleSignOut() {
+    stopPolling()
+    setBusy(true)
+    setMessage(null)
+    await window.hubAPI.logoutGitHub()
+    setBusy(false)
     await loadConfig()
-    setMessage({ type: 'success', text: 'Legacy PAT removed. Dashboard now uses GitHub sign-in only.' })
+    setMessage({ type: 'success', text: 'Signed out from GitHub.' })
   }
+
+  const allScopesGranted = config?.ghAuthenticated && config.missingScopes.length === 0
 
   return (
     <div className="bg-white/5 rounded-xl p-4 border border-white/10 space-y-4">
       <div className="flex items-center gap-2 text-sm font-semibold text-white/80">
-        <Key size={14} />
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="opacity-70">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
         GitHub Authentication
       </div>
 
-      {/* Current status */}
+      {/* Status badge */}
       {config && (
-        <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${config.ghAuthenticated && config.missingScopes.length === 0 ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'}`}>
-          {config.ghAuthenticated && config.missingScopes.length === 0
-            ? <><CheckCircle size={12} /> Signed in with GitHub — all required scopes granted</>
+        <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${
+          allScopesGranted
+            ? 'bg-green-500/10 text-green-400'
+            : 'bg-amber-500/10 text-amber-400'
+        }`}>
+          {allScopesGranted
+            ? <><CheckCircle size={12} /> Signed in with GitHub — all enterprise panels unlocked</>
             : config.ghAuthenticated
               ? <><AlertCircle size={12} /> Signed in, but missing required scopes</>
-              : <><AlertCircle size={12} /> Not signed in to GitHub yet</>
+              : <><AlertCircle size={12} /> Not signed in to GitHub</>
           }
-          {config.hasToken && (
-            <button
-              onClick={handleDisablePat}
-              className="ml-auto text-white/30 hover:text-red-400 transition-colors"
-              title="Remove legacy PAT"
-            >
-              <Trash2 size={11} />
-            </button>
-          )}
         </div>
       )}
 
-      {/* Required scopes callout */}
+      {/* Required scopes */}
       <div className="text-xs text-white/40 space-y-1.5">
-        <div className="text-white/60 font-medium">Required GitHub scopes to unlock all panels:</div>
-        {REQUIRED_SCOPES.map(({ scope, panel, required }) => (
-          <div key={scope} className="flex items-center gap-2">
-            <code className="bg-white/5 px-1.5 py-0.5 rounded text-purple-300 font-mono">{scope}</code>
-            <span className="text-white/30">→ {panel}</span>
-            {required && <span className="text-amber-500 text-[10px]">required</span>}
-          </div>
-        ))}
-        <div className="text-white/30 pt-1">
-          Sign-in is browser-based via GitHub CLI (`gh auth login --web`) and does not require pasting PATs.
-        </div>
-        {config?.ghAuthenticated && config.ghScopes.length > 0 && (
-          <div className="pt-1">
-            <div className="text-white/50 mb-1">Detected scopes:</div>
-            <div className="flex flex-wrap gap-1">
-              {config.ghScopes.map((scope) => (
-                <code key={scope} className="bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-blue-300 font-mono">{scope}</code>
-              ))}
+        <div className="text-white/60 font-medium">Required scopes to unlock enterprise panels:</div>
+        {REQUIRED_SCOPES.map(({ scope, panel }) => {
+          const granted = config?.ghScopes.includes(scope)
+          return (
+            <div key={scope} className="flex items-center gap-2">
+              {granted
+                ? <CheckCircle size={10} className="text-green-400 shrink-0" />
+                : <AlertCircle size={10} className="text-amber-400/60 shrink-0" />
+              }
+              <code className="bg-white/5 px-1.5 py-0.5 rounded text-purple-300 font-mono">{scope}</code>
+              <span className="text-white/30">→ {panel}</span>
             </div>
-          </div>
-        )}
-        {config?.hasToken && (
-          <div className="text-amber-400 pt-1">
-            Legacy PAT is still stored. Click the trash icon in status to disable PAT mode.
-          </div>
-        )}
-        {config?.missingScopes && config.missingScopes.length > 0 && (
-          <div className="text-amber-400 pt-1">
-            Missing scopes: {config.missingScopes.join(', ')}
-          </div>
-        )}
+          )
+        })}
+        <p className="text-white/25 pt-1">
+          Auth uses GitHub CLI (<code className="text-white/40">gh auth login</code>) — no PAT entry required.
+          Your browser will open automatically.
+        </p>
       </div>
 
-      <div className="space-y-2">
-        <div>
-          <label className="text-[10px] text-white/40 uppercase tracking-wide block mb-1">Enterprise slug</label>
-          <input
-            type="text"
-            value={enterprise}
-            onChange={e => setEnterprise(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white/80 focus:outline-none focus:border-blue-500/50"
-            placeholder="AICraftworks"
-          />
-        </div>
+      {/* Enterprise slug */}
+      <div>
+        <label className="text-[10px] text-white/40 uppercase tracking-wide block mb-1">Enterprise slug</label>
+        <input
+          type="text"
+          value={enterprise}
+          onChange={e => setEnterprise(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white/80 focus:outline-none focus:border-blue-500/50"
+          placeholder="AICraftworks"
+        />
       </div>
 
+      {/* Action buttons */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <button
-          onClick={handleBeginLogin}
-          disabled={saving}
+          onClick={handleSignIn}
+          disabled={busy || polling}
           className="py-1.5 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-white flex items-center justify-center gap-1.5"
         >
-          <LogIn size={12} /> Sign in with GitHub
+          {polling ? <Loader2 size={12} className="animate-spin" /> : <LogIn size={12} />}
+          {polling ? 'Waiting…' : 'Sign in with GitHub'}
         </button>
         <button
-          onClick={handleVerifyLogin}
-          disabled={saving}
+          onClick={handleVerify}
+          disabled={busy || polling}
           className="py-1.5 rounded-lg text-xs font-medium bg-white/10 hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-white flex items-center justify-center gap-1.5"
         >
           <RefreshCw size={12} /> Verify Login
         </button>
         <button
-          onClick={handleLogout}
-          disabled={saving}
+          onClick={handleSignOut}
+          disabled={busy || polling}
           className="py-1.5 rounded-lg text-xs font-medium bg-white/10 hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-white flex items-center justify-center gap-1.5"
         >
           <LogOut size={12} /> Sign Out
@@ -194,8 +213,19 @@ export function TokenAuthPanel({ onSaved }: Props) {
 
       {/* Feedback */}
       {message && (
-        <div className={`text-xs px-3 py-2 rounded-lg flex items-center gap-2 ${message.type === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-          {message.type === 'success' ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+        <div className={`text-xs px-3 py-2 rounded-lg flex items-center gap-2 ${
+          message.type === 'success'
+            ? 'bg-green-500/10 text-green-400'
+            : message.type === 'info'
+              ? 'bg-blue-500/10 text-blue-300'
+              : 'bg-red-500/10 text-red-400'
+        }`}>
+          {message.type === 'success'
+            ? <CheckCircle size={12} />
+            : message.type === 'info'
+              ? <Loader2 size={12} className="animate-spin" />
+              : <AlertCircle size={12} />
+          }
           {message.text}
         </div>
       )}
