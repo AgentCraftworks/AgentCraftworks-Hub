@@ -1,16 +1,16 @@
 // GitHubMonitorService.ts — Orchestrates all GitHub monitoring pollers
 // Runs in the Electron main process and exposes data via IPC.
-
 import { EventEmitter } from 'events'
 import { RateLimitPoller, type RateLimitData } from './RateLimitPoller.js'
 import { BillingPoller, type BillingData } from './BillingPoller.js'
 import { CopilotUsagePoller, type CopilotUsageData } from './CopilotUsagePoller.js'
-import { AuditLogPoller, type AuditLogEntry } from './AuditLogPoller.js'
+import { AuditLogPoller, type AuditLogEntry, type AuditLogData } from './AuditLogPoller.js'
 import { AlertService, type AlertThresholds } from './AlertService.js'
 import { appendSample, loadHistory, closeDb } from './HistoryStore.js'
 
 export interface MonitorConfig {
-  enterprise: string
+  enterprise: string  // Enterprise slug for audit log (case-sensitive: AICraftWorks)
+  org: string         // Org slug for billing/copilot APIs (AgentCraftworks)
   token: string
   rateLimitIntervalMs: number
   billingIntervalMs: number
@@ -24,11 +24,13 @@ export interface MonitorSnapshot {
   billing: BillingData | null
   copilot: CopilotUsageData | null
   topCallers: AuditLogEntry[]
+  auditLogError?: string
   lastUpdated: Record<string, number>
 }
 
 const DEFAULT_CONFIG: Omit<MonitorConfig, 'token'> = {
-  enterprise: 'AICraftworks',
+  enterprise: 'AICraftWorks',   // Case-sensitive! Capital W required for enterprise endpoints
+  org: 'AgentCraftworks',       // Org slug for billing v2 and copilot endpoints
   rateLimitIntervalMs: 30_000,
   billingIntervalMs: 5 * 60_000,
   copilotIntervalMs: 5 * 60_000,
@@ -53,13 +55,16 @@ export class GitHubMonitorService extends EventEmitter {
   constructor(token: string, overrides: Partial<MonitorConfig> = {}) {
     super()
     this.config = { ...DEFAULT_CONFIG, token, ...overrides }
+
     this.rateLimitPoller = new RateLimitPoller(token, this.config.rateLimitIntervalMs)
-    this.billingPoller = new BillingPoller(token, this.config.enterprise, this.config.billingIntervalMs)
-    this.copilotPoller = new CopilotUsagePoller(token, this.config.enterprise, this.config.copilotIntervalMs)
+    // Billing and Copilot use org-level endpoints
+    this.billingPoller = new BillingPoller(token, this.config.org, this.config.billingIntervalMs)
+    this.copilotPoller = new CopilotUsagePoller(token, this.config.org, this.config.copilotIntervalMs)
+    // Audit log uses enterprise-level endpoint
     this.auditLogPoller = new AuditLogPoller(token, this.config.enterprise, this.config.auditLogIntervalMs)
     this.alertService = new AlertService(this.config.alertThresholds)
 
-    // Pre-fill rate limit history from SQLite
+    // Pre-fill rate limit history from disk
     const history = loadHistory()
     if (history.length > 0) {
       this.snapshot.rateLimit = {
@@ -77,7 +82,6 @@ export class GitHubMonitorService extends EventEmitter {
     this.rateLimitPoller.on('data', (data: RateLimitData) => {
       this.snapshot.rateLimit = data
       this.snapshot.lastUpdated.rateLimit = Date.now()
-      // Persist sample to SQLite for sparkline continuity across restarts
       appendSample({ ts: data.fetchedAt, coreUsed: data.core.used, coreLimit: data.core.limit })
       this.alertService.evaluate(this.snapshot)
       this.emit('update', this.snapshot)
@@ -96,8 +100,9 @@ export class GitHubMonitorService extends EventEmitter {
       this.emit('update', this.snapshot)
     })
 
-    this.auditLogPoller.on('data', (entries: AuditLogEntry[]) => {
-      this.snapshot.topCallers = entries
+    this.auditLogPoller.on('data', (result: AuditLogData) => {
+      this.snapshot.topCallers = result.entries
+      this.snapshot.auditLogError = result.error
       this.snapshot.lastUpdated.auditLog = Date.now()
       this.emit('update', this.snapshot)
     })

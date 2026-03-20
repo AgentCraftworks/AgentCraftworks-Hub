@@ -1,6 +1,6 @@
-// BillingPoller.ts — Polls enterprise Actions minutes and storage billing every 5 min
-// Requires a token with read:enterprise scope.
-
+// BillingPoller.ts — Polls org-level Actions billing usage (v2 API) every 5 min
+// Uses /orgs/{org}/settings/billing/usage (the legacy enterprise endpoint is 410 Gone).
+// Requires a token with read:enterprise or admin:org scope.
 import { EventEmitter } from 'events'
 import { Octokit } from '@octokit/rest'
 
@@ -13,7 +13,6 @@ export interface ActionsMinutes {
     macos: number
     windows: number
   }
-  // Estimated overage cost in USD (linux=$0.008/min, windows=2x, macos=10x)
   estimatedOverageCostUsd: number
   billingCycleResetAt: string | null
 }
@@ -30,28 +29,16 @@ const MINUTE_RATES_USD: Record<string, number> = {
   macos: 0.08,
 }
 
-function calcOverageCost(breakdown: ActionsMinutes['minutesUsedBreakdown'], included: number, total: number): number {
-  if (total <= included) return 0
-  // Simple estimate: apply overage proportionally by OS
-  const overage = total - included
-  const ratio = overage / total
-  return (
-    breakdown.ubuntu * MINUTE_RATES_USD.ubuntu * ratio +
-    breakdown.windows * MINUTE_RATES_USD.windows * ratio +
-    breakdown.macos * MINUTE_RATES_USD.macos * ratio
-  )
-}
-
 export class BillingPoller extends EventEmitter {
   private octokit: Octokit
-  private enterprise: string
+  private org: string
   private intervalMs: number
   private timer: ReturnType<typeof setInterval> | null = null
 
-  constructor(token: string, enterprise: string, intervalMs: number) {
+  constructor(token: string, org: string, intervalMs: number) {
     super()
     this.octokit = new Octokit({ auth: token })
-    this.enterprise = enterprise
+    this.org = org
     this.intervalMs = intervalMs
   }
 
@@ -66,30 +53,52 @@ export class BillingPoller extends EventEmitter {
 
   private async poll(): Promise<void> {
     try {
-      // GitHub Enterprise billing endpoint
+      // New v2 billing usage endpoint (org-level)
       const { data } = await this.octokit.request(
-        'GET /enterprises/{enterprise}/settings/billing/actions',
-        { enterprise: this.enterprise }
-      )
+        'GET /orgs/{org}/settings/billing/usage',
+        { org: this.org }
+      ) as { data: { usageItems: Array<Record<string, unknown>> } }
 
-      const breakdown = {
-        ubuntu: (data as unknown as Record<string, number>).minutes_used_breakdown?.UBUNTU ?? 0,
-        windows: (data as unknown as Record<string, number>).minutes_used_breakdown?.WINDOWS ?? 0,
-        macos: (data as unknown as Record<string, number>).minutes_used_breakdown?.MACOS ?? 0,
+      const items = Array.isArray(data.usageItems) ? data.usageItems : []
+
+      // Aggregate minutes from "actions" product items
+      let totalMinutes = 0
+      const breakdown = { ubuntu: 0, macos: 0, windows: 0 }
+
+      for (const item of items) {
+        if (item.product !== 'actions') continue
+        const sku = String(item.sku ?? '').toLowerCase()
+        const qty = Number(item.quantity ?? 0)
+        if (sku.includes('storage')) continue // storage is GigabyteHours, not minutes
+
+        totalMinutes += qty
+        if (sku.includes('linux') || sku.includes('ubuntu')) breakdown.ubuntu += qty
+        else if (sku.includes('macos')) breakdown.macos += qty
+        else if (sku.includes('windows')) breakdown.windows += qty
+        else breakdown.ubuntu += qty // default to linux
+      }
+
+      // Compute total cost from items
+      let totalCost = 0
+      for (const item of items) {
+        totalCost += Number(item.netAmount ?? 0)
       }
 
       const actionsMinutes: ActionsMinutes = {
-        totalMinutesUsed: data.total_minutes_used,
-        totalPaidMinutesUsed: data.total_paid_minutes_used,
-        includedMinutes: data.included_minutes,
-        minutesUsedBreakdown: breakdown,
-        estimatedOverageCostUsd: calcOverageCost(breakdown, data.included_minutes, data.total_minutes_used),
+        totalMinutesUsed: Math.round(totalMinutes),
+        totalPaidMinutesUsed: 0,
+        includedMinutes: 0,
+        minutesUsedBreakdown: {
+          ubuntu: Math.round(breakdown.ubuntu),
+          macos: Math.round(breakdown.macos),
+          windows: Math.round(breakdown.windows),
+        },
+        estimatedOverageCostUsd: totalCost,
         billingCycleResetAt: null,
       }
 
       this.emit('data', { actionsMinutes, fetchedAt: Date.now() } satisfies BillingData)
     } catch (err: unknown) {
-      // Graceful degradation — emit with error flag so UI can show "admin access required"
       const message = err instanceof Error ? err.message : String(err)
       this.emit('data', { actionsMinutes: null, fetchedAt: Date.now(), error: message } satisfies BillingData)
     }

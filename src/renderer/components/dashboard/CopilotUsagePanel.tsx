@@ -50,16 +50,29 @@ export function CopilotUsagePanel({ data }: Props) {
     fullName: m.model,
   }))
 
+  const seats = data.seatBreakdown
+
   return (
     <Panel>
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <Stat label="Active Users" value={data.totalActiveUsers} />
-        <Stat label="Engaged Users" value={data.totalEngagedUsers} />
+        {seats ? (
+          <>
+            <Stat label="Total Seats" value={seats.total} />
+            <Stat label="Active This Cycle" value={seats.activeThisCycle} highlight />
+            <Stat label="Inactive" value={seats.inactiveThisCycle} />
+            <Stat label="Pending Invite" value={seats.pendingInvitation} />
+          </>
+        ) : (
+          <>
+            <Stat label="Active Users" value={data.totalActiveUsers} />
+            <Stat label="Engaged Users" value={data.totalEngagedUsers} />
+          </>
+        )}
         <Stat label="Premium Requests" value={data.premiumRequestsUsed} highlight />
         <Stat
-          label="Limit"
-          value={data.premiumRequestsLimit !== null ? data.premiumRequestsLimit : '—'}
+          label="Plan"
+          value={data.planType ?? '—'}
         />
       </div>
 

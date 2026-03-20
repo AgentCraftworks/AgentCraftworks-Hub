@@ -40,12 +40,23 @@ export interface CopilotModelBreakdown {
   totalChatTurns?: number
 }
 
+export interface CopilotSeatBreakdown {
+  total: number
+  activeThisCycle: number
+  inactiveThisCycle: number
+  pendingInvitation: number
+  pendingCancellation: number
+  addedThisCycle: number
+}
+
 export interface CopilotUsageData {
   totalActiveUsers: number
   totalEngagedUsers: number
   modelBreakdown: CopilotModelBreakdown[]
   premiumRequestsUsed: number
   premiumRequestsLimit: number | null
+  seatBreakdown: CopilotSeatBreakdown | null
+  planType: string | null
   fetchedAt: number
   error?: string
 }
@@ -64,6 +75,7 @@ export interface MonitorSnapshot {
   billing: BillingData | null
   copilot: CopilotUsageData | null
   topCallers: AuditLogEntry[]
+  auditLogError?: string
   lastUpdated: Record<string, number>
 }
 

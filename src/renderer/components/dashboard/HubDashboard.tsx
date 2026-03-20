@@ -14,7 +14,7 @@ interface Props {
   onClose?: () => void
 }
 
-export function HubDashboard({ enterprise = 'AICraftworks', onClose }: Props) {
+export function HubDashboard({ enterprise = 'AICraftWorks', onClose }: Props) {
   const { snapshot, history, loading, error, lastUpdated, refresh } = useHubMonitor(enterprise)
   const [showAuth, setShowAuth] = useState(false)
 
@@ -93,7 +93,7 @@ export function HubDashboard({ enterprise = 'AICraftworks', onClose }: Props) {
           <div className="xl:col-span-1">
             <TokenActivityPanel
               topCallers={snapshot?.topCallers ?? []}
-              error={snapshot !== null && snapshot.topCallers.length === 0 && snapshot.lastUpdated.auditLog !== undefined}
+              error={snapshot?.auditLogError}
             />
           </div>
 
