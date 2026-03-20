@@ -145,7 +145,7 @@ const hubAPI = {
   getHistory: (): Promise<import('@shared/hub-types').RateLimitSample[]> =>
     ipcRenderer.invoke('hub:getHistory'),
 
-  getTokenConfig: (): Promise<{ hasToken: boolean; enterprise: string; isGhCli: boolean }> =>
+  getTokenConfig: (): Promise<{ hasToken: boolean; enterprise: string; isGhCli: boolean; ghAuthenticated: boolean; ghScopes: string[]; missingScopes: string[] }> =>
     ipcRenderer.invoke('hub:getTokenConfig'),
 
   setToken: (params: { token: string; enterprise: string }): Promise<{ ok: boolean; error?: string }> =>
@@ -153,6 +153,15 @@ const hubAPI = {
 
   clearToken: (): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke('hub:clearToken'),
+
+  beginGitHubLogin: (params: { enterprise: string }): Promise<{ ok: boolean; error?: string; message?: string }> =>
+    ipcRenderer.invoke('hub:beginGitHubLogin', params),
+
+  completeGitHubLogin: (params: { enterprise: string }): Promise<{ ok: boolean; error?: string; scopes?: string[]; missingScopes?: string[] }> =>
+    ipcRenderer.invoke('hub:completeGitHubLogin', params),
+
+  logoutGitHub: (): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('hub:logoutGitHub'),
 
   refresh: (): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('hub:refresh'),

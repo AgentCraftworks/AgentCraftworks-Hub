@@ -78,9 +78,19 @@ export interface HubWindowAPI {
   stop(): Promise<{ ok: boolean }>
   getSnapshot(): Promise<MonitorSnapshot | null>
   getHistory(): Promise<RateLimitSample[]>
-  getTokenConfig(): Promise<{ hasToken: boolean; enterprise: string; isGhCli: boolean }>
+  getTokenConfig(): Promise<{
+    hasToken: boolean
+    enterprise: string
+    isGhCli: boolean
+    ghAuthenticated: boolean
+    ghScopes: string[]
+    missingScopes: string[]
+  }>
   setToken(params: { token: string; enterprise: string }): Promise<{ ok: boolean; error?: string }>
   clearToken(): Promise<{ ok: boolean }>
+  beginGitHubLogin(params: { enterprise: string }): Promise<{ ok: boolean; error?: string; message?: string }>
+  completeGitHubLogin(params: { enterprise: string }): Promise<{ ok: boolean; error?: string; scopes?: string[]; missingScopes?: string[] }>
+  logoutGitHub(): Promise<{ ok: boolean; error?: string }>
   refresh(): Promise<{ ok: boolean; error?: string }>
   onSnapshot(cb: (snapshot: MonitorSnapshot) => void): () => void
   onError(cb: (message: string) => void): () => void
