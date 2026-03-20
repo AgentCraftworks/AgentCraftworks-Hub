@@ -253,6 +253,23 @@ export function StatusBar({ sessions, activeSession, onToggleSettings, onToggleH
             >
               GitHub Usage
             </button>
+            {hubOpen && (
+              <>
+                <span className="mx-1" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
+                <button
+                  onClick={onToggleHub}
+                  className="cursor-pointer flex items-center justify-center"
+                  style={{
+                    color: 'var(--text-primary)',
+                    background: 'none', border: 'none', font: 'inherit', fontSize: 'inherit', padding: 0,
+                    fontWeight: 600,
+                  }}
+                  title="Return to main terminal view"
+                >
+                  Back to Main
+                </button>
+              </>
+            )}
           </>
         )}
         <span className="mx-1" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>

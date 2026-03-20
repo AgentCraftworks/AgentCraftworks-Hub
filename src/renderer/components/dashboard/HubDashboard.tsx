@@ -70,8 +70,8 @@ export function HubDashboard({ enterprise = 'AICraftworks', onClose }: Props) {
       )}
 
       {/* Dashboard grid */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-w-5xl mx-auto">
+      <div className="flex-1 overflow-y-auto py-4 pr-4 pl-6 sm:pl-7 lg:pl-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-w-6xl mr-auto">
 
           {/* Auth settings panel — shown when settings gear is clicked */}
           {showAuth && (
