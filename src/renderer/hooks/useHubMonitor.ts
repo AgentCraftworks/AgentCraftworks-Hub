@@ -1,9 +1,10 @@
-// useHubMonitor.ts — React hook that subscribes to hub IPC events
+﻿// useHubMonitor.ts — React hook that subscribes to hub IPC events
 import { useState, useEffect, useCallback } from 'react'
-import type { MonitorSnapshot } from '@shared/hub-types'
+import type { MonitorSnapshot, RateLimitSample } from '@shared/hub-types'
 
 export interface HubMonitorState {
   snapshot: MonitorSnapshot | null
+  history: RateLimitSample[]
   loading: boolean
   error: string | null
   lastUpdated: Date | null
@@ -12,6 +13,7 @@ export interface HubMonitorState {
 export function useHubMonitor(enterprise = 'AICraftworks'): HubMonitorState & { refresh: () => void } {
   const [state, setState] = useState<HubMonitorState>({
     snapshot: null,
+    history: [],
     loading: true,
     error: null,
     lastUpdated: null,
@@ -28,14 +30,28 @@ export function useHubMonitor(enterprise = 'AICraftworks'): HubMonitorState & { 
         return
       }
 
+      // Load persisted history from disk on startup
+      const persistedHistory = await window.hubAPI.getHistory()
+
       // Seed with current snapshot if already available
       const initial = await window.hubAPI.getSnapshot()
       if (initial) {
-        setState(s => ({ ...s, snapshot: initial, loading: false, lastUpdated: new Date() }))
+        setState(s => ({ ...s, snapshot: initial, history: persistedHistory, loading: false, lastUpdated: new Date() }))
+      } else {
+        setState(s => ({ ...s, history: persistedHistory }))
       }
 
       unsubSnapshot = window.hubAPI.onSnapshot((snapshot) => {
-        setState({ snapshot, loading: false, error: null, lastUpdated: new Date() })
+        setState(s => {
+          // Append new sample to local history state (HistoryStore handles disk persistence)
+          const newSample: RateLimitSample | null = snapshot.rateLimit
+            ? { ts: snapshot.rateLimit.fetchedAt, coreUsed: snapshot.rateLimit.core.used, coreLimit: snapshot.rateLimit.core.limit }
+            : null
+          const updatedHistory = newSample
+            ? [...s.history.slice(-720), newSample]
+            : s.history
+          return { snapshot, history: updatedHistory, loading: false, error: null, lastUpdated: new Date() }
+        })
       })
 
       unsubError = window.hubAPI.onError((msg) => {

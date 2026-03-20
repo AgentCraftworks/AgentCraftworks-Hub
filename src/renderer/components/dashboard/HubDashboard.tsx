@@ -1,11 +1,13 @@
-// HubDashboard.tsx — Main dashboard container (Task Manager style)
+﻿// HubDashboard.tsx — Main dashboard container (Task Manager style)
+import { useState } from 'react'
 import { useHubMonitor } from '@/hooks/useHubMonitor'
 import { RateLimitPanel } from './RateLimitPanel'
 import { TokenActivityPanel } from './TokenActivityPanel'
 import { ActionsMinutesPanel } from './ActionsMinutesPanel'
 import { CopilotUsagePanel } from './CopilotUsagePanel'
 import { BillingPanel } from './BillingPanel'
-import { RefreshCw, Loader } from 'lucide-react'
+import { TokenAuthPanel } from './TokenAuthPanel'
+import { RefreshCw, Loader, Settings } from 'lucide-react'
 
 interface Props {
   enterprise?: string
@@ -13,7 +15,8 @@ interface Props {
 }
 
 export function HubDashboard({ enterprise = 'AICraftworks', onClose }: Props) {
-  const { snapshot, loading, error, lastUpdated, refresh } = useHubMonitor(enterprise)
+  const { snapshot, history, loading, error, lastUpdated, refresh } = useHubMonitor(enterprise)
+  const [showAuth, setShowAuth] = useState(false)
 
   return (
     <div className="flex flex-col h-full bg-black/20 overflow-hidden">
@@ -21,7 +24,7 @@ export function HubDashboard({ enterprise = 'AICraftworks', onClose }: Props) {
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 flex-shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-white/80">AgentCraftworks Hub</span>
-          <span className="text-xs text-white/30">AICraftworks Enterprise</span>
+          <span className="text-xs text-white/30">{enterprise} Enterprise</span>
         </div>
         <div className="flex items-center gap-3">
           {onClose && (
@@ -38,6 +41,14 @@ export function HubDashboard({ enterprise = 'AICraftworks', onClose }: Props) {
               Updated {lastUpdated.toLocaleTimeString()}
             </span>
           )}
+          <button
+            onClick={() => setShowAuth(s => !s)}
+            className={`flex items-center gap-1.5 text-xs transition-colors ${showAuth ? 'text-blue-400' : 'text-white/40 hover:text-white/70'}`}
+            title="Configure GitHub token"
+          >
+            <Settings size={12} />
+            Auth
+          </button>
           <button
             onClick={refresh}
             disabled={loading}
@@ -58,19 +69,22 @@ export function HubDashboard({ enterprise = 'AICraftworks', onClose }: Props) {
         </div>
       )}
 
-      {/* Dashboard grid — Task Manager style */}
-      <div
-        className="flex-1 overflow-y-auto"
-        style={{ paddingTop: 16, paddingRight: 16, paddingBottom: 16, paddingLeft: 16 }}
-      >
-        <div
-          className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-w-5xl mx-auto"
-          style={{ marginLeft: 20 }}
-        >
+      {/* Dashboard grid */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-w-5xl mx-auto">
+
+          {/* Auth settings panel — shown when settings gear is clicked */}
+          {showAuth && (
+            <div className="xl:col-span-2">
+              <TokenAuthPanel onSaved={() => setShowAuth(false)} />
+            </div>
+          )}
+
           {/* Rate Limit — always full width on smaller, left col on xl */}
           <div className="xl:col-span-1">
             <RateLimitPanel
               data={snapshot?.rateLimit ?? null}
+              history={history}
               onRefresh={refresh}
             />
           </div>

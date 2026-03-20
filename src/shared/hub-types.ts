@@ -1,4 +1,4 @@
-// hub-types.ts — Shared types for Hub monitoring (used by main + renderer)
+﻿// hub-types.ts — Shared types for Hub monitoring (used by main + renderer)
 // Keep in sync with the individual poller exports.
 
 export interface RateLimitEndpoint {
@@ -65,4 +65,23 @@ export interface MonitorSnapshot {
   copilot: CopilotUsageData | null
   topCallers: AuditLogEntry[]
   lastUpdated: Record<string, number>
+}
+
+export interface RateLimitSample {
+  ts: number
+  coreUsed: number
+  coreLimit: number
+}
+
+export interface HubWindowAPI {
+  start(enterprise?: string): Promise<{ ok: boolean; error?: string }>
+  stop(): Promise<{ ok: boolean }>
+  getSnapshot(): Promise<MonitorSnapshot | null>
+  getHistory(): Promise<RateLimitSample[]>
+  getTokenConfig(): Promise<{ hasToken: boolean; enterprise: string; isGhCli: boolean }>
+  setToken(params: { token: string; enterprise: string }): Promise<{ ok: boolean; error?: string }>
+  clearToken(): Promise<{ ok: boolean }>
+  refresh(): Promise<{ ok: boolean; error?: string }>
+  onSnapshot(cb: (snapshot: MonitorSnapshot) => void): () => void
+  onError(cb: (message: string) => void): () => void
 }

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+﻿import { contextBridge, ipcRenderer } from 'electron'
 
 const tangentAPI = {
   session: {
@@ -141,6 +141,18 @@ const hubAPI = {
 
   getSnapshot: (): Promise<import('@shared/hub-types').MonitorSnapshot | null> =>
     ipcRenderer.invoke('hub:getSnapshot'),
+
+  getHistory: (): Promise<import('@shared/hub-types').RateLimitSample[]> =>
+    ipcRenderer.invoke('hub:getHistory'),
+
+  getTokenConfig: (): Promise<{ hasToken: boolean; enterprise: string; isGhCli: boolean }> =>
+    ipcRenderer.invoke('hub:getTokenConfig'),
+
+  setToken: (params: { token: string; enterprise: string }): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('hub:setToken', params),
+
+  clearToken: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('hub:clearToken'),
 
   refresh: (): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('hub:refresh'),
