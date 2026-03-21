@@ -2,18 +2,22 @@
 // Registers the GitHubMonitorService and pushes snapshots to the renderer.
 import { ipcMain, BrowserWindow, shell } from 'electron'
 import { execSync, spawn } from 'child_process'
+import { createRequire } from 'module'
 import { GitHubMonitorService } from '../github/GitHubMonitorService.js'
 import type { MonitorSnapshot } from '../github/GitHubMonitorService.js'
 import { loadHistory } from '../github/HistoryStore.js'
 
 // Keytar is an optional native module — gracefully degrade if not available
+const requireForOptionalDeps =
+  typeof require === 'function' ? require : createRequire(import.meta.url)
+
 let keytar: {
   getPassword: (svc: string, acc: string) => Promise<string | null>
   setPassword: (svc: string, acc: string, pw: string) => Promise<void>
   deletePassword: (svc: string, acc: string) => Promise<boolean>
 } | null = null
 try {
-  keytar = require('keytar')
+  keytar = requireForOptionalDeps('keytar')
 } catch {
   // keytar not available — enterprise slug stored in memory only
 }
