@@ -1,6 +1,6 @@
-// CopilotUsagePoller.ts — Polls enterprise Copilot usage every 5 min
+// CopilotUsagePoller.ts — Polls org-level Copilot billing every 5 min
+// Uses /orgs/{org}/copilot/billing (enterprise endpoint returns 404).
 // Requires a token with manage_billing:copilot scope.
-
 import { EventEmitter } from 'events'
 import { Octokit } from '@octokit/rest'
 
@@ -14,24 +14,32 @@ export interface CopilotModelBreakdown {
 export interface CopilotUsageData {
   totalActiveUsers: number
   totalEngagedUsers: number
-  // Per-model breakdown for the current billing period
   modelBreakdown: CopilotModelBreakdown[]
   premiumRequestsUsed: number
   premiumRequestsLimit: number | null
+  seatBreakdown: {
+    total: number
+    activeThisCycle: number
+    inactiveThisCycle: number
+    pendingInvitation: number
+    pendingCancellation: number
+    addedThisCycle: number
+  } | null
+  planType: string | null
   fetchedAt: number
   error?: string
 }
 
 export class CopilotUsagePoller extends EventEmitter {
   private octokit: Octokit
-  private enterprise: string
+  private org: string
   private intervalMs: number
   private timer: ReturnType<typeof setInterval> | null = null
 
-  constructor(token: string, enterprise: string, intervalMs: number) {
+  constructor(token: string, org: string, intervalMs: number) {
     super()
     this.octokit = new Octokit({ auth: token })
-    this.enterprise = enterprise
+    this.org = org
     this.intervalMs = intervalMs
   }
 
@@ -46,40 +54,29 @@ export class CopilotUsagePoller extends EventEmitter {
 
   private async poll(): Promise<void> {
     try {
+      // Org-level copilot billing endpoint
       const { data } = await this.octokit.request(
-        'GET /enterprises/{enterprise}/copilot/usage',
-        { enterprise: this.enterprise }
-      )
+        'GET /orgs/{org}/copilot/billing',
+        { org: this.org }
+      ) as { data: Record<string, unknown> }
 
-      // data is an array of daily usage records — aggregate the most recent day
-      const records = Array.isArray(data) ? data : []
-      const latest = records[records.length - 1] as Record<string, unknown> | undefined
-
-      const breakdown: CopilotModelBreakdown[] = []
-      let premiumRequestsUsed = 0
-
-      if (latest?.breakdown && Array.isArray(latest.breakdown)) {
-        for (const entry of latest.breakdown as Record<string, unknown>[]) {
-          const model = String(entry.model ?? 'unknown')
-          breakdown.push({
-            model,
-            totalSuggestionsCount: Number(entry.total_suggestions_count ?? 0),
-            totalAcceptancesCount: Number(entry.total_acceptances_count ?? 0),
-            totalChatTurns: Number(entry.total_chat_turns ?? 0),
-          })
-          // Premium models (non-base) count toward premium requests
-          if (model !== 'default' && model !== 'gpt-3.5-turbo') {
-            premiumRequestsUsed += Number(entry.total_suggestions_count ?? 0)
-          }
-        }
-      }
+      const seatBreakdown = data.seat_breakdown as Record<string, number> | undefined
 
       this.emit('data', {
-        totalActiveUsers: Number(latest?.total_active_users ?? 0),
-        totalEngagedUsers: Number(latest?.total_engaged_users ?? 0),
-        modelBreakdown: breakdown,
-        premiumRequestsUsed,
-        premiumRequestsLimit: null, // Not available in public API
+        totalActiveUsers: Number(seatBreakdown?.active_this_cycle ?? 0),
+        totalEngagedUsers: Number(seatBreakdown?.active_this_cycle ?? 0),
+        modelBreakdown: [],
+        premiumRequestsUsed: 0,
+        premiumRequestsLimit: null,
+        seatBreakdown: seatBreakdown ? {
+          total: Number(seatBreakdown.total ?? 0),
+          activeThisCycle: Number(seatBreakdown.active_this_cycle ?? 0),
+          inactiveThisCycle: Number(seatBreakdown.inactive_this_cycle ?? 0),
+          pendingInvitation: Number(seatBreakdown.pending_invitation ?? 0),
+          pendingCancellation: Number(seatBreakdown.pending_cancellation ?? 0),
+          addedThisCycle: Number(seatBreakdown.added_this_cycle ?? 0),
+        } : null,
+        planType: data.plan_type ? String(data.plan_type) : null,
         fetchedAt: Date.now(),
       } satisfies CopilotUsageData)
     } catch (err: unknown) {
@@ -90,6 +87,8 @@ export class CopilotUsagePoller extends EventEmitter {
         modelBreakdown: [],
         premiumRequestsUsed: 0,
         premiumRequestsLimit: null,
+        seatBreakdown: null,
+        planType: null,
         fetchedAt: Date.now(),
         error: message,
       } satisfies CopilotUsageData)

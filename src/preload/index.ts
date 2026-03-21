@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+﻿import { contextBridge, ipcRenderer } from 'electron'
 
 const tangentAPI = {
   session: {
@@ -142,6 +142,27 @@ const hubAPI = {
   getSnapshot: (): Promise<import('@shared/hub-types').MonitorSnapshot | null> =>
     ipcRenderer.invoke('hub:getSnapshot'),
 
+  getHistory: (): Promise<import('@shared/hub-types').RateLimitSample[]> =>
+    ipcRenderer.invoke('hub:getHistory'),
+
+  getTokenConfig: (): Promise<{ hasToken: boolean; enterprise: string; isGhCli: boolean; ghAuthenticated: boolean; ghScopes: string[]; missingScopes: string[] }> =>
+    ipcRenderer.invoke('hub:getTokenConfig'),
+
+  checkLoginStatus: (): Promise<{ authenticated: boolean; scopes: string[]; missingScopes: string[] }> =>
+    ipcRenderer.invoke('hub:checkLoginStatus'),
+
+  beginGitHubLogin: (params: { enterprise: string }): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('hub:beginGitHubLogin', params),
+
+  openDevicePage: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('hub:openDevicePage'),
+
+  completeGitHubLogin: (params: { enterprise: string }): Promise<{ ok: boolean; error?: string; scopes?: string[]; missingScopes?: string[] }> =>
+    ipcRenderer.invoke('hub:completeGitHubLogin', params),
+
+  logoutGitHub: (): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('hub:logoutGitHub'),
+
   refresh: (): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('hub:refresh'),
 
@@ -155,6 +176,12 @@ const hubAPI = {
     const handler = (_: Electron.IpcRendererEvent, message: string) => cb(message)
     ipcRenderer.on('hub:error', handler)
     return () => { ipcRenderer.removeListener('hub:error', handler) }
+  },
+
+  onDeviceCode: (cb: (code: string) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, code: string) => cb(code)
+    ipcRenderer.on('hub:deviceCode', handler)
+    return () => { ipcRenderer.removeListener('hub:deviceCode', handler) }
   },
 }
 

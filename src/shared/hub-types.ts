@@ -1,4 +1,4 @@
-// hub-types.ts — Shared types for Hub monitoring (used by main + renderer)
+﻿// hub-types.ts — Shared types for Hub monitoring (used by main + renderer)
 // Keep in sync with the individual poller exports.
 
 export interface RateLimitEndpoint {
@@ -40,12 +40,23 @@ export interface CopilotModelBreakdown {
   totalChatTurns?: number
 }
 
+export interface CopilotSeatBreakdown {
+  total: number
+  activeThisCycle: number
+  inactiveThisCycle: number
+  pendingInvitation: number
+  pendingCancellation: number
+  addedThisCycle: number
+}
+
 export interface CopilotUsageData {
   totalActiveUsers: number
   totalEngagedUsers: number
   modelBreakdown: CopilotModelBreakdown[]
   premiumRequestsUsed: number
   premiumRequestsLimit: number | null
+  seatBreakdown: CopilotSeatBreakdown | null
+  planType: string | null
   fetchedAt: number
   error?: string
 }
@@ -64,5 +75,36 @@ export interface MonitorSnapshot {
   billing: BillingData | null
   copilot: CopilotUsageData | null
   topCallers: AuditLogEntry[]
+  auditLogError?: string
   lastUpdated: Record<string, number>
+}
+
+export interface RateLimitSample {
+  ts: number
+  coreUsed: number
+  coreLimit: number
+}
+
+export interface HubWindowAPI {
+  start(enterprise?: string): Promise<{ ok: boolean; error?: string }>
+  stop(): Promise<{ ok: boolean }>
+  getSnapshot(): Promise<MonitorSnapshot | null>
+  getHistory(): Promise<RateLimitSample[]>
+  getTokenConfig(): Promise<{
+    hasToken: boolean
+    enterprise: string
+    isGhCli: boolean
+    ghAuthenticated: boolean
+    ghScopes: string[]
+    missingScopes: string[]
+  }>
+  checkLoginStatus(): Promise<{ authenticated: boolean; scopes: string[]; missingScopes: string[] }>
+  beginGitHubLogin(params: { enterprise: string }): Promise<{ ok: boolean; error?: string }>
+  openDevicePage(): Promise<{ ok: boolean }>
+  completeGitHubLogin(params: { enterprise: string }): Promise<{ ok: boolean; error?: string; scopes?: string[]; missingScopes?: string[] }>
+  logoutGitHub(): Promise<{ ok: boolean; error?: string }>
+  refresh(): Promise<{ ok: boolean; error?: string }>
+  onSnapshot(cb: (snapshot: MonitorSnapshot) => void): () => void
+  onError(cb: (message: string) => void): () => void
+  onDeviceCode(cb: (code: string) => void): () => void
 }

@@ -45,7 +45,7 @@ function createWindow(): void {
     minHeight: 400,
     backgroundColor: '#0d1117',
     autoHideMenuBar: true,
-    icon: join(__dirname, '../../assets/tangent.ico'),
+    icon: join(__dirname, '../../assets/agentcraftworks.ico'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import type { Session } from '@shared/types'
 
 declare global {
   interface Window {
     tangentAPI: any
+    hubAPI: import('@shared/hub-types').HubWindowAPI
   }
 }
 

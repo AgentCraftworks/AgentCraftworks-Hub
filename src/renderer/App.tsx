@@ -100,7 +100,7 @@ export function App(): JSX.Element {
         <TerminalViewport sessions={sessions} activeId={activeId} fontSize={fontSize} />
         {hubOpen && (
           <div className="absolute inset-0 z-10 bg-[#0d1117]">
-            <HubDashboard />
+            <HubDashboard onClose={toggleHub} />
           </div>
         )}
         <AgentsSidebar activeSessionId={activeId} prefillAgent={prefillAgent} onPrefillConsumed={() => setPrefillAgent(null)} />

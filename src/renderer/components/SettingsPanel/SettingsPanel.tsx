@@ -351,7 +351,7 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                   Open Config File
                 </button>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Open ~/.tangent/config.json in your editor
+                  Open ~/AgentCraftworks/config.json in your editor
                 </p>
               </div>
 

@@ -4,7 +4,7 @@ import { Users, Lock } from 'lucide-react'
 
 interface Props {
   topCallers: AuditLogEntry[]
-  error?: boolean
+  error?: string
 }
 
 export function TokenActivityPanel({ topCallers, error }: Props) {
@@ -14,9 +14,11 @@ export function TokenActivityPanel({ topCallers, error }: Props) {
         <div className="flex flex-col items-center justify-center h-28 gap-2 text-white/30">
           <Lock size={20} />
           <p className="text-xs text-center">
-            Token Activity requires <span className="text-white/60">read:audit_log</span> scope
+            Audit log error: <span className="text-white/50">{error}</span>
             <br />
-            (enterprise admin access)
+            <span className="text-white/20 mt-1 block">
+              Requires <span className="text-white/60">read:audit_log</span> scope + enterprise admin access
+            </span>
           </p>
         </div>
       </Panel>

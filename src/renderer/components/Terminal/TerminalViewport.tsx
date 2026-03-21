@@ -275,7 +275,7 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
   }, [searchOpen])
 
   return (
-    <div className="flex-1 min-w-0 h-full flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="flex-1 min-w-0 h-full flex flex-col pl-2" style={{ background: 'var(--bg-primary)' }}>
       {searchOpen && (
         <div className="flex items-center gap-2 px-3 py-1.5 border-b" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
           <input
