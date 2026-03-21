@@ -29,7 +29,7 @@ Workflows known to be toggle-supported:
 - Toggle action creates a PR in the target repo updating ghaw-config.json
 - Toggle history is persisted and displayed in Hub
 - Branch protection and permission errors are surfaced gracefully in UI
-- 	oggle-supported vs Not yet controllable status is accurate
+- toggle-supported vs Not yet controllable status is accurate
 
 ## Related plan
 
