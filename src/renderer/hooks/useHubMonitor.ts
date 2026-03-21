@@ -30,8 +30,9 @@ export function useHubMonitor(enterprise = 'AICraftworks'): HubMonitorState & { 
         return
       }
 
-      // Load persisted history from disk on startup
-      const persistedHistory = await window.hubAPI.getHistory()
+      // Load persisted history from disk on startup; trim to the same
+      // retention window used for live updates to avoid unbounded memory growth.
+      const persistedHistory = (await window.hubAPI.getHistory()).slice(-720)
 
       // Seed with current snapshot if already available
       const initial = await window.hubAPI.getSnapshot()
