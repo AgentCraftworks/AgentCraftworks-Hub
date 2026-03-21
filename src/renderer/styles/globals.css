@@ -40,11 +40,10 @@
 }
 
 /* === Base Styles === */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* NOTE: Tailwind v4 preflight (included via @import "tailwindcss") already
+   resets margin, padding, and box-sizing on all elements inside @layer base.
+   A duplicate unlayered reset here would override ALL Tailwind padding/margin
+   utilities because unlayered CSS beats layered CSS in the cascade. */
 
 body {
   background: var(--bg-primary);
