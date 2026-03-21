@@ -213,7 +213,7 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
     const token = getGhCliToken()
     if (!token) return { ok: false, error: 'No GitHub token found. Click "Sign in with GitHub" to authenticate.' }
 
-    const ent = enterprise ?? (await getStoredEnterprise())
+    const ent = enterprise?.trim() || (await getStoredEnterprise())
     startMonitor(token, ent, getWindow)
     return { ok: true }
   })
