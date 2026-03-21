@@ -106,4 +106,5 @@ export interface HubWindowAPI {
   refresh(): Promise<{ ok: boolean; error?: string }>
   onSnapshot(cb: (snapshot: MonitorSnapshot) => void): () => void
   onError(cb: (message: string) => void): () => void
+  onDeviceCode(cb: (code: string) => void): () => void
 }

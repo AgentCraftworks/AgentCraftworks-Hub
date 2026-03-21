@@ -1,7 +1,8 @@
 // TokenAuthPanel.tsx — GitHub OAuth-only sign-in for enterprise dashboard access.
-// Spawns "gh auth login --web" silently (no terminal window) and polls for completion.
+// Spawns "gh auth login --web" silently, captures the device code, and shows it
+// inline so the user never needs a hidden terminal window.
 import { useState, useEffect, useRef } from 'react'
-import { CheckCircle, AlertCircle, LogIn, RefreshCw, LogOut, Loader2 } from 'lucide-react'
+import { CheckCircle, AlertCircle, LogIn, RefreshCw, LogOut, Loader2, Copy, Check } from 'lucide-react'
 
 interface AuthConfig {
   enterprise: string
@@ -28,6 +29,8 @@ export function TokenAuthPanel({ onSaved }: Props) {
   const [busy, setBusy] = useState(false)
   const [polling, setPolling] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
+  const [deviceCode, setDeviceCode] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   async function loadConfig() {
@@ -38,7 +41,15 @@ export function TokenAuthPanel({ onSaved }: Props) {
 
   useEffect(() => {
     void loadConfig()
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+    // Listen for device code from main process
+    const unsubCode = window.hubAPI.onDeviceCode((code: string) => {
+      setDeviceCode(code)
+      setCopied(false)
+    })
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+      unsubCode()
+    }
   }, [])
 
   function stopPolling() {
@@ -51,13 +62,14 @@ export function TokenAuthPanel({ onSaved }: Props) {
 
   function startPolling(ent: string) {
     setPolling(true)
-    setMessage({ type: 'info', text: 'Your browser opened for GitHub authorization. Waiting for sign-in…' })
+    setMessage({ type: 'info', text: 'Paste the code below into your browser and authorize. Waiting…' })
 
     pollRef.current = setInterval(async () => {
       const status = await window.hubAPI.checkLoginStatus()
       if (!status.authenticated) return
 
       stopPolling()
+      setDeviceCode(null)
 
       if (status.missingScopes.length > 0) {
         setMessage({
@@ -78,6 +90,7 @@ export function TokenAuthPanel({ onSaved }: Props) {
     stopPolling()
     setBusy(true)
     setMessage(null)
+    setDeviceCode(null)
 
     const ent = enterprise.trim() || 'AICraftworks'
     const result = await window.hubAPI.beginGitHubLogin({ enterprise: ent })
@@ -118,6 +131,7 @@ export function TokenAuthPanel({ onSaved }: Props) {
     stopPolling()
     setBusy(true)
     setMessage(null)
+    setDeviceCode(null)
     await window.hubAPI.logoutGitHub()
     setBusy(false)
     await loadConfig()
@@ -210,6 +224,39 @@ export function TokenAuthPanel({ onSaved }: Props) {
           <LogOut size={12} /> Sign Out
         </button>
       </div>
+
+      {/* Device code display — shown during OAuth device flow */}
+      {deviceCode && (
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 space-y-2">
+          <div className="text-xs text-blue-300 font-medium">
+            Enter this code on GitHub to authorize:
+          </div>
+          <div className="flex items-center gap-3">
+            <code className="text-2xl font-bold font-mono text-white tracking-[0.2em] select-all">
+              {deviceCode}
+            </code>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(deviceCode)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              }}
+              className="px-2 py-1 rounded text-xs bg-white/10 hover:bg-white/20 transition-colors text-white/70 flex items-center gap-1"
+            >
+              {copied ? <><Check size={10} className="text-green-400" /> Copied</> : <><Copy size={10} /> Copy</>}
+            </button>
+          </div>
+          <div className="text-[10px] text-blue-300/60">
+            Your browser should open automatically. If not,{' '}
+            <button
+              onClick={() => window.hubAPI.openDevicePage()}
+              className="underline hover:text-blue-300 transition-colors"
+            >
+              click here to open github.com/login/device
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Feedback */}
       {message && (

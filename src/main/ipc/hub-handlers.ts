@@ -62,17 +62,42 @@ function missingScopes(scopes: string[]): string[] {
 
 /**
  * Launch GitHub browser-based OAuth flow entirely within the Electron process.
- * No terminal window is opened — gh auth login spawns silently with windowsHide
- * and opens the default system browser. Stdin is closed immediately to skip any
- * interactive prompts.
+ * Captures the device code from gh CLI output and pushes it to the renderer
+ * so the user sees the code in the app UI (no hidden terminal).
+ * Auto-opens github.com/login/device in the default browser.
  */
-function launchGitHubLoginIntegrated(scopes: string[]): void {
+function launchGitHubLoginIntegrated(
+  scopes: string[],
+  getWindow: () => BrowserWindow | null,
+): void {
   const scopeCsv = scopes.join(',')
-  const proc = spawn('gh', ['auth', 'login', '-h', 'github.com', '--web', '--scopes', scopeCsv], {
-    stdio: ['pipe', 'pipe', 'pipe'],
-    windowsHide: true,
-  })
-  // Close stdin immediately — prevents blocking on any "Press Enter" prompts
+  const proc = spawn(
+    'gh',
+    ['auth', 'login', '-h', 'github.com', '--web', '-p', 'HTTPS', '--scopes', scopeCsv],
+    { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true },
+  )
+
+  let codeSent = false
+  const codeRegex = /one-time code:\s*([A-Z0-9]{4}-[A-Z0-9]{4})/i
+
+  function parseForCode(chunk: Buffer | string) {
+    if (codeSent) return
+    const text = chunk.toString()
+    const match = text.match(codeRegex)
+    if (match) {
+      codeSent = true
+      const deviceCode = match[1]
+      // Push the code to the renderer so it can display it in the UI
+      getWindow()?.webContents.send('hub:deviceCode', deviceCode)
+      // Open the device page in the default browser
+      shell.openExternal('https://github.com/login/device')
+    }
+  }
+
+  proc.stdout?.on('data', parseForCode)
+  proc.stderr?.on('data', parseForCode)
+
+  // Close stdin immediately — skips any "Press Enter" / protocol selection prompts
   proc.stdin?.end()
   proc.unref()
 }
@@ -131,7 +156,7 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
     }
 
     try {
-      launchGitHubLoginIntegrated(REQUIRED_GH_SCOPES)
+      launchGitHubLoginIntegrated(REQUIRED_GH_SCOPES, getWindow)
       return { ok: true }
     } catch {
       return { ok: false, error: 'Unable to launch GitHub login. Ensure GitHub CLI (gh) is installed and in PATH.' }

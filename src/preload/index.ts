@@ -177,6 +177,12 @@ const hubAPI = {
     ipcRenderer.on('hub:error', handler)
     return () => { ipcRenderer.removeListener('hub:error', handler) }
   },
+
+  onDeviceCode: (cb: (code: string) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, code: string) => cb(code)
+    ipcRenderer.on('hub:deviceCode', handler)
+    return () => { ipcRenderer.removeListener('hub:deviceCode', handler) }
+  },
 }
 
 contextBridge.exposeInMainWorld('hubAPI', hubAPI)
