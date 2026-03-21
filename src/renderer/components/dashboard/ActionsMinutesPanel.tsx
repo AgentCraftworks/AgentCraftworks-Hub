@@ -1,4 +1,4 @@
-// ActionsMinutesPanel.tsx — GitHub Actions minutes usage and overage cost
+// ActionsMinutesPanel.tsx — GitHub Actions minutes usage and estimated total cost
 import type { BillingData } from '@shared/hub-types'
 import { Timer, AlertTriangle } from 'lucide-react'
 
@@ -82,10 +82,10 @@ export function ActionsMinutesPanel({ data }: Props) {
           <span className="text-amber-400 font-mono">{m.totalPaidMinutesUsed.toLocaleString()}</span>
         </div>
       )}
-      {m.estimatedOverageCostUsd > 0 && (
+      {m.estimatedCostUsd > 0 && (
         <div className="flex justify-between text-xs mt-1">
-          <span className="text-white/40">Est. overage cost</span>
-          <span className="text-red-400 font-mono">${m.estimatedOverageCostUsd.toFixed(2)}</span>
+          <span className="text-white/40">Est. total cost</span>
+          <span className="text-amber-400 font-mono">${m.estimatedCostUsd.toFixed(2)}</span>
         </div>
       )}
     </Panel>
