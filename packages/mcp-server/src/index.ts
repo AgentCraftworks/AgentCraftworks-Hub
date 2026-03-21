@@ -43,7 +43,7 @@ async function getRateLimits() {
   return {
     core: { ...r.core, resetEta: fmtEta(r.core.reset), percentUsed: Math.round((r.core.used / r.core.limit) * 100) },
     search: { ...r.search, resetEta: fmtEta(r.search.reset) },
-    graphql: { ...r.graphql, resetEta: fmtEta(r.graphql.reset) },
+    graphql: r.graphql ? { ...r.graphql, resetEta: fmtEta(r.graphql.reset) } : null,
     codeSearch: cs ? { ...cs, resetEta: fmtEta(cs.reset) } : null,
   }
 }

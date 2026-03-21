@@ -112,7 +112,7 @@ function ActionsSection({ data }: { data: BillingData }) {
     return (
       <Box flexDirection="column" marginBottom={1}>
         <Text bold color="cyan">  Actions Minutes</Text>
-        <Text paddingLeft={2} dimColor>{data.error ?? 'No data'}</Text>
+        <Box paddingLeft={2}><Text dimColor>{data.error ?? 'No data'}</Text></Box>
       </Box>
     )
   }
