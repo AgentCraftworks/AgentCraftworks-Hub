@@ -134,7 +134,7 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
     const ghToken = getGhCliToken()
     const ghScopes = ghToken ? getGhCliScopes() : []
     return {
-      hasToken: false,
+      hasToken: !!ghToken,
       enterprise,
       isGhCli: true,
       ghAuthenticated: !!ghToken,
