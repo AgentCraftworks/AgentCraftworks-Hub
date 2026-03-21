@@ -25,7 +25,7 @@ const POLL_INTERVAL_MS = 2500
 
 export function TokenAuthPanel({ onSaved }: Props) {
   const [config, setConfig] = useState<AuthConfig | null>(null)
-  const [enterprise, setEnterprise] = useState('AICraftworks')
+  const [enterprise, setEnterprise] = useState('AICraftWorks')
   const [busy, setBusy] = useState(false)
   const [polling, setPolling] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
@@ -92,7 +92,7 @@ export function TokenAuthPanel({ onSaved }: Props) {
     setMessage(null)
     setDeviceCode(null)
 
-    const ent = enterprise.trim() || 'AICraftworks'
+    const ent = enterprise.trim() || 'AICraftWorks'
     const result = await window.hubAPI.beginGitHubLogin({ enterprise: ent })
     setBusy(false)
 
@@ -195,7 +195,7 @@ export function TokenAuthPanel({ onSaved }: Props) {
           value={enterprise}
           onChange={e => setEnterprise(e.target.value)}
           className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white/80 focus:outline-none focus:border-blue-500/50"
-          placeholder="AICraftworks"
+          placeholder="AICraftWorks"
         />
       </div>
 

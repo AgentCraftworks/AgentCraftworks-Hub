@@ -8,7 +8,7 @@ import { render, Box, Text, Newline, useInput, useApp } from 'ink'
 import { execSync } from 'child_process'
 import type { MonitorSnapshot, RateLimitData, BillingData, CopilotUsageData } from './types.js'
 
-const ENTERPRISE = process.env.GITHUB_ENTERPRISE ?? 'AICraftworks'
+const ENTERPRISE = process.env.GITHUB_ENTERPRISE ?? 'AICraftWorks'
 const REFRESH_MS = 30_000
 
 // ── GitHub API fetch helpers ──────────────────────────────────────────────
