@@ -36,9 +36,9 @@ export function useHubMonitor(enterprise = 'AICraftworks'): HubMonitorState & { 
       // Seed with current snapshot if already available
       const initial = await window.hubAPI.getSnapshot()
       if (initial) {
-        setState(s => ({ ...s, snapshot: initial, history: persistedHistory, loading: false, lastUpdated: new Date() }))
+        setState(s => ({ ...s, snapshot: initial, history: persistedHistory.slice(-720), loading: false, lastUpdated: new Date() }))
       } else {
-        setState(s => ({ ...s, history: persistedHistory }))
+        setState(s => ({ ...s, history: persistedHistory.slice(-720) }))
       }
 
       unsubSnapshot = window.hubAPI.onSnapshot((snapshot) => {
