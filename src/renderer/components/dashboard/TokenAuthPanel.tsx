@@ -6,6 +6,7 @@ import { CheckCircle, AlertCircle, LogIn, RefreshCw, LogOut, Loader2, Copy, Chec
 
 interface AuthConfig {
   enterprise: string
+  org: string
   ghAuthenticated: boolean
   ghScopes: string[]
   missingScopes: string[]
@@ -26,6 +27,7 @@ const POLL_INTERVAL_MS = 2500
 export function TokenAuthPanel({ onSaved }: Props) {
   const [config, setConfig] = useState<AuthConfig | null>(null)
   const [enterprise, setEnterprise] = useState('AICraftWorks')
+  const [org, setOrg] = useState('AgentCraftworks')
   const [busy, setBusy] = useState(false)
   const [polling, setPolling] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
@@ -37,6 +39,7 @@ export function TokenAuthPanel({ onSaved }: Props) {
     const cfg = await window.hubAPI.getTokenConfig()
     setConfig(cfg)
     setEnterprise(cfg.enterprise)
+    setOrg(cfg.org)
   }
 
   useEffect(() => {
@@ -60,7 +63,7 @@ export function TokenAuthPanel({ onSaved }: Props) {
     setPolling(false)
   }
 
-  function startPolling(ent: string) {
+  function startPolling(ent: string, orgSlug: string) {
     setPolling(true)
     setMessage({ type: 'info', text: 'Paste the code below into your browser and authorize. Waiting…' })
 
@@ -83,7 +86,7 @@ export function TokenAuthPanel({ onSaved }: Props) {
           })
         } else {
           // Complete the login — starts the monitor service
-          await window.hubAPI.completeGitHubLogin({ enterprise: ent })
+          await window.hubAPI.completeGitHubLogin({ enterprise: ent, org: orgSlug })
           setMessage({ type: 'success', text: 'Signed in with GitHub — enterprise panels are now unlocked.' })
           onSaved?.()
         }
@@ -104,7 +107,8 @@ export function TokenAuthPanel({ onSaved }: Props) {
     setDeviceCode(null)
 
     const ent = enterprise.trim() || 'AICraftWorks'
-    const result = await window.hubAPI.beginGitHubLogin({ enterprise: ent })
+    const orgSlug = org.trim() || 'AgentCraftworks'
+    const result = await window.hubAPI.beginGitHubLogin({ enterprise: ent, org: orgSlug })
     setBusy(false)
 
     if (!result.ok) {
@@ -112,14 +116,14 @@ export function TokenAuthPanel({ onSaved }: Props) {
       return
     }
 
-    startPolling(ent)
+    startPolling(ent, orgSlug)
   }
 
   async function handleVerify() {
     stopPolling()
     setBusy(true)
     setMessage(null)
-    const result = await window.hubAPI.completeGitHubLogin({ enterprise: enterprise.trim() })
+    const result = await window.hubAPI.completeGitHubLogin({ enterprise: enterprise.trim(), org: org.trim() })
     setBusy(false)
 
     if (!result.ok) {
@@ -198,16 +202,30 @@ export function TokenAuthPanel({ onSaved }: Props) {
         </p>
       </div>
 
-      {/* Enterprise slug */}
-      <div>
-        <label className="text-[10px] text-white/40 uppercase tracking-wide block mb-1">Enterprise slug</label>
-        <input
-          type="text"
-          value={enterprise}
-          onChange={e => setEnterprise(e.target.value)}
-          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white/80 focus:outline-none focus:border-blue-500/50"
-          placeholder="AICraftWorks"
-        />
+      {/* Enterprise & Org slugs — side by side */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-[10px] text-white/40 uppercase tracking-wide block mb-1">Enterprise slug</label>
+          <input
+            type="text"
+            value={enterprise}
+            onChange={e => setEnterprise(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white/80 focus:outline-none focus:border-blue-500/50"
+            placeholder="AICraftWorks"
+          />
+          <p className="text-[10px] text-white/25 mt-1">Used for audit log (enterprise API)</p>
+        </div>
+        <div>
+          <label className="text-[10px] text-white/40 uppercase tracking-wide block mb-1">Org slug</label>
+          <input
+            type="text"
+            value={org}
+            onChange={e => setOrg(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white/80 focus:outline-none focus:border-blue-500/50"
+            placeholder="AgentCraftworks"
+          />
+          <p className="text-[10px] text-white/25 mt-1">Used for billing &amp; Copilot (org API)</p>
+        </div>
       </div>
 
       {/* Action buttons */}

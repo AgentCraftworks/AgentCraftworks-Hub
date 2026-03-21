@@ -24,10 +24,12 @@ try {
 
 const KEYTAR_SERVICE = 'agentcraftworks-hub'
 const KEYTAR_ACCOUNT_ENTERPRISE = 'github-enterprise'
+const KEYTAR_ACCOUNT_ORG = 'github-org'
 const REQUIRED_GH_SCOPES = ['read:audit_log', 'read:enterprise', 'manage_billing:copilot']
 
 let monitorService: GitHubMonitorService | null = null
 let cachedEnterprise = 'AICraftWorks'
+let cachedOrg = 'AgentCraftworks'
 
 async function getStoredEnterprise(): Promise<string> {
   if (keytar) {
@@ -35,6 +37,14 @@ async function getStoredEnterprise(): Promise<string> {
     if (stored) return stored
   }
   return cachedEnterprise
+}
+
+async function getStoredOrg(): Promise<string> {
+  if (keytar) {
+    const stored = await keytar.getPassword(KEYTAR_SERVICE, KEYTAR_ACCOUNT_ORG)
+    if (stored) return stored
+  }
+  return cachedOrg
 }
 
 function getGhCliToken(): string {
@@ -106,12 +116,12 @@ function launchGitHubLoginIntegrated(
   proc.unref()
 }
 
-function startMonitor(token: string, enterprise: string, getWindow: () => BrowserWindow | null): void {
+function startMonitor(token: string, enterprise: string, org: string, getWindow: () => BrowserWindow | null): void {
   if (monitorService) {
     monitorService.stop()
     monitorService = null
   }
-  monitorService = new GitHubMonitorService(token, { enterprise })
+  monitorService = new GitHubMonitorService(token, { enterprise, org })
   monitorService.on('update', (snapshot: MonitorSnapshot) => {
     getWindow()?.webContents.send('hub:snapshot', snapshot)
   })
@@ -128,14 +138,16 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
   // Return persisted rate limit history for the full chart
   ipcMain.handle('hub:getHistory', () => loadHistory())
 
-  // Returns auth status and enterprise name — no PAT fields
+  // Returns auth status and enterprise/org names — no PAT fields
   ipcMain.handle('hub:getTokenConfig', async () => {
     const enterprise = await getStoredEnterprise()
+    const org = await getStoredOrg()
     const ghToken = getGhCliToken()
     const ghScopes = ghToken ? getGhCliScopes() : []
     return {
       hasToken: !!ghToken,
       enterprise,
+      org,
       isGhCli: true,
       ghAuthenticated: !!ghToken,
       ghScopes,
@@ -152,11 +164,14 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   // Launch GitHub web OAuth flow — opens system browser silently, no terminal window
-  ipcMain.handle('hub:beginGitHubLogin', async (_, { enterprise }: { enterprise: string }) => {
+  ipcMain.handle('hub:beginGitHubLogin', async (_, { enterprise, org }: { enterprise: string; org?: string }) => {
     const ent = enterprise.trim() || 'AICraftWorks'
+    const orgSlug = (org ?? '').trim() || 'AgentCraftworks'
     cachedEnterprise = ent
+    cachedOrg = orgSlug
     if (keytar) {
       await keytar.setPassword(KEYTAR_SERVICE, KEYTAR_ACCOUNT_ENTERPRISE, ent)
+      await keytar.setPassword(KEYTAR_SERVICE, KEYTAR_ACCOUNT_ORG, orgSlug)
     }
 
     try {
@@ -174,7 +189,7 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   // Verify gh auth status/scopes and start monitoring with gh token
-  ipcMain.handle('hub:completeGitHubLogin', async (_, { enterprise }: { enterprise: string }) => {
+  ipcMain.handle('hub:completeGitHubLogin', async (_, { enterprise, org }: { enterprise: string; org?: string }) => {
     const token = getGhCliToken()
     if (!token) {
       return { ok: false, error: 'GitHub login not detected yet. Complete the sign-in flow in your browser first.' }
@@ -183,12 +198,15 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
     const scopes = getGhCliScopes()
     const missing = missingScopes(scopes)
     const ent = enterprise.trim() || (await getStoredEnterprise())
+    const orgSlug = (org ?? '').trim() || (await getStoredOrg())
     cachedEnterprise = ent
+    cachedOrg = orgSlug
     if (keytar) {
       await keytar.setPassword(KEYTAR_SERVICE, KEYTAR_ACCOUNT_ENTERPRISE, ent)
+      await keytar.setPassword(KEYTAR_SERVICE, KEYTAR_ACCOUNT_ORG, orgSlug)
     }
 
-    startMonitor(token, ent, getWindow)
+    startMonitor(token, ent, orgSlug, getWindow)
     return { ok: true, scopes, missingScopes: missing }
   })
 
@@ -214,7 +232,8 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
     if (!token) return { ok: false, error: 'No GitHub token found. Click "Sign in with GitHub" to authenticate.' }
 
     const ent = enterprise?.trim() || (await getStoredEnterprise())
-    startMonitor(token, ent, getWindow)
+    const org = await getStoredOrg()
+    startMonitor(token, ent, org, getWindow)
     return { ok: true }
   })
 
@@ -230,7 +249,8 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
     const token = getGhCliToken()
     if (!token) return { ok: false, error: 'No GitHub token' }
     const enterprise = await getStoredEnterprise()
-    startMonitor(token, enterprise, getWindow)
+    const org = await getStoredOrg()
+    startMonitor(token, enterprise, org, getWindow)
     return { ok: true }
   })
 }
