@@ -16,7 +16,7 @@ Currently, many GHAW workflows check .github/ghaw-config.json for workflows[].en
   - Permission check (Contents API write access)
   - Config patch operation (update or insert entry)
   - PR creation (default) or direct commit (when policy permits)
-- [ ] Add per-row Enabled toggle switch in inventory UI (only interactive for 	oggle-supported rows)
+- [ ] Add per-row Enabled toggle switch in inventory UI (only interactive for toggle-supported rows)
 - [ ] Add confirmation modal: workflow name, repo, current → requested state, impact, PR target
 - [ ] Add toggle history / activity log panel
 - [ ] Show Not yet controllable for workflows without ghaw-config.json guard
@@ -29,7 +29,7 @@ Workflows known to be toggle-supported:
 - Toggle action creates a PR in the target repo updating ghaw-config.json
 - Toggle history is persisted and displayed in Hub
 - Branch protection and permission errors are surfaced gracefully in UI
-- 	oggle-supported vs Not yet controllable status is accurate
+- Toggle-supported vs Not yet controllable status is accurate
 
 ## Related plan
 
