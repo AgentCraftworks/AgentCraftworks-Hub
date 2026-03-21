@@ -13,7 +13,7 @@ export interface ActionsMinutes {
     macos: number
     windows: number
   }
-  estimatedOverageCostUsd: number
+  estimatedCostUsd: number
   billingCycleResetAt: string | null
 }
 
@@ -87,7 +87,7 @@ export class BillingPoller extends EventEmitter {
           macos: Math.round(breakdown.macos),
           windows: Math.round(breakdown.windows),
         },
-        estimatedOverageCostUsd: totalCost,
+        estimatedCostUsd: totalCost,
         billingCycleResetAt: null,
       }
 

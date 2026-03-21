@@ -10,10 +10,10 @@ interface Props {
 const COPILOT_SEAT_PRICE_USD = 19 // per seat/month (Business tier)
 
 export function BillingPanel({ billing, copilot }: Props) {
-  const actionsOverage = billing?.actionsMinutes?.estimatedOverageCostUsd ?? 0
+  const actionsCost = billing?.actionsMinutes?.estimatedCostUsd ?? 0
   const activeUsers = copilot?.totalActiveUsers ?? 0
   const copilotCost = activeUsers * COPILOT_SEAT_PRICE_USD
-  const total = actionsOverage + copilotCost
+  const total = actionsCost + copilotCost
 
   const hasError = billing?.error || copilot?.error
 
@@ -40,13 +40,8 @@ export function BillingPanel({ billing, copilot }: Props) {
           color="text-blue-400"
         />
         <LineItem
-          label="Actions overages"
-          sublabel={
-            billing?.actionsMinutes
-              ? `${billing.actionsMinutes.totalPaidMinutesUsed.toLocaleString()} overage min`
-              : undefined
-          }
-          value={actionsOverage}
+          label="Actions cost (MTD)"
+          value={actionsCost}
           color="text-amber-400"
         />
         <div className="border-t border-white/10 pt-2 flex justify-between font-semibold">
@@ -56,7 +51,7 @@ export function BillingPanel({ billing, copilot }: Props) {
       </div>
 
       <p className="text-[10px] text-white/20 mt-3 leading-relaxed">
-        Copilot cost estimated from active seats. Actions cost from reported overages only.
+        Copilot cost estimated from active seats. Actions cost is the reported month-to-date total from the billing API.
         Does not include storage, packages, or enterprise licensing.
       </p>
     </div>
