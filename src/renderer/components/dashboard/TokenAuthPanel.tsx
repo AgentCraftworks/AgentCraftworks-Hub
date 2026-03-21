@@ -26,14 +26,14 @@ const POLL_INTERVAL_MS = 2500
 
 export function TokenAuthPanel({ onSaved }: Props) {
   const [config, setConfig] = useState<AuthConfig | null>(null)
-  const [enterprise, setEnterprise] = useState('AICraftworks')
+  const [enterprise, setEnterprise] = useState('AICraftWorks')
   const [org, setOrg] = useState('AgentCraftworks')
   const [busy, setBusy] = useState(false)
   const [polling, setPolling] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
   const [deviceCode, setDeviceCode] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   async function loadConfig() {
     const cfg = await window.hubAPI.getTokenConfig()
@@ -50,14 +50,14 @@ export function TokenAuthPanel({ onSaved }: Props) {
       setCopied(false)
     })
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current)
+      if (pollRef.current) clearTimeout(pollRef.current)
       unsubCode()
     }
   }, [])
 
   function stopPolling() {
     if (pollRef.current) {
-      clearInterval(pollRef.current)
+      clearTimeout(pollRef.current)
       pollRef.current = null
     }
     setPolling(false)
@@ -67,26 +67,37 @@ export function TokenAuthPanel({ onSaved }: Props) {
     setPolling(true)
     setMessage({ type: 'info', text: 'Paste the code below into your browser and authorize. Waiting…' })
 
-    pollRef.current = setInterval(async () => {
-      const status = await window.hubAPI.checkLoginStatus()
-      if (!status.authenticated) return
+    async function poll() {
+      try {
+        const status = await window.hubAPI.checkLoginStatus()
+        if (!status.authenticated) {
+          // Schedule next poll only after this one completes — prevents overlapping IPC calls
+          pollRef.current = setTimeout(poll, POLL_INTERVAL_MS)
+          return
+        }
 
-      stopPolling()
-      setDeviceCode(null)
+        stopPolling()
+        setDeviceCode(null)
 
-      if (status.missingScopes.length > 0) {
-        setMessage({
-          type: 'error',
-          text: `Signed in, but missing: ${status.missingScopes.join(', ')}. Re-authorize and grant all required scopes.`,
-        })
-      } else {
-        // Complete the login — starts the monitor service
-        await window.hubAPI.completeGitHubLogin({ enterprise: ent, org: orgSlug })
-        setMessage({ type: 'success', text: 'Signed in with GitHub — enterprise panels are now unlocked.' })
-        onSaved?.()
+        if (status.missingScopes.length > 0) {
+          setMessage({
+            type: 'error',
+            text: `Signed in, but missing: ${status.missingScopes.join(', ')}. Re-authorize and grant all required scopes.`,
+          })
+        } else {
+          // Complete the login — starts the monitor service
+          await window.hubAPI.completeGitHubLogin({ enterprise: ent, org: orgSlug })
+          setMessage({ type: 'success', text: 'Signed in with GitHub — enterprise panels are now unlocked.' })
+          onSaved?.()
+        }
+        await loadConfig()
+      } catch (err) {
+        // Transient error — log and reschedule so polling continues
+        console.error('[TokenAuthPanel] Poll error:', err)
+        pollRef.current = setTimeout(poll, POLL_INTERVAL_MS)
       }
-      await loadConfig()
-    }, POLL_INTERVAL_MS)
+    }
+    pollRef.current = setTimeout(poll, POLL_INTERVAL_MS)
   }
 
   async function handleSignIn() {
@@ -95,7 +106,7 @@ export function TokenAuthPanel({ onSaved }: Props) {
     setMessage(null)
     setDeviceCode(null)
 
-    const ent = enterprise.trim() || 'AICraftworks'
+    const ent = enterprise.trim() || 'AICraftWorks'
     const orgSlug = org.trim() || 'AgentCraftworks'
     const result = await window.hubAPI.beginGitHubLogin({ enterprise: ent, org: orgSlug })
     setBusy(false)
@@ -200,7 +211,7 @@ export function TokenAuthPanel({ onSaved }: Props) {
             value={enterprise}
             onChange={e => setEnterprise(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white/80 focus:outline-none focus:border-blue-500/50"
-            placeholder="AICraftworks"
+            placeholder="AICraftWorks"
           />
           <p className="text-[10px] text-white/25 mt-1">Used for audit log (enterprise API)</p>
         </div>

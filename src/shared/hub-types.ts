@@ -23,7 +23,7 @@ export interface ActionsMinutes {
   totalPaidMinutesUsed: number
   includedMinutes: number
   minutesUsedBreakdown: { ubuntu: number; macos: number; windows: number }
-  estimatedOverageCostUsd: number
+  estimatedCostUsd: number
   billingCycleResetAt: string | null
 }
 

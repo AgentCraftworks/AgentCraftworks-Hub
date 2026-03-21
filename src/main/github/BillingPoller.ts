@@ -13,7 +13,7 @@ export interface ActionsMinutes {
     macos: number
     windows: number
   }
-  estimatedOverageCostUsd: number
+  estimatedCostUsd: number
   billingCycleResetAt: string | null
 }
 
@@ -21,12 +21,6 @@ export interface BillingData {
   actionsMinutes: ActionsMinutes | null
   fetchedAt: number
   error?: string
-}
-
-const MINUTE_RATES_USD: Record<string, number> = {
-  ubuntu: 0.008,
-  windows: 0.016,
-  macos: 0.08,
 }
 
 export class BillingPoller extends EventEmitter {
@@ -93,7 +87,7 @@ export class BillingPoller extends EventEmitter {
           macos: Math.round(breakdown.macos),
           windows: Math.round(breakdown.windows),
         },
-        estimatedOverageCostUsd: totalCost,
+        estimatedCostUsd: totalCost,
         billingCycleResetAt: null,
       }
 

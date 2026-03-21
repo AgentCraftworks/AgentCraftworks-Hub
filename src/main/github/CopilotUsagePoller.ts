@@ -64,7 +64,7 @@ export class CopilotUsagePoller extends EventEmitter {
 
       this.emit('data', {
         totalActiveUsers: Number(seatBreakdown?.active_this_cycle ?? 0),
-        totalEngagedUsers: Number(seatBreakdown?.total ?? 0),
+        totalEngagedUsers: Number(seatBreakdown?.active_this_cycle ?? 0),
         modelBreakdown: [],
         premiumRequestsUsed: 0,
         premiumRequestsLimit: null,

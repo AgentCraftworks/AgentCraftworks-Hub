@@ -145,7 +145,7 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
     const ghToken = getGhCliToken()
     const ghScopes = ghToken ? getGhCliScopes() : []
     return {
-      hasToken: false,
+      hasToken: !!ghToken,
       enterprise,
       org,
       isGhCli: true,
@@ -165,7 +165,7 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
 
   // Launch GitHub web OAuth flow — opens system browser silently, no terminal window
   ipcMain.handle('hub:beginGitHubLogin', async (_, { enterprise, org }: { enterprise: string; org?: string }) => {
-    const ent = enterprise.trim() || 'AICraftworks'
+    const ent = enterprise.trim() || 'AICraftWorks'
     const orgSlug = (org ?? '').trim() || 'AgentCraftworks'
     cachedEnterprise = ent
     cachedOrg = orgSlug

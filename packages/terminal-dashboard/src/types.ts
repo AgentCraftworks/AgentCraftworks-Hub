@@ -9,7 +9,7 @@ export interface RateLimitData {
 export interface ActionsMinutes {
   totalMinutesUsed: number; totalPaidMinutesUsed: number; includedMinutes: number
   minutesUsedBreakdown: { ubuntu: number; macos: number; windows: number }
-  estimatedOverageCostUsd: number; billingCycleResetAt: string | null
+  estimatedCostUsd: number; billingCycleResetAt: string | null
 }
 export interface BillingData { actionsMinutes: ActionsMinutes | null; fetchedAt: number; error?: string }
 export interface CopilotUsageData {

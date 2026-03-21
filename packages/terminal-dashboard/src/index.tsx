@@ -8,7 +8,7 @@ import { render, Box, Text, Newline, useInput, useApp } from 'ink'
 import { execSync } from 'child_process'
 import type { MonitorSnapshot, RateLimitData, BillingData, CopilotUsageData } from './types.js'
 
-const ENTERPRISE = process.env.GITHUB_ENTERPRISE ?? 'AICraftworks'
+const ENTERPRISE = process.env.GITHUB_ENTERPRISE ?? 'AICraftWorks'
 const REFRESH_MS = 30_000
 
 // ── GitHub API fetch helpers ──────────────────────────────────────────────
@@ -52,7 +52,7 @@ function fetchSnapshot(): MonitorSnapshot {
             macos: Number((billingRaw as Record<string, Record<string, number>>).minutes_used_breakdown?.MACOS ?? 0),
             windows: Number((billingRaw as Record<string, Record<string, number>>).minutes_used_breakdown?.WINDOWS ?? 0),
           },
-          estimatedOverageCostUsd: 0,
+          estimatedCostUsd: 0,
           billingCycleResetAt: null,
         },
         fetchedAt: Date.now(),
@@ -112,7 +112,7 @@ function ActionsSection({ data }: { data: BillingData }) {
     return (
       <Box flexDirection="column" marginBottom={1}>
         <Text bold color="cyan">  Actions Minutes</Text>
-        <Text paddingLeft={2} dimColor>{data.error ?? 'No data'}</Text>
+        <Box paddingLeft={2}><Text dimColor>{data.error ?? 'No data'}</Text></Box>
       </Box>
     )
   }
@@ -134,8 +134,8 @@ function ActionsSection({ data }: { data: BillingData }) {
           {'  Windows:'}<Text color="white"> {m.minutesUsedBreakdown.windows.toLocaleString()}</Text>
           {'  macOS:'}<Text color="white"> {m.minutesUsedBreakdown.macos.toLocaleString()}</Text>
         </Text>
-        {m.estimatedOverageCostUsd > 0 && (
-          <Text color="red">  Est. overage: ${m.estimatedOverageCostUsd.toFixed(2)}</Text>
+        {m.estimatedCostUsd > 0 && (
+          <Text color="yellow">  Est. total cost: ${m.estimatedCostUsd.toFixed(2)}</Text>
         )}
       </Box>
     </Box>

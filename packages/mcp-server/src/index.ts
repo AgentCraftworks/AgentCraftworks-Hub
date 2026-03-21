@@ -8,7 +8,7 @@
 //     "agentcraftworks-hub": {
 //       "command": "node",
 //       "args": ["/path/to/AgentCraftworks-Hub/packages/mcp-server/dist/index.js"],
-//       "env": { "GITHUB_TOKEN": "ghp_...", "GITHUB_ENTERPRISE": "AICraftworks" }
+//       "env": { "GITHUB_TOKEN": "ghp_...", "GITHUB_ENTERPRISE": "AICraftWorks" }
 //     }
 //   }
 // }
@@ -18,7 +18,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { Octokit } from '@octokit/rest'
 
-const ENTERPRISE = process.env.GITHUB_ENTERPRISE ?? 'AICraftworks'
+const ENTERPRISE = process.env.GITHUB_ENTERPRISE ?? 'AICraftWorks'
 const TOKEN = process.env.GITHUB_TOKEN ?? ''
 
 if (!TOKEN) {
@@ -43,7 +43,7 @@ async function getRateLimits() {
   return {
     core: { ...r.core, resetEta: fmtEta(r.core.reset), percentUsed: Math.round((r.core.used / r.core.limit) * 100) },
     search: { ...r.search, resetEta: fmtEta(r.search.reset) },
-    graphql: { ...r.graphql, resetEta: fmtEta(r.graphql.reset) },
+    graphql: r.graphql ? { ...r.graphql, resetEta: fmtEta(r.graphql.reset) } : null,
     codeSearch: cs ? { ...cs, resetEta: fmtEta(cs.reset) } : null,
   }
 }
