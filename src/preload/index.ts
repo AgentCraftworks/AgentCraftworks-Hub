@@ -145,19 +145,21 @@ const hubAPI = {
   getHistory: (): Promise<import('@shared/hub-types').RateLimitSample[]> =>
     ipcRenderer.invoke('hub:getHistory'),
 
-  getTokenConfig: (): Promise<{ hasToken: boolean; enterprise: string; isGhCli: boolean; ghAuthenticated: boolean; ghScopes: string[]; missingScopes: string[] }> =>
+  getTokenConfig: (): Promise<{ hasToken: boolean; enterprise: string; org: string; isGhCli: boolean; ghAuthenticated: boolean; ghScopes: string[]; missingScopes: string[] }> =>
     ipcRenderer.invoke('hub:getTokenConfig'),
 
   checkLoginStatus: (): Promise<{ authenticated: boolean; scopes: string[]; missingScopes: string[] }> =>
     ipcRenderer.invoke('hub:checkLoginStatus'),
 
-  beginGitHubLogin: (params: { enterprise: string }): Promise<{ ok: boolean; error?: string }> =>
+  // org is optional; defaults to the persisted or default org slug on the main process side
+  beginGitHubLogin: (params: { enterprise: string; org?: string }): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('hub:beginGitHubLogin', params),
 
   openDevicePage: (): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke('hub:openDevicePage'),
 
-  completeGitHubLogin: (params: { enterprise: string }): Promise<{ ok: boolean; error?: string; scopes?: string[]; missingScopes?: string[] }> =>
+  // org is optional; defaults to the persisted or default org slug on the main process side
+  completeGitHubLogin: (params: { enterprise: string; org?: string }): Promise<{ ok: boolean; error?: string; scopes?: string[]; missingScopes?: string[] }> =>
     ipcRenderer.invoke('hub:completeGitHubLogin', params),
 
   logoutGitHub: (): Promise<{ ok: boolean; error?: string }> =>
