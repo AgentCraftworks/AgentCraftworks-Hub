@@ -10,7 +10,7 @@ export interface HubMonitorState {
   lastUpdated: Date | null
 }
 
-export function useHubMonitor(enterprise = 'AICraftworks'): HubMonitorState & { refresh: () => void } {
+export function useHubMonitor(enterprise = 'AICraftWorks'): HubMonitorState & { refresh: () => void } {
   const [state, setState] = useState<HubMonitorState>({
     snapshot: null,
     history: [],

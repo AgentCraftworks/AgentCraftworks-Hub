@@ -153,7 +153,7 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
 
   // Launch GitHub web OAuth flow — opens system browser silently, no terminal window
   ipcMain.handle('hub:beginGitHubLogin', async (_, { enterprise }: { enterprise: string }) => {
-    const ent = enterprise.trim() || 'AICraftworks'
+    const ent = enterprise.trim() || 'AICraftWorks'
     cachedEnterprise = ent
     if (keytar) {
       await keytar.setPassword(KEYTAR_SERVICE, KEYTAR_ACCOUNT_ENTERPRISE, ent)
