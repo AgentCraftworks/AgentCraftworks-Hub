@@ -47,6 +47,7 @@ export class AuditLogPoller extends EventEmitter {
           enterprise: this.enterprise,
           per_page: 100,
           order: 'desc',
+          phrase: 'action:api',
         }
       )
 
