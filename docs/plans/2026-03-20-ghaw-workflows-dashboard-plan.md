@@ -413,11 +413,11 @@ Milestone 4 (Enrichment and alerts)
 
 ## 11) File-Level Change Plan
 
-## 9) File-Level Change Plan
-
 Main process
 
 - `src/main/github/GitHubMonitorService.ts`
+- `src/main/ipc/hub-handlers.ts`
+- New: `src/main/github/GhawInsightsPoller.ts`
 - `src/main/ipc/hub-handlers.ts`
 - New: `src/main/github/GhawInsightsPoller.ts`
 - New: `src/main/github/GhawAnomalyEngine.ts`
