@@ -23,12 +23,6 @@ export interface BillingData {
   error?: string
 }
 
-const MINUTE_RATES_USD: Record<string, number> = {
-  ubuntu: 0.008,
-  windows: 0.016,
-  macos: 0.08,
-}
-
 export class BillingPoller extends EventEmitter {
   private octokit: Octokit
   private org: string
