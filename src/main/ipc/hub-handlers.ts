@@ -27,7 +27,7 @@ const KEYTAR_ACCOUNT_ENTERPRISE = 'github-enterprise'
 const REQUIRED_GH_SCOPES = ['read:audit_log', 'read:enterprise', 'manage_billing:copilot']
 
 let monitorService: GitHubMonitorService | null = null
-let cachedEnterprise = 'AICraftworks'
+let cachedEnterprise = 'AICraftWorks'
 
 async function getStoredEnterprise(): Promise<string> {
   if (keytar) {
