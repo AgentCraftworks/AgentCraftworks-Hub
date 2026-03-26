@@ -5,6 +5,7 @@ declare global {
   interface Window {
     tangentAPI: any
     hubAPI: import('@shared/hub-types').HubWindowAPI
+    ghawAPI: import('@shared/hub-types').GhawWorkflowPoller
   }
 }
 
