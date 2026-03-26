@@ -14,7 +14,10 @@ export default [
       parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },
       globals: { ...globals.node, NodeJS: 'readonly', Electron: 'readonly' },
     },
-    rules: { 'no-unused-vars': 'off', 'no-control-regex': 'off' },
+    rules: {
+      'no-unused-vars': 'off', // handled by TypeScript
+      'no-control-regex': 'off',
+    },
   },
   {
     files: ['src/renderer/**/*.{ts,tsx}'],
@@ -23,6 +26,8 @@ export default [
       parserOptions: { ecmaVersion: 'latest', sourceType: 'module', ecmaFeatures: { jsx: true } },
       globals: { ...globals.browser, React: 'readonly', JSX: 'readonly' },
     },
-    rules: { 'no-unused-vars': 'off' },
+    rules: {
+      'no-unused-vars': 'off',
+    },
   },
 ]
