@@ -12,13 +12,18 @@ import { AgentLauncher } from './agents/AgentLauncher'
 import { ConfigStore } from './config/ConfigStore'
 import { registerIpcHandlers } from './ipc/handlers'
 import { registerHubHandlers } from './ipc/hub-handlers'
+import { registerEntitlementHandlers } from './ipc/entitlement-handlers'
+import { entitlementService } from './hub/EntitlementService'
 import { PipeServer } from './config/PipeServer'
+import { parseScopeString } from '../shared/hub-contracts.js'
 
 const SESSIONS_PATH = join(homedir(), '.agentcraftworks-hub', 'sessions.json')
 
 let mainWindow: BrowserWindow | null = null
+let pendingDeepLink: string | null = null
 
 const configStore = new ConfigStore()
+entitlementService.load()
 const ptyManager = new PtyManager()
 const sessionStore = new SessionStore()
 const sessionManager = new SessionManager(sessionStore, ptyManager)
@@ -65,11 +70,52 @@ function createWindow(): void {
   })
 
   registerHubHandlers(() => mainWindow && !mainWindow.isDestroyed() ? mainWindow : null)
+  registerEntitlementHandlers()
 
   if (process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (pendingDeepLink) {
+      dispatchDeepLink(pendingDeepLink)
+      pendingDeepLink = null
+    }
+  })
+}
+
+function dispatchDeepLink(rawUrl: string): void {
+  try {
+    const parsed = new URL(rawUrl)
+    if (parsed.protocol !== 'agentcraftworks-hub:') {
+      return
+    }
+
+    const scopeRaw = parsed.searchParams.get('scope') || ''
+    const panel = parsed.searchParams.get('panel') || parsed.pathname.replace(/^\//, '') || 'overview'
+    const persona = parsed.searchParams.get('persona') || undefined
+    const parsedScope = scopeRaw ? parseScopeString(scopeRaw) : undefined
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore()
+      }
+      mainWindow.focus()
+      mainWindow.webContents.send('hub:deepLinkOpen', {
+        rawUrl,
+        panel,
+        scope: parsedScope,
+        scopeRaw,
+        persona,
+      })
+      if (parsedScope && parsedScope.org) {
+        entitlementService.setLastScope({ org: parsedScope.org, ...parsedScope, window: parsedScope.window ?? '7d' })
+      }
+    }
+  } catch (err) {
+    console.warn('[Tangent] Failed to parse deep-link:', err)
   }
 }
 
@@ -78,7 +124,14 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'tangent-file', privileges: { standard: false, supportFetchAPI: true, stream: true } }
 ])
 
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) {
+  app.quit()
+}
+
 app.whenReady().then(async () => {
+  app.setAsDefaultProtocolClient('agentcraftworks-hub')
+
   protocol.handle('tangent-file', (request) => {
     // tangent-file:///C:/path/to/file.ico -> file:///C:/path/to/file.ico
     const filePath = decodeURIComponent(request.url.replace('tangent-file:///', ''))
@@ -198,6 +251,32 @@ app.whenReady().then(async () => {
   if (!restored) {
     sessionManager.create(configStore.getStartFolder())
   }
+
+  const deepLinkArg = process.argv.find((arg) => arg.startsWith('agentcraftworks-hub://'))
+  if (deepLinkArg) {
+    dispatchDeepLink(deepLinkArg)
+  }
+})
+
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  if (!mainWindow) {
+    pendingDeepLink = url
+    return
+  }
+  dispatchDeepLink(url)
+})
+
+app.on('second-instance', (_event, argv) => {
+  const deepLinkArg = argv.find((arg) => arg.startsWith('agentcraftworks-hub://'))
+  if (!deepLinkArg) {
+    return
+  }
+  if (!mainWindow) {
+    pendingDeepLink = deepLinkArg
+    return
+  }
+  dispatchDeepLink(deepLinkArg)
 })
 
 app.on('before-quit', () => {
