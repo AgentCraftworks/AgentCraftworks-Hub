@@ -5,11 +5,11 @@ It is intended to mirror the current app UI and make design changes trackable th
 
 ## Figma
 
-Add your Figma file URL here after creation:
+Current file details:
 
-- Figma file: TODO
-- Figma team/project: TODO
-- Owners: TODO
+- Figma file: https://www.figma.com/design/ysHQKLmIPoI9Q8CoBF5LAd/Hub-Design?node-id=0-1&t=9k8OFXXvghLjPkZ3-1
+- Figma team/project: Hub-Design
+- Owners: jenp@aicraftworks.ai
 
 ## Goals
 
