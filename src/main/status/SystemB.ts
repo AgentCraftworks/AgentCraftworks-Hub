@@ -26,7 +26,6 @@ const SPINNER_PATTERN = /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⊙◐◑◒◓]/
 
 /** Strip ANSI escape sequences from text for clean pattern matching. */
 function stripAnsi(text: string): string {
-  // eslint-disable-next-line no-control-regex
   return text
     .replace(/\x1b\[[?!>]?[0-9;]*[a-zA-Z]/g, '')   // CSI sequences (including ?25h, ?25l, etc.)
     .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '') // OSC sequences
