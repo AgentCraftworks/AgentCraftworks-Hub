@@ -72,6 +72,7 @@ function fetchSnapshot(): MonitorSnapshot {
     billing,
     copilot: null,
     topCallers: [],
+    ghawWorkflows: null,
     lastUpdated: { rateLimit: Date.now() },
   }
 }

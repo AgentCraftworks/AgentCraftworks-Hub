@@ -17,7 +17,17 @@ export interface CopilotUsageData {
   premiumRequestsLimit: number | null; fetchedAt: number; error?: string
 }
 export interface AuditLogEntry { actor: string; action: string; tokenType: string; appSlug?: string; count: number; lastSeenAt: number }
+export interface GhawWorkflowRun {
+  id: number; workflowId?: number; name: string; headBranch: string; status: string
+  conclusion?: string | null; runNumber: number; event: string; htmlUrl: string
+  createdAt: string; updatedAt: string; runStartedAt?: string | null
+}
+export interface GhawWorkflowData {
+  repository: string; runs: GhawWorkflowRun[]
+  summary: { total: number; queued: number; inProgress: number; completed: number; success: number; failed: number; cancelled: number }
+  fetchedAt: number; recovered?: boolean; error?: string
+}
 export interface MonitorSnapshot {
   rateLimit: RateLimitData | null; billing: BillingData | null; copilot: CopilotUsageData | null
-  topCallers: AuditLogEntry[]; lastUpdated: Record<string, number>
+  topCallers: AuditLogEntry[]; ghawWorkflows: GhawWorkflowData | null; lastUpdated: Record<string, number>
 }

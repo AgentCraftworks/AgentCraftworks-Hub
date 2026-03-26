@@ -5,6 +5,7 @@ import { RateLimitPoller, type RateLimitData } from './RateLimitPoller.js'
 import { BillingPoller, type BillingData } from './BillingPoller.js'
 import { CopilotUsagePoller, type CopilotUsageData } from './CopilotUsagePoller.js'
 import { AuditLogPoller, type AuditLogEntry, type AuditLogData } from './AuditLogPoller.js'
+import { GhawWorkflowPoller, type GhawWorkflowData } from './GhawWorkflowPoller.js'
 import { AlertService, type AlertThresholds } from './AlertService.js'
 import { appendSample, loadHistory, closeDb } from './HistoryStore.js'
 
@@ -16,6 +17,9 @@ export interface MonitorConfig {
   billingIntervalMs: number
   copilotIntervalMs: number
   auditLogIntervalMs: number
+  ghawWorkflowIntervalMs: number
+  ghawWorkflowOwner: string
+  ghawWorkflowRepo: string
   alertThresholds?: Partial<AlertThresholds>
 }
 
@@ -25,6 +29,7 @@ export interface MonitorSnapshot {
   copilot: CopilotUsageData | null
   topCallers: AuditLogEntry[]
   auditLogError?: string
+  ghawWorkflows: GhawWorkflowData | null
   lastUpdated: Record<string, number>
 }
 
@@ -35,6 +40,9 @@ const DEFAULT_CONFIG: Omit<MonitorConfig, 'token'> = {
   billingIntervalMs: 5 * 60_000,
   copilotIntervalMs: 5 * 60_000,
   auditLogIntervalMs: 2 * 60_000,
+  ghawWorkflowIntervalMs: 30_000,
+  ghawWorkflowOwner: 'AgentCraftworks',
+  ghawWorkflowRepo: 'AgentCraftworks-Hub',
 }
 
 export class GitHubMonitorService extends EventEmitter {
@@ -43,12 +51,14 @@ export class GitHubMonitorService extends EventEmitter {
   private billingPoller: BillingPoller
   private copilotPoller: CopilotUsagePoller
   private auditLogPoller: AuditLogPoller
+  private ghawWorkflowPoller: GhawWorkflowPoller
   private alertService: AlertService
   private snapshot: MonitorSnapshot = {
     rateLimit: null,
     billing: null,
     copilot: null,
     topCallers: [],
+    ghawWorkflows: null,
     lastUpdated: {},
   }
 
@@ -62,6 +72,12 @@ export class GitHubMonitorService extends EventEmitter {
     this.copilotPoller = new CopilotUsagePoller(token, this.config.org, this.config.copilotIntervalMs)
     // Audit log uses enterprise-level endpoint
     this.auditLogPoller = new AuditLogPoller(token, this.config.enterprise, this.config.auditLogIntervalMs)
+    this.ghawWorkflowPoller = new GhawWorkflowPoller(
+      token,
+      this.config.ghawWorkflowOwner,
+      this.config.ghawWorkflowRepo,
+      this.config.ghawWorkflowIntervalMs,
+    )
     this.alertService = new AlertService(this.config.alertThresholds)
 
     // Pre-fill rate limit history from disk
@@ -107,10 +123,17 @@ export class GitHubMonitorService extends EventEmitter {
       this.emit('update', this.snapshot)
     })
 
+    this.ghawWorkflowPoller.on('data', (data: GhawWorkflowData) => {
+      this.snapshot.ghawWorkflows = data
+      this.snapshot.lastUpdated.ghawWorkflows = Date.now()
+      this.emit('update', this.snapshot)
+    })
+
     this.rateLimitPoller.start()
     this.billingPoller.start()
     this.copilotPoller.start()
     this.auditLogPoller.start()
+    this.ghawWorkflowPoller.start()
   }
 
   stop(): void {
@@ -118,6 +141,7 @@ export class GitHubMonitorService extends EventEmitter {
     this.billingPoller.stop()
     this.copilotPoller.stop()
     this.auditLogPoller.stop()
+    this.ghawWorkflowPoller.stop()
     closeDb()
   }
 
