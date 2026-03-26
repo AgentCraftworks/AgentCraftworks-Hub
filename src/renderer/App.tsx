@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { useSessions } from '@/hooks/useSession'
 import { useAgents } from '@/hooks/useAgents'
@@ -11,6 +11,7 @@ import { SettingsPanel } from '@/components/SettingsPanel/SettingsPanel'
 import { PermissionDialog } from '@/components/PermissionDialog'
 import { UserInputDialog } from '@/components/UserInputDialog'
 import { HubDashboard } from '@/components/dashboard/HubDashboard'
+import type { DashboardFocusSection } from '@/components/dashboard/HubDashboard'
 import { ZOOM } from '@shared/constants'
 import type { AgentProfile, Session } from '@shared/types'
 
@@ -24,6 +25,49 @@ export function App(): JSX.Element {
   const [prefillAgent, setPrefillAgent] = useState<AgentProfile | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [hubOpen, setHubOpen] = useState(false)
+  const [hubEnterprise, setHubEnterprise] = useState<string>('AICraftWorks')
+  const [hubScopeLabel, setHubScopeLabel] = useState<string>('')
+  const [hubFocus, setHubFocus] = useState<DashboardFocusSection>('overview')
+
+  useEffect(() => {
+    if (!window.hubAPI?.onDeepLinkOpen) {
+      return
+    }
+
+    const unsub = window.hubAPI.onDeepLinkOpen((payload: {
+      panel?: string
+      scopeRaw?: string
+    }) => {
+      const scopeRaw = payload.scopeRaw || ''
+      const panel = payload.panel || 'overview'
+      const mappedFocus: DashboardFocusSection =
+        panel === 'my-scope' ? 'activity'
+        : panel === 'agent-ops' ? 'billing'
+        : panel === 'audit' ? 'audit'
+        : panel === 'auth' ? 'auth'
+        : 'overview'
+
+      let enterpriseFromScope = 'AICraftWorks'
+      if (scopeRaw.startsWith('org:')) {
+        enterpriseFromScope = scopeRaw.slice(4)
+      } else if (scopeRaw.startsWith('repo:')) {
+        const repoValue = scopeRaw.slice(5)
+        const [org] = repoValue.split('/', 1)
+        if (org) {
+          enterpriseFromScope = org
+        }
+      }
+
+      setHubEnterprise(enterpriseFromScope)
+      setHubScopeLabel(scopeRaw)
+      setHubFocus(mappedFocus)
+      setHubOpen(true)
+    })
+
+    return () => {
+      unsub()
+    }
+  }, [])
 
   const handleCreateAgentFromSession = useCallback((session: Session) => {
     const command = session.agentCommand || ''
@@ -100,7 +144,7 @@ export function App(): JSX.Element {
         <TerminalViewport sessions={sessions} activeId={activeId} fontSize={fontSize} />
         {hubOpen && (
           <div className="absolute inset-0 z-10 bg-[#0d1117]">
-            <HubDashboard onClose={toggleHub} />
+            <HubDashboard enterprise={hubEnterprise} scopeLabel={hubScopeLabel} initialFocus={hubFocus} onClose={toggleHub} />
           </div>
         )}
         <AgentsSidebar activeSessionId={activeId} prefillAgent={prefillAgent} onPrefillConsumed={() => setPrefillAgent(null)} />
