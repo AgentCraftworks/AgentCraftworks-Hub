@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "source": "src/renderer/styles/globals.css",
+    "theme": "github-dark",
+    "updated": "2026-03-25"
+  },
+  "color": {
+    "bg": {
+      "primary": "#0d1117",
+      "secondary": "#161b22",
+      "tertiary": "#1c2128",
+      "hover": "#21262d",
+      "active": "#1a2233"
+    },
+    "text": {
+      "primary": "#e6edf3",
+      "secondary": "#8b949e",
+      "muted": "#484f58"
+    },
+    "semantic": {
+      "accent": "#58a6ff",
+      "running": "#3fb950",
+      "error": "#ff4444",
+      "idle": "#ffb800",
+      "attention": "#ff6a33"
+    },
+    "overlay": {
+      "dashboardBackplate": "rgba(13, 17, 23, 1)",
+      "panelTint": "rgba(0, 0, 0, 0.2)",
+      "borderSubtle": "rgba(255, 255, 255, 0.1)"
+    }
+  }
+}

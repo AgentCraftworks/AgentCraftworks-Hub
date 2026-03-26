@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "source": "src/renderer/styles/globals.css",
+    "updated": "2026-03-25"
+  },
+  "typography": {
+    "fontFamily": {
+      "ui": "system-ui, -apple-system, sans-serif",
+      "mono": "Cascadia Code, JetBrains Mono, Fira Code, monospace"
+    },
+    "fontSize": {
+      "xs": 10,
+      "sm": 12,
+      "base": 14,
+      "md": 16,
+      "lg": 18
+    },
+    "fontWeight": {
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    },
+    "lineHeight": {
+      "tight": 1.2,
+      "normal": 1.4,
+      "relaxed": 1.6
+    }
+  }
+}
