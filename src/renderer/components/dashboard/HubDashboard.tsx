@@ -9,6 +9,7 @@ import { BillingPanel } from './BillingPanel'
 import { TokenAuthPanel } from './TokenAuthPanel'
 import { OperationLogPanel } from './OperationLogPanel'
 import { ActionRequestPanel } from './ActionRequestPanel'
+import { WorkflowHealthPanel } from './WorkflowHealthPanel'
 import { RefreshCw, Loader, Settings, ShieldAlert } from 'lucide-react'
 import type { ActionRequest, ActionAuthoritySnapshot, OperationLogEntry } from '@shared/hub-types'
 
@@ -225,6 +226,16 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
           {/* Copilot Usage */}
           <div className="xl:col-span-1">
             <CopilotUsagePanel data={snapshot?.copilot ?? null} />
+          </div>
+
+          {/* Workflow Health */}
+          <div className="xl:col-span-2">
+            <WorkflowHealthPanel
+              entries={operationLog}
+              actionRequests={actionRequests}
+              lastUpdated={lastUpdated}
+              onRefresh={refreshAll}
+            />
           </div>
 
           {/* Billing — spans full width */}
