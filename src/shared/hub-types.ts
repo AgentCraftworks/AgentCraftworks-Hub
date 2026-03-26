@@ -172,8 +172,18 @@ export interface GhawWorkflowRun {
   workflowName: string
   workflowPath?: string
   trigger: string
-  status: 'queued' | 'in_progress' | 'completed'
-  conclusion: 'success' | 'failure' | 'cancelled' | 'skipped' | 'timed_out' | null
+  status: 'queued' | 'in_progress' | 'completed' | 'waiting' | 'requested' | 'pending'
+  conclusion:
+    | 'success'
+    | 'failure'
+    | 'neutral'
+    | 'cancelled'
+    | 'skipped'
+    | 'timed_out'
+    | 'action_required'
+    | 'stale'
+    | 'startup_failure'
+    | null
   startedAt: number
   completedAt: number | null
   durationMs: number | null
@@ -207,12 +217,7 @@ export interface GhawAnomaly {
 export interface GhawMinutesSummary {
   window: '7d' | '30d'
   ghawRuntimeMinutes: number
-  estimatedBillableMinutes: {
-    ubuntu: number
-    windows: number
-    macos: number
-    total: number
-  }
+  estimatedBillableMinutes: Record<string, number> & { total: number }
   estimatedCostUsd?: number
   methodology: 'run_duration_estimate' | 'billing_api_enriched'
 }

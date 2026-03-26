@@ -273,13 +273,17 @@ const ghawAPI: import('@shared/hub-types').GhawWorkflowPoller = {
   onSnapshot: (cb: (snapshot: import('@shared/hub-types').GhawInsightsSnapshot) => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, snapshot: import('@shared/hub-types').GhawInsightsSnapshot) => cb(snapshot)
     ipcRenderer.on('ghaw:snapshot', handler)
-    return () => { ipcRenderer.removeListener('ghaw:snapshot', handler) }
+    return () => {
+      ipcRenderer.off('ghaw:snapshot', handler)
+    }
   },
 
   onError: (cb: (message: string) => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, message: string) => cb(message)
     ipcRenderer.on('ghaw:error', handler)
-    return () => { ipcRenderer.removeListener('ghaw:error', handler) }
+    return () => {
+      ipcRenderer.off('ghaw:error', handler)
+    }
   },
 }
 
