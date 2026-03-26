@@ -200,6 +200,99 @@ export interface ActionRequestQuery {
   scope?: string
 }
 
+export interface GhawWorkflowRun {
+  repo: string
+  workflowName: string
+  workflowPath?: string
+  trigger: string
+  status: 'queued' | 'in_progress' | 'completed' | 'waiting' | 'requested' | 'pending'
+  conclusion:
+    | 'success'
+    | 'failure'
+    | 'neutral'
+    | 'cancelled'
+    | 'skipped'
+    | 'timed_out'
+    | 'action_required'
+    | 'stale'
+    | 'startup_failure'
+    | null
+  startedAt: number
+  completedAt: number | null
+  durationMs: number | null
+  runId: number
+  runUrl: string
+}
+
+export interface GhawWorkflowDefinition {
+  repo: string
+  workflowName: string
+  workflowPath: string
+  triggers: string[]
+  scheduleCrons: string[]
+}
+
+export interface GhawAnomaly {
+  severity: 'info' | 'warning' | 'critical'
+  type:
+    | 'high_skip_rate'
+    | 'high_failure_rate'
+    | 'run_spike'
+    | 'duration_spike'
+    | 'duplicate_advisory_pattern'
+  repo: string
+  workflowName: string
+  metricValue: number
+  baselineValue?: number
+  note: string
+}
+
+export interface GhawMinutesSummary {
+  window: '7d' | '30d'
+  ghawRuntimeMinutes: number
+  estimatedBillableMinutes: Record<string, number> & { total: number }
+  estimatedCostUsd?: number
+  methodology: 'run_duration_estimate' | 'billing_api_enriched'
+}
+
+export interface GhawInsightsSnapshot {
+  definitions: GhawWorkflowDefinition[]
+  runs7d: GhawWorkflowRun[]
+  runs30d: GhawWorkflowRun[]
+  anomalies: GhawAnomaly[]
+  topHotspots: Array<{
+    repo: string
+    workflowName: string
+    runs7d: number
+    failRate7d: number
+    skipRate7d: number
+    p95DurationMinutes7d: number
+  }>
+  minutes7d: GhawMinutesSummary
+  minutes30d: GhawMinutesSummary
+  fetchedAt: number
+  error?: string
+}
+
+/**
+ * Renderer-facing preload contract for the GHAW workflow poller.
+ * Methods are request/reply IPC calls and event handlers are push subscriptions.
+ */
+export interface GhawWorkflowPoller {
+  /** Start GHAW workflow polling. */
+  start(): Promise<HubActionResponse>
+  /** Stop GHAW workflow polling. */
+  stop(): Promise<HubActionResponse>
+  /** Force an immediate GHAW workflow refresh. */
+  refresh(): Promise<HubActionResponse>
+  /** Fetch the latest cached GHAW insights snapshot. */
+  getSnapshot(): Promise<GhawInsightsSnapshot | null>
+  /** Subscribe to incremental snapshot updates from the main process. */
+  onSnapshot(cb: (snapshot: GhawInsightsSnapshot) => void): () => void
+  /** Subscribe to poller errors emitted by the main process. */
+  onError(cb: (message: string) => void): () => void
+}
+
 export interface HubWindowAPI {
   start(enterprise?: string): Promise<HubActionResponse>
   stop(): Promise<HubActionResponse>

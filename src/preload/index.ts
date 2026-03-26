@@ -256,6 +256,39 @@ const hubAPI = {
 
 contextBridge.exposeInMainWorld('hubAPI', hubAPI)
 
+// GHAW workflows API — isolated namespace for dashboard workflow polling
+const ghawAPI: import('@shared/hub-types').GhawWorkflowPoller = {
+  start: (): Promise<import('@shared/hub-types').HubActionResponse> =>
+    ipcRenderer.invoke('ghaw:start'),
+
+  stop: (): Promise<import('@shared/hub-types').HubActionResponse> =>
+    ipcRenderer.invoke('ghaw:stop'),
+
+  refresh: (): Promise<import('@shared/hub-types').HubActionResponse> =>
+    ipcRenderer.invoke('ghaw:refresh'),
+
+  getSnapshot: (): Promise<import('@shared/hub-types').GhawInsightsSnapshot | null> =>
+    ipcRenderer.invoke('ghaw:getSnapshot'),
+
+  onSnapshot: (cb: (snapshot: import('@shared/hub-types').GhawInsightsSnapshot) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, snapshot: import('@shared/hub-types').GhawInsightsSnapshot) => cb(snapshot)
+    ipcRenderer.on('ghaw:snapshot', handler)
+    return () => {
+      ipcRenderer.off('ghaw:snapshot', handler)
+    }
+  },
+
+  onError: (cb: (message: string) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, message: string) => cb(message)
+    ipcRenderer.on('ghaw:error', handler)
+    return () => {
+      ipcRenderer.off('ghaw:error', handler)
+    }
+  },
+}
+
+contextBridge.exposeInMainWorld('ghawAPI', ghawAPI)
+
 // Entitlement API — persona + capability gating
 const entitlementAPI = {
   getSnapshot: () => ipcRenderer.invoke('entitlement:getSnapshot'),
