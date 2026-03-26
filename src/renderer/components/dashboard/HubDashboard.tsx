@@ -12,17 +12,20 @@ import { ActionRequestPanel } from './ActionRequestPanel'
 import { WorkflowHealthPanel } from './WorkflowHealthPanel'
 import { RefreshCw, Loader, Settings, ShieldAlert } from 'lucide-react'
 import type { ActionRequest, ActionAuthoritySnapshot, OperationLogEntry } from '@shared/hub-types'
+import { buildDeepLink } from '@shared/hub-contracts'
+import type { HubDeepLinkFilters } from '@shared/hub-contracts'
 
 interface Props {
   enterprise?: string
   scopeLabel?: string
   initialFocus?: DashboardFocusSection
+  initialFilters?: HubDeepLinkFilters
   onClose?: () => void
 }
 
-export type DashboardFocusSection = 'overview' | 'activity' | 'billing' | 'auth' | 'audit' | 'requests'
+export type DashboardFocusSection = 'overview' | 'activity' | 'workflows' | 'billing' | 'auth' | 'audit' | 'requests'
 
-export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialFocus = 'overview', onClose }: Props) {
+export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialFocus = 'overview', initialFilters, onClose }: Props) {
   const { snapshot, history, loading, error, lastUpdated, refresh: refreshMonitor } = useHubMonitor(enterprise)
   const [showAuth, setShowAuth] = useState(false)
   const [operationLog, setOperationLog] = useState<OperationLogEntry[]>([])
@@ -30,8 +33,11 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
   const [actionRequests, setActionRequests] = useState<ActionRequest[]>([])
   const [actionRequestsLoading, setActionRequestsLoading] = useState(false)
   const [authority, setAuthority] = useState<ActionAuthoritySnapshot | null>(null)
+  const [shareCopied, setShareCopied] = useState(false)
+  const shareCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const overviewRef = useRef<HTMLDivElement | null>(null)
   const activityRef = useRef<HTMLDivElement | null>(null)
+  const workflowsRef = useRef<HTMLDivElement | null>(null)
   const billingRef = useRef<HTMLDivElement | null>(null)
   const auditRef = useRef<HTMLDivElement | null>(null)
   const requestsRef = useRef<HTMLDivElement | null>(null)
@@ -40,24 +46,35 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
     setOperationLogLoading(true)
     try {
       const entries = await window.hubAPI.getOperationLog({
-        limit: 100,
+        limit: initialFilters?.limit ?? 100,
         scope: scopeLabel || undefined,
+        result: initialFilters?.result,
+        surface: initialFilters?.surface,
       })
       setOperationLog(entries)
     } finally {
       setOperationLogLoading(false)
     }
-  }, [scopeLabel])
+  }, [scopeLabel, initialFilters?.limit, initialFilters?.result, initialFilters?.surface])
 
   const refreshActionRequests = useCallback(async () => {
     setActionRequestsLoading(true)
     try {
       const reqs = await window.hubAPI.listActionRequests({ limit: 100 })
-      setActionRequests(reqs)
+      const filtered = reqs.filter((request) => {
+        if (initialFilters?.state && request.state !== initialFilters.state) {
+          return false
+        }
+        if (initialFilters?.actor && request.actor !== initialFilters.actor) {
+          return false
+        }
+        return true
+      })
+      setActionRequests(filtered)
     } finally {
       setActionRequestsLoading(false)
     }
-  }, [])
+  }, [initialFilters?.actor, initialFilters?.state])
 
   const refreshAll = useCallback(() => {
     void refreshMonitor()
@@ -112,6 +129,32 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
     void refreshActionRequests()
   }, [refreshActionRequests])
 
+  const handleCopyShareLink = useCallback(async () => {
+    const link = buildDeepLink({
+      panel: initialFocus,
+      scopeRaw: scopeLabel || '',
+      filters: initialFilters,
+    })
+    try {
+      await navigator.clipboard.writeText(link)
+    } catch {
+      return
+    }
+    setShareCopied(true)
+    if (shareCopiedTimerRef.current) {
+      clearTimeout(shareCopiedTimerRef.current)
+    }
+    shareCopiedTimerRef.current = setTimeout(() => {
+      setShareCopied(false)
+    }, 2000)
+  }, [initialFocus, initialFilters, scopeLabel])
+
+  useEffect(() => () => {
+    if (shareCopiedTimerRef.current) {
+      clearTimeout(shareCopiedTimerRef.current)
+    }
+  }, [])
+
   useEffect(() => {
     if (initialFocus === 'auth') {
       setShowAuth(true)
@@ -120,6 +163,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
 
     const targetRef =
       initialFocus === 'activity' ? activityRef
+      : initialFocus === 'workflows' ? workflowsRef
       : initialFocus === 'billing' ? billingRef
       : initialFocus === 'audit' ? auditRef
       : initialFocus === 'requests' ? requestsRef
@@ -169,6 +213,13 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
           >
             <Settings size={12} />
             Auth
+          </button>
+          <button
+            onClick={handleCopyShareLink}
+            className="text-xs text-white/40 hover:text-white/70 transition-colors"
+            title="Copy deep-link"
+          >
+            {shareCopied ? 'Copied' : 'Share'}
           </button>
           <button
             onClick={refreshAll}
@@ -229,7 +280,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
           </div>
 
           {/* Workflow Health */}
-          <div className="xl:col-span-2">
+          <div ref={workflowsRef} className="xl:col-span-2">
             <WorkflowHealthPanel
               entries={operationLog}
               actionRequests={actionRequests}

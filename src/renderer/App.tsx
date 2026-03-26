@@ -14,6 +14,7 @@ import { HubDashboard } from '@/components/dashboard/HubDashboard'
 import type { DashboardFocusSection } from '@/components/dashboard/HubDashboard'
 import { ZOOM } from '@shared/constants'
 import type { AgentProfile, Session } from '@shared/types'
+import type { HubDeepLinkFilters } from '@shared/hub-contracts'
 
 export function App(): JSX.Element {
   const { sessions, activeId, activeSession, createSession, selectSession, closeSession, renameSession } =
@@ -28,6 +29,7 @@ export function App(): JSX.Element {
   const [hubEnterprise, setHubEnterprise] = useState<string>('AICraftWorks')
   const [hubScopeLabel, setHubScopeLabel] = useState<string>('')
   const [hubFocus, setHubFocus] = useState<DashboardFocusSection>('overview')
+  const [hubFilters, setHubFilters] = useState<HubDeepLinkFilters | undefined>(undefined)
 
   useEffect(() => {
     if (!window.hubAPI?.onDeepLinkOpen) {
@@ -37,6 +39,7 @@ export function App(): JSX.Element {
     const unsub = window.hubAPI.onDeepLinkOpen((payload: {
       panel?: string
       scopeRaw?: string
+      filters?: HubDeepLinkFilters
     }) => {
       const scopeRaw = payload.scopeRaw || ''
       const panel = payload.panel || 'overview'
@@ -45,6 +48,9 @@ export function App(): JSX.Element {
         : panel === 'agent-ops' ? 'billing'
         : panel === 'audit' ? 'audit'
         : panel === 'auth' ? 'auth'
+        : panel === 'requests' ? 'requests'
+        : panel === 'workflows' ? 'workflows'
+        : panel === 'workflow-run' ? 'workflows'
         : 'overview'
 
       let enterpriseFromScope = 'AICraftWorks'
@@ -61,6 +67,7 @@ export function App(): JSX.Element {
       setHubEnterprise(enterpriseFromScope)
       setHubScopeLabel(scopeRaw)
       setHubFocus(mappedFocus)
+      setHubFilters(payload.filters)
       setHubOpen(true)
     })
 
@@ -144,7 +151,13 @@ export function App(): JSX.Element {
         <TerminalViewport sessions={sessions} activeId={activeId} fontSize={fontSize} />
         {hubOpen && (
           <div className="absolute inset-0 z-10 bg-[#0d1117]">
-            <HubDashboard enterprise={hubEnterprise} scopeLabel={hubScopeLabel} initialFocus={hubFocus} onClose={toggleHub} />
+            <HubDashboard
+              enterprise={hubEnterprise}
+              scopeLabel={hubScopeLabel}
+              initialFocus={hubFocus}
+              initialFilters={hubFilters}
+              onClose={toggleHub}
+            />
           </div>
         )}
         <AgentsSidebar activeSessionId={activeId} prefillAgent={prefillAgent} onPrefillConsumed={() => setPrefillAgent(null)} />

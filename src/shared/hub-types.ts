@@ -1,5 +1,6 @@
-﻿// hub-types.ts — Shared types for Hub monitoring (used by main + renderer)
+// hub-types.ts — Shared types for Hub monitoring (used by main + renderer)
 // Keep in sync with the individual poller exports.
+import type { HubDeepLinkPayload } from './hub-contracts'
 
 export interface RateLimitEndpoint {
   limit: number
@@ -70,7 +71,7 @@ export interface AuditLogEntry {
   lastSeenAt: number
 }
 
-export interface GhawWorkflowRun {
+export interface GhawWorkflowDataRun {
   id: number
   workflowId?: number
   name: string
@@ -87,7 +88,7 @@ export interface GhawWorkflowRun {
 
 export interface GhawWorkflowData {
   repository: string
-  runs: GhawWorkflowRun[]
+  runs: GhawWorkflowDataRun[]
   summary: {
     total: number
     queued: number
@@ -327,11 +328,5 @@ export interface HubWindowAPI {
   rejectActionRequest(id: string, note?: string): Promise<HubActionResponse & { request?: ActionRequest }>
   countPendingRequests(): Promise<number>
   onActionRequestUpdated(cb: (request: ActionRequest) => void): () => void
-  onDeepLinkOpen(cb: (payload: {
-    rawUrl: string
-    panel: string
-    scopeRaw: string
-    persona?: string
-    scope?: unknown
-  }) => void): () => void
+  onDeepLinkOpen(cb: (payload: HubDeepLinkPayload) => void): () => void
 }
