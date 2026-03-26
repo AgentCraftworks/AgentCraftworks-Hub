@@ -147,20 +147,23 @@ export class GhawWorkflowPoller extends EventEmitter {
       ) as { data: { workflow_runs?: Array<Record<string, unknown>> } }
 
       const runsRaw = Array.isArray(data.workflow_runs) ? data.workflow_runs : []
-      const runs: GhawWorkflowRun[] = runsRaw.map((run) => ({
-        id: Number(run.id ?? 0),
-        workflowId: typeof run.workflow_id === 'number' ? run.workflow_id : undefined,
-        name: String(run.name ?? 'unknown'),
-        headBranch: String(run.head_branch ?? ''),
-        status: String(run.status ?? 'unknown'),
-        conclusion: run.conclusion == null ? null : String(run.conclusion),
-        runNumber: Number(run.run_number ?? 0),
-        event: String(run.event ?? ''),
-        htmlUrl: String(run.html_url ?? ''),
-        createdAt: String(run.created_at ?? ''),
-        updatedAt: String(run.updated_at ?? ''),
-        runStartedAt: run.run_started_at == null ? null : String(run.run_started_at),
-      }))
+      const runs: GhawWorkflowRun[] = runsRaw.map((run) => {
+        const workflowId = Number(run.workflow_id)
+        return {
+          ...(Number.isFinite(workflowId) ? { workflowId } : {}),
+          id: Number(run.id ?? 0),
+          name: String(run.name ?? 'unknown'),
+          headBranch: String(run.head_branch ?? ''),
+          status: String(run.status ?? 'unknown'),
+          conclusion: run.conclusion == null ? null : String(run.conclusion),
+          runNumber: Number(run.run_number ?? 0),
+          event: String(run.event ?? ''),
+          htmlUrl: String(run.html_url ?? ''),
+          createdAt: String(run.created_at ?? ''),
+          updatedAt: String(run.updated_at ?? ''),
+          runStartedAt: run.run_started_at == null ? null : String(run.run_started_at),
+        }
+      })
 
       const result: GhawWorkflowData = {
         repository: `${this.owner}/${this.repo}`,

@@ -14,6 +14,8 @@ vi.mock('@octokit/rest', () => ({
 }))
 
 describe('GhawWorkflowPoller', () => {
+  const tempDirs: string[] = []
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(Octokit).mockImplementation(function () {
@@ -24,10 +26,14 @@ describe('GhawWorkflowPoller', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    for (const dir of tempDirs.splice(0)) {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   it('emits workflow data and persists session payload', async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ghaw-poller-'))
+    tempDirs.push(tmpDir)
     const sessionFilePath = path.join(tmpDir, 'session.json')
 
     requestMock.mockResolvedValue({
@@ -65,16 +71,22 @@ describe('GhawWorkflowPoller', () => {
     expect(emitted.summary.success).toBe(1)
 
     expect(fs.existsSync(sessionFilePath)).toBe(true)
-    const persisted = JSON.parse(fs.readFileSync(sessionFilePath, 'utf-8')) as { repository: string; runs: unknown[] }
+    const persisted = JSON.parse(fs.readFileSync(sessionFilePath, 'utf-8')) as {
+      repository: string
+      runs: Array<Record<string, unknown>>
+      fetchedAt: number
+    }
     expect(persisted.repository).toBe('AgentCraftworks/AgentCraftworks-Hub')
     expect(Array.isArray(persisted.runs)).toBe(true)
     expect(persisted.runs).toHaveLength(1)
+    expect(typeof persisted.fetchedAt).toBe('number')
 
     poller.stop()
   })
 
   it('recovers persisted session on start and marks recovered payload', async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ghaw-poller-'))
+    tempDirs.push(tmpDir)
     const sessionFilePath = path.join(tmpDir, 'session.json')
 
     fs.writeFileSync(sessionFilePath, JSON.stringify({
@@ -118,6 +130,7 @@ describe('GhawWorkflowPoller', () => {
 
   it('emits error payload when API request fails', async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ghaw-poller-'))
+    tempDirs.push(tmpDir)
     const sessionFilePath = path.join(tmpDir, 'session.json')
     requestMock.mockRejectedValue(new Error('boom'))
 
