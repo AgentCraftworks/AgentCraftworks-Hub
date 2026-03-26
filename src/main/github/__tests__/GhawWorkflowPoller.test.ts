@@ -192,6 +192,8 @@ describe('GhawWorkflowPoller', () => {
     tempDirs.push(tmpDir)
     const sessionFilePath = path.join(tmpDir, 'session.json')
 
+    // Validate fallback behavior when persisted payload has wrong types:
+    // repository must be string; fetchedAt must be numeric unix-ms timestamp.
     fs.writeFileSync(sessionFilePath, JSON.stringify({
       repository: 123,
       fetchedAt: 'bad-value',

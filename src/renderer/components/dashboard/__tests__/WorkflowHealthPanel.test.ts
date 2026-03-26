@@ -102,7 +102,7 @@ describe('buildWorkflowHealthMetrics', () => {
     expect(metrics.status).toBe('stale')
   })
 
-  it('handles high-volume workflow data without changing aggregation behavior', () => {
+  it('aggregates 12,500 workflow entries correctly', () => {
     const entries: OperationLogEntry[] = Array.from({ length: 10_000 }, (_, i) => operation(
       `ok-${i}`,
       'ok',

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const listeners = new Map<string, (event: unknown, payload: unknown) => void>()
+const listeners = new Map<string, Set<(event: unknown, payload: unknown) => void>>()
 interface GhawApiContract {
   start: () => Promise<unknown>
   stop: () => Promise<unknown>
@@ -14,10 +14,15 @@ const exposed: Record<string, unknown> = {}
 
 const invoke = vi.fn()
 const on = vi.fn((channel: string, handler: (event: unknown, payload: unknown) => void) => {
-  listeners.set(channel, handler)
+  const existing = listeners.get(channel) ?? new Set()
+  existing.add(handler)
+  listeners.set(channel, existing)
 })
 const off = vi.fn((channel: string, handler: (event: unknown, payload: unknown) => void) => {
-  if (listeners.get(channel) === handler) {
+  const existing = listeners.get(channel)
+  if (!existing) return
+  existing.delete(handler)
+  if (existing.size === 0) {
     listeners.delete(channel)
   }
 })
@@ -69,7 +74,7 @@ describe('preload ghawAPI integration', () => {
     const unsubscribe = ghawAPI.onSnapshot(cb)
 
     expect(on).toHaveBeenCalledWith('ghaw:snapshot', expect.any(Function))
-    listeners.get('ghaw:snapshot')?.({}, { fetchedAt: 123 })
+    listeners.get('ghaw:snapshot')?.forEach((handler) => handler({}, { fetchedAt: 123 }))
     expect(cb).toHaveBeenCalledWith({ fetchedAt: 123 })
 
     unsubscribe()
@@ -82,7 +87,7 @@ describe('preload ghawAPI integration', () => {
     const unsubscribe = ghawAPI.onError(cb)
 
     expect(on).toHaveBeenCalledWith('ghaw:error', expect.any(Function))
-    listeners.get('ghaw:error')?.({}, 'poll failed')
+    listeners.get('ghaw:error')?.forEach((handler) => handler({}, 'poll failed'))
     expect(cb).toHaveBeenCalledWith('poll failed')
 
     unsubscribe()

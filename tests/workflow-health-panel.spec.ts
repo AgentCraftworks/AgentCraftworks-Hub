@@ -19,11 +19,14 @@ test.describe('WorkflowHealthPanel', () => {
       },
     })
     page = await app.firstWindow()
-    await page.waitForTimeout(3_000)
+    await expect(page.getByRole('button', { name: 'GitHub Usage' })).toBeVisible()
   })
 
   test.afterAll(async () => {
-    await app?.close().catch(() => {})
+    if (!app) return
+    await app.close().catch((error: unknown) => {
+      console.error('[E2E Cleanup] Failed to close Electron app:', error)
+    })
   })
 
   test('renders workflow health panel in Hub dashboard', async () => {
