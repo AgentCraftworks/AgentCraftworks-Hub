@@ -133,10 +133,10 @@ contextBridge.exposeInMainWorld('tangentAPI', tangentAPI)
 
 // Hub monitoring API — separate namespace to avoid collisions with Tangent internals
 const hubAPI = {
-  start: (enterprise?: string): Promise<{ ok: boolean; error?: string }> =>
+  start: (enterprise?: string): Promise<import('@shared/hub-types').HubActionResponse> =>
     ipcRenderer.invoke('hub:start', enterprise),
 
-  stop: (): Promise<{ ok: boolean }> =>
+  stop: (): Promise<import('@shared/hub-types').HubActionResponse> =>
     ipcRenderer.invoke('hub:stop'),
 
   getSnapshot: (): Promise<import('@shared/hub-types').MonitorSnapshot | null> =>
@@ -145,6 +145,17 @@ const hubAPI = {
   getHistory: (): Promise<import('@shared/hub-types').RateLimitSample[]> =>
     ipcRenderer.invoke('hub:getHistory'),
 
+  getOperationLog: (query?: import('@shared/hub-types').OperationLogQuery): Promise<import('@shared/hub-types').OperationLogEntry[]> =>
+    ipcRenderer.invoke('hub:getOperationLog', query),
+
+  appendOperationLogEntry: (
+    input: import('@shared/hub-types').OperationLogAppendInput,
+  ): Promise<import('@shared/hub-types').HubActionResponse & { entry?: import('@shared/hub-types').OperationLogEntry }> =>
+    ipcRenderer.invoke('hub:appendOperationLogEntry', input),
+
+  getActionAuthority: (): Promise<import('@shared/hub-types').ActionAuthoritySnapshot> =>
+    ipcRenderer.invoke('hub:getActionAuthority'),
+
   getTokenConfig: (): Promise<{ hasToken: boolean; enterprise: string; org: string; isGhCli: boolean; ghAuthenticated: boolean; ghScopes: string[]; missingScopes: string[] }> =>
     ipcRenderer.invoke('hub:getTokenConfig'),
 
@@ -152,20 +163,22 @@ const hubAPI = {
     ipcRenderer.invoke('hub:checkLoginStatus'),
 
   // org is optional; defaults to the persisted or default org slug on the main process side
-  beginGitHubLogin: (params: { enterprise: string; org?: string }): Promise<{ ok: boolean; error?: string }> =>
+  beginGitHubLogin: (params: { enterprise: string; org?: string }): Promise<import('@shared/hub-types').HubActionResponse> =>
     ipcRenderer.invoke('hub:beginGitHubLogin', params),
 
-  openDevicePage: (): Promise<{ ok: boolean }> =>
+  openDevicePage: (): Promise<import('@shared/hub-types').HubActionResponse> =>
     ipcRenderer.invoke('hub:openDevicePage'),
 
   // org is optional; defaults to the persisted or default org slug on the main process side
-  completeGitHubLogin: (params: { enterprise: string; org?: string }): Promise<{ ok: boolean; error?: string; scopes?: string[]; missingScopes?: string[] }> =>
+  completeGitHubLogin: (
+    params: { enterprise: string; org?: string },
+  ): Promise<import('@shared/hub-types').HubActionResponse & { scopes?: string[]; missingScopes?: string[] }> =>
     ipcRenderer.invoke('hub:completeGitHubLogin', params),
 
-  logoutGitHub: (): Promise<{ ok: boolean; error?: string }> =>
+  logoutGitHub: (): Promise<import('@shared/hub-types').HubActionResponse> =>
     ipcRenderer.invoke('hub:logoutGitHub'),
 
-  refresh: (): Promise<{ ok: boolean; error?: string }> =>
+  refresh: (): Promise<import('@shared/hub-types').HubActionResponse> =>
     ipcRenderer.invoke('hub:refresh'),
 
   onSnapshot: (cb: (snapshot: import('@shared/hub-types').MonitorSnapshot) => void): (() => void) => {
@@ -185,6 +198,72 @@ const hubAPI = {
     ipcRenderer.on('hub:deviceCode', handler)
     return () => { ipcRenderer.removeListener('hub:deviceCode', handler) }
   },
+
+  onOperationLogUpdated: (cb: (entry: import('@shared/hub-types').OperationLogEntry) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, entry: import('@shared/hub-types').OperationLogEntry) => cb(entry)
+    ipcRenderer.on('hub:operationLogUpdated', handler)
+    return () => { ipcRenderer.removeListener('hub:operationLogUpdated', handler) }
+  },
+
+  // Action request queue
+  submitActionRequest: (
+    input: import('@shared/hub-types').ActionRequestSubmitInput,
+  ): Promise<import('@shared/hub-types').HubActionResponse & { request?: import('@shared/hub-types').ActionRequest }> =>
+    ipcRenderer.invoke('hub:submitActionRequest', input),
+
+  listActionRequests: (query?: import('@shared/hub-types').ActionRequestQuery): Promise<import('@shared/hub-types').ActionRequest[]> =>
+    ipcRenderer.invoke('hub:listActionRequests', query),
+
+  countPendingRequests: (): Promise<number> =>
+    ipcRenderer.invoke('hub:countPendingRequests'),
+
+  approveActionRequest: (
+    id: string,
+    note?: string,
+  ): Promise<import('@shared/hub-types').HubActionResponse & { request?: import('@shared/hub-types').ActionRequest }> =>
+    ipcRenderer.invoke('hub:approveActionRequest', id, note),
+
+  rejectActionRequest: (
+    id: string,
+    note?: string,
+  ): Promise<import('@shared/hub-types').HubActionResponse & { request?: import('@shared/hub-types').ActionRequest }> =>
+    ipcRenderer.invoke('hub:rejectActionRequest', id, note),
+
+  onActionRequestUpdated: (cb: (request: import('@shared/hub-types').ActionRequest) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, request: import('@shared/hub-types').ActionRequest) => cb(request)
+    ipcRenderer.on('hub:actionRequestUpdated', handler)
+    return () => { ipcRenderer.removeListener('hub:actionRequestUpdated', handler) }
+  },
+
+  onDeepLinkOpen: (cb: (payload: {
+    rawUrl: string
+    panel: string
+    scopeRaw: string
+    persona?: string
+    scope?: unknown
+  }) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, payload: {
+      rawUrl: string
+      panel: string
+      scopeRaw: string
+      persona?: string
+      scope?: unknown
+    }) => cb(payload)
+    ipcRenderer.on('hub:deepLinkOpen', handler)
+    return () => { ipcRenderer.removeListener('hub:deepLinkOpen', handler) }
+  },
 }
 
 contextBridge.exposeInMainWorld('hubAPI', hubAPI)
+
+// Entitlement API — persona + capability gating
+const entitlementAPI = {
+  getSnapshot: () => ipcRenderer.invoke('entitlement:getSnapshot'),
+  setPersona: (personaId: string) => ipcRenderer.invoke('entitlement:setPersona', personaId),
+  setLicenseLevel: (level: string) => ipcRenderer.invoke('entitlement:setLicenseLevel', level),
+  setLicenseKey: (key: string) => ipcRenderer.invoke('entitlement:setLicenseKey', key),
+  setLastScope: (scope: unknown) => ipcRenderer.invoke('entitlement:setLastScope', scope),
+  allows: (capabilityKey: string) => ipcRenderer.invoke('entitlement:allows', capabilityKey),
+}
+
+contextBridge.exposeInMainWorld('entitlementAPI', entitlementAPI)

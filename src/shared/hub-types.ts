@@ -85,26 +85,127 @@ export interface RateLimitSample {
   coreLimit: number
 }
 
+export interface OperationLogEntry {
+  id: string
+  ts: string
+  actor: string
+  action: string
+  scope: string
+  surface: string
+  tier: string
+  result: string
+}
+
+export interface OperationLogQuery {
+  limit?: number
+  scope?: string
+  surface?: string
+  result?: string
+}
+
+export interface OperationLogAppendInput {
+  actor?: string
+  action: string
+  scope?: string
+  surface?: string
+  tier?: string
+  result?: string
+}
+
+export type ActionTier = 'T1' | 'T2' | 'T3' | 'T4' | 'T5'
+
+export interface HubActionResponse {
+  ok: boolean
+  error?: string
+  denied?: boolean
+  requiredTier?: ActionTier
+  requiredCapability?: string
+  personaId?: string
+  licenseLevel?: string
+}
+
+export interface ActionAuthoritySnapshot {
+  personaId: string
+  licenseLevel: string
+  capabilities: string[]
+  tierRequirements: Record<ActionTier, string>
+}
+
+// ============================================================================
+// Action Request Queue (request/approve workflow)
+// ============================================================================
+
+export type ActionRequestState = 'pending' | 'approved' | 'rejected'
+
+export interface ActionRequest {
+  id: string
+  ts: string
+  actor: string
+  action: string
+  scope: string
+  surface: string
+  tier: string
+  rationale?: string
+  state: ActionRequestState
+  resolvedAt?: string
+  resolvedBy?: string
+  resolvedNote?: string
+}
+
+export interface ActionRequestSubmitInput {
+  actor?: string
+  action: string
+  scope?: string
+  surface?: string
+  tier?: string
+  rationale?: string
+}
+
+export interface ActionRequestQuery {
+  limit?: number
+  state?: ActionRequestState
+  scope?: string
+}
+
 export interface HubWindowAPI {
-  start(enterprise?: string): Promise<{ ok: boolean; error?: string }>
-  stop(): Promise<{ ok: boolean }>
+  start(enterprise?: string): Promise<HubActionResponse>
+  stop(): Promise<HubActionResponse>
   getSnapshot(): Promise<MonitorSnapshot | null>
   getHistory(): Promise<RateLimitSample[]>
+  getOperationLog(query?: OperationLogQuery): Promise<OperationLogEntry[]>
+  appendOperationLogEntry(input: OperationLogAppendInput): Promise<HubActionResponse & { entry?: OperationLogEntry }>
+  getActionAuthority(): Promise<ActionAuthoritySnapshot>
   getTokenConfig(): Promise<{
     hasToken: boolean
     enterprise: string
+    org: string
     isGhCli: boolean
     ghAuthenticated: boolean
     ghScopes: string[]
     missingScopes: string[]
   }>
   checkLoginStatus(): Promise<{ authenticated: boolean; scopes: string[]; missingScopes: string[] }>
-  beginGitHubLogin(params: { enterprise: string }): Promise<{ ok: boolean; error?: string }>
-  openDevicePage(): Promise<{ ok: boolean }>
-  completeGitHubLogin(params: { enterprise: string }): Promise<{ ok: boolean; error?: string; scopes?: string[]; missingScopes?: string[] }>
-  logoutGitHub(): Promise<{ ok: boolean; error?: string }>
-  refresh(): Promise<{ ok: boolean; error?: string }>
+  beginGitHubLogin(params: { enterprise: string; org?: string }): Promise<HubActionResponse>
+  openDevicePage(): Promise<HubActionResponse>
+  completeGitHubLogin(params: { enterprise: string; org?: string }): Promise<HubActionResponse & { scopes?: string[]; missingScopes?: string[] }>
+  logoutGitHub(): Promise<HubActionResponse>
+  refresh(): Promise<HubActionResponse>
   onSnapshot(cb: (snapshot: MonitorSnapshot) => void): () => void
   onError(cb: (message: string) => void): () => void
   onDeviceCode(cb: (code: string) => void): () => void
+  onOperationLogUpdated(cb: (entry: OperationLogEntry) => void): () => void
+  // Action request queue
+  submitActionRequest(input: ActionRequestSubmitInput): Promise<HubActionResponse & { request?: ActionRequest }>
+  listActionRequests(query?: ActionRequestQuery): Promise<ActionRequest[]>
+  approveActionRequest(id: string, note?: string): Promise<HubActionResponse & { request?: ActionRequest }>
+  rejectActionRequest(id: string, note?: string): Promise<HubActionResponse & { request?: ActionRequest }>
+  countPendingRequests(): Promise<number>
+  onActionRequestUpdated(cb: (request: ActionRequest) => void): () => void
+  onDeepLinkOpen(cb: (payload: {
+    rawUrl: string
+    panel: string
+    scopeRaw: string
+    persona?: string
+    scope?: unknown
+  }) => void): () => void
 }

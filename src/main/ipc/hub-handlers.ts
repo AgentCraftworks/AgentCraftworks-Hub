@@ -1,11 +1,26 @@
 // hub-handlers.ts — IPC handlers for GitHub monitoring (Hub dashboard)
 // Registers the GitHubMonitorService and pushes snapshots to the renderer.
+
 import { ipcMain, BrowserWindow, shell } from 'electron'
 import { execSync, spawn } from 'child_process'
 import { createRequire } from 'module'
 import { GitHubMonitorService } from '../github/GitHubMonitorService.js'
 import type { MonitorSnapshot } from '../github/GitHubMonitorService.js'
 import { loadHistory } from '../github/HistoryStore.js'
+import { appendOperationLog, listOperationLog } from '../github/OperationLogStore.js'
+import {
+  submitActionRequest,
+  listActionRequests,
+  approveActionRequest,
+  rejectActionRequest,
+  countPendingActionRequests,
+} from '../github/ActionRequestStore.js'
+import {
+  authorizeActionTier,
+  getActionAuthoritySnapshot,
+  normalizeActionTier,
+  toDeniedOperationLog,
+} from '../hub/ActionAuthority.js'
 
 // Keytar is an optional native module — gracefully degrade if not available
 const requireForOptionalDeps =
@@ -131,12 +146,71 @@ function startMonitor(token: string, enterprise: string, org: string, getWindow:
   monitorService.start()
 }
 
+function pushOperationLogUpdate(getWindow: () => BrowserWindow | null, entry: ReturnType<typeof appendOperationLog>): void {
+  getWindow()?.webContents.send('hub:operationLogUpdated', entry)
+}
+
+function appendDesktopOperationLog(
+  getWindow: () => BrowserWindow | null,
+  action: string,
+  scope: string,
+  result: string,
+  tier = 'T1',
+): void {
+  const entry = appendOperationLog({
+    action,
+    scope,
+    surface: 'desktop',
+    result,
+    actor: 'hub-desktop',
+    tier,
+  })
+  pushOperationLogUpdate(getWindow, entry)
+}
+
 export function registerHubHandlers(getWindow: () => BrowserWindow | null): void {
   // Get latest snapshot (one-shot request from renderer)
   ipcMain.handle('hub:getSnapshot', () => monitorService?.getSnapshot() ?? null)
 
   // Return persisted rate limit history for the full chart
   ipcMain.handle('hub:getHistory', () => loadHistory())
+
+  ipcMain.handle('hub:getOperationLog', (_, query) => listOperationLog(query ?? {}))
+
+  ipcMain.handle('hub:getActionAuthority', () => getActionAuthoritySnapshot())
+
+  ipcMain.handle('hub:appendOperationLogEntry', (_, input: {
+    actor?: string
+    action?: string
+    scope?: string
+    surface?: string
+    tier?: string
+    result?: string
+  }) => {
+    if (!input?.action || !input.action.trim()) {
+      return { ok: false, entry: null, error: 'action is required' }
+    }
+
+    const requiredTier = normalizeActionTier(input?.tier)
+    const authResult = authorizeActionTier(requiredTier)
+    if (!authResult.ok) {
+      const scope = input?.scope?.trim() || '(global)'
+      const deniedEntry = appendOperationLog(toDeniedOperationLog('hub.appendOperationLogEntry', scope, authResult))
+      pushOperationLogUpdate(getWindow, deniedEntry)
+      return authResult
+    }
+
+    const entry = appendOperationLog({
+      actor: input?.actor,
+      action: input.action,
+      scope: input?.scope,
+      surface: input?.surface,
+      tier: input?.tier,
+      result: input?.result,
+    })
+    pushOperationLogUpdate(getWindow, entry)
+    return { ok: true, entry }
+  })
 
   // Returns auth status and enterprise/org names — no PAT fields
   ipcMain.handle('hub:getTokenConfig', async () => {
@@ -165,6 +239,14 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
 
   // Launch GitHub web OAuth flow — opens system browser silently, no terminal window
   ipcMain.handle('hub:beginGitHubLogin', async (_, { enterprise, org }: { enterprise: string; org?: string }) => {
+    const authResult = authorizeActionTier('T2')
+    if (!authResult.ok) {
+      const scope = `org:${(org ?? '').trim() || cachedOrg}`
+      const deniedEntry = appendOperationLog(toDeniedOperationLog('hub.beginGitHubLogin', scope, authResult))
+      pushOperationLogUpdate(getWindow, deniedEntry)
+      return authResult
+    }
+
     const ent = enterprise.trim() || 'AICraftWorks'
     const orgSlug = (org ?? '').trim() || 'AgentCraftworks'
     cachedEnterprise = ent
@@ -176,8 +258,10 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
 
     try {
       launchGitHubLoginIntegrated(REQUIRED_GH_SCOPES, getWindow)
+      appendDesktopOperationLog(getWindow, 'hub.beginGitHubLogin', `org:${orgSlug}`, 'ok')
       return { ok: true }
     } catch {
+      appendDesktopOperationLog(getWindow, 'hub.beginGitHubLogin', `org:${orgSlug}`, 'failed')
       return { ok: false, error: 'Unable to launch GitHub login. Ensure GitHub CLI (gh) is installed and in PATH.' }
     }
   })
@@ -190,8 +274,18 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
 
   // Verify gh auth status/scopes and start monitoring with gh token
   ipcMain.handle('hub:completeGitHubLogin', async (_, { enterprise, org }: { enterprise: string; org?: string }) => {
+    const authResult = authorizeActionTier('T2')
+    if (!authResult.ok) {
+      const scope = `org:${(org ?? '').trim() || cachedOrg}`
+      const deniedEntry = appendOperationLog(toDeniedOperationLog('hub.completeGitHubLogin', scope, authResult))
+      pushOperationLogUpdate(getWindow, deniedEntry)
+      return authResult
+    }
+
     const token = getGhCliToken()
     if (!token) {
+      const failedScope = `org:${(org ?? '').trim() || cachedOrg}`
+      appendDesktopOperationLog(getWindow, 'hub.completeGitHubLogin', failedScope, 'failed')
       return { ok: false, error: 'GitHub login not detected yet. Complete the sign-in flow in your browser first.' }
     }
 
@@ -207,11 +301,20 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
     }
 
     startMonitor(token, ent, orgSlug, getWindow)
+    appendDesktopOperationLog(getWindow, 'hub.completeGitHubLogin', `org:${orgSlug}`, 'ok')
     return { ok: true, scopes, missingScopes: missing }
   })
 
   // Log out of GitHub CLI and stop monitor
   ipcMain.handle('hub:logoutGitHub', async () => {
+    const authResult = authorizeActionTier('T2')
+    if (!authResult.ok) {
+      const deniedEntry = appendOperationLog(toDeniedOperationLog('hub.logoutGitHub', `org:${cachedOrg}`, authResult))
+      pushOperationLogUpdate(getWindow, deniedEntry)
+      return authResult
+    }
+
+    const org = await getStoredOrg()
     try {
       execSync('gh auth logout --hostname github.com --yes', { stdio: 'ignore' })
     } catch {
@@ -221,6 +324,8 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
     monitorService?.stop()
     monitorService = null
 
+    appendDesktopOperationLog(getWindow, 'hub.logoutGitHub', `org:${org}`, 'ok')
+
     return { ok: true }
   })
 
@@ -229,28 +334,109 @@ export function registerHubHandlers(getWindow: () => BrowserWindow | null): void
     if (monitorService) return { ok: true }
 
     const token = getGhCliToken()
-    if (!token) return { ok: false, error: 'No GitHub token found. Click "Sign in with GitHub" to authenticate.' }
+    const org = await getStoredOrg()
+    if (!token) {
+      appendDesktopOperationLog(getWindow, 'hub.start', `org:${org}`, 'failed')
+      return { ok: false, error: 'No GitHub token found. Click "Sign in with GitHub" to authenticate.' }
+    }
 
     const ent = enterprise?.trim() || (await getStoredEnterprise())
-    const org = await getStoredOrg()
     startMonitor(token, ent, org, getWindow)
+    appendDesktopOperationLog(getWindow, 'hub.start', `org:${org}`, 'ok')
     return { ok: true }
   })
 
   // Stop monitoring
   ipcMain.handle('hub:stop', () => {
+    const authResult = authorizeActionTier('T2')
+    if (!authResult.ok) {
+      const deniedEntry = appendOperationLog(toDeniedOperationLog('hub.stop', `org:${cachedOrg}`, authResult))
+      pushOperationLogUpdate(getWindow, deniedEntry)
+      return authResult
+    }
+
+    const scope = `org:${cachedOrg}`
     monitorService?.stop()
     monitorService = null
+    appendDesktopOperationLog(getWindow, 'hub.stop', scope, 'ok')
     return { ok: true }
   })
 
   // Manually refresh all pollers immediately
   ipcMain.handle('hub:refresh', async () => {
     const token = getGhCliToken()
-    if (!token) return { ok: false, error: 'No GitHub token' }
-    const enterprise = await getStoredEnterprise()
     const org = await getStoredOrg()
+    if (!token) {
+      appendDesktopOperationLog(getWindow, 'hub.refresh', `org:${org}`, 'failed')
+      return { ok: false, error: 'No GitHub token' }
+    }
+    const enterprise = await getStoredEnterprise()
     startMonitor(token, enterprise, org, getWindow)
+    appendDesktopOperationLog(getWindow, 'hub.refresh', `org:${org}`, 'ok')
     return { ok: true }
+  })
+
+  // ============================================================================
+  // Action Request Queue — submit / list / approve / reject
+  // ============================================================================
+
+  function pushActionRequestUpdate(request: ReturnType<typeof submitActionRequest>): void {
+    getWindow()?.webContents.send('hub:actionRequestUpdated', request)
+  }
+
+  ipcMain.handle('hub:submitActionRequest', (_, input: {
+    actor?: string
+    action?: string
+    scope?: string
+    surface?: string
+    tier?: string
+    rationale?: string
+  }) => {
+    if (!input?.action || !input.action.trim()) {
+      return { ok: false, error: 'action is required' }
+    }
+    const request = submitActionRequest({
+      actor: input.actor,
+      action: input.action,
+      scope: input.scope,
+      surface: input.surface,
+      tier: input.tier,
+      rationale: input.rationale,
+    })
+    pushActionRequestUpdate(request)
+    appendDesktopOperationLog(getWindow, 'hub.submitActionRequest', input.scope || '', 'ok')
+    return { ok: true, request }
+  })
+
+  ipcMain.handle('hub:listActionRequests', (_, query) => listActionRequests(query ?? {}))
+
+  ipcMain.handle('hub:countPendingRequests', () => countPendingActionRequests())
+
+  ipcMain.handle('hub:approveActionRequest', (_, id: string, note?: string) => {
+    const authResult = authorizeActionTier('T3')
+    if (!authResult.ok) {
+      const deniedEntry = appendOperationLog(toDeniedOperationLog('hub.approveActionRequest', id, authResult))
+      pushOperationLogUpdate(getWindow, deniedEntry)
+      return authResult
+    }
+    const updated = approveActionRequest(id, { resolvedBy: 'hub-desktop', note })
+    if (!updated) return { ok: false, error: `Request ${id} not found` }
+    pushActionRequestUpdate(updated)
+    appendDesktopOperationLog(getWindow, 'hub.approveActionRequest', id, 'ok', 'T3')
+    return { ok: true, request: updated }
+  })
+
+  ipcMain.handle('hub:rejectActionRequest', (_, id: string, note?: string) => {
+    const authResult = authorizeActionTier('T3')
+    if (!authResult.ok) {
+      const deniedEntry = appendOperationLog(toDeniedOperationLog('hub.rejectActionRequest', id, authResult))
+      pushOperationLogUpdate(getWindow, deniedEntry)
+      return authResult
+    }
+    const updated = rejectActionRequest(id, { resolvedBy: 'hub-desktop', note })
+    if (!updated) return { ok: false, error: `Request ${id} not found` }
+    pushActionRequestUpdate(updated)
+    appendDesktopOperationLog(getWindow, 'hub.rejectActionRequest', id, 'ok', 'T3')
+    return { ok: true, request: updated }
   })
 }
