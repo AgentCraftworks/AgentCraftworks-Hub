@@ -31,6 +31,13 @@ export interface WorkflowHealthMetrics {
 }
 
 const STALE_WINDOW_MS = 5 * 60_000
+const CRITICAL_FAILURE_COUNT = 3
+const CRITICAL_FAILURE_RATIO = 0.3
+const CRITICAL_PENDING_REQUESTS = 10
+const TOOLTIP_LABELS: Record<string, string> = {
+  failed: 'Failed',
+  total: 'Total',
+}
 
 export function buildWorkflowHealthMetrics(
   entries: OperationLogEntry[],
@@ -91,7 +98,11 @@ export function buildWorkflowHealthMetrics(
     status = 'stale'
   } else if (totalRuns === 0 && pendingRequests === 0) {
     status = 'no-data'
-  } else if (failedRuns >= 3 || (totalRuns > 0 && (failedRuns / totalRuns) >= 0.3) || pendingRequests >= 10) {
+  } else if (
+    failedRuns >= CRITICAL_FAILURE_COUNT
+    || (totalRuns > 0 && (failedRuns / totalRuns) >= CRITICAL_FAILURE_RATIO)
+    || pendingRequests >= CRITICAL_PENDING_REQUESTS
+  ) {
     status = 'critical'
   } else if (failedRuns > 0 || pendingRequests > 0) {
     status = 'degraded'
@@ -169,7 +180,7 @@ export function WorkflowHealthPanel({ entries, actionRequests, lastUpdated, onRe
             />
             <Tooltip
               contentStyle={{ background: '#111827', border: 'none', borderRadius: 6, fontSize: 11 }}
-              formatter={(value: number, name: string) => [value.toLocaleString(), name === 'failed' ? 'Failed' : 'Total']}
+              formatter={(value: number, name: string) => [value.toLocaleString(), TOOLTIP_LABELS[name] ?? name]}
             />
             <Area type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={1.5} fill="url(#workflowTotal)" />
             <Area type="monotone" dataKey="failed" stroke="#ef4444" strokeWidth={1.3} fill="url(#workflowFailed)" />
