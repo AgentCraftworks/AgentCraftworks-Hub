@@ -469,3 +469,199 @@ Renderer
 ## 14) Recommended Next Step
 
 Implement Milestone 1 (read-only insights) and Milestone 2 (toggle controls for already-supported workflows) behind `hub.ghawInsights.enabled`, then start Milestone 3 to standardize toggle support across remaining workflows.
+
+## 15) Practical Rollout Plan (Option A + B)
+
+### 15.1 Rollout objective
+
+Deliver enterprise value quickly by combining:
+
+- Option A: VS Code companion extension experiences (persona-aware webviews + scoped controls)
+- Option B: terminal-native workflows (`hub monitor`, `hub status`) integrated into VS Code command surface
+
+while preserving a distinct and continuously evolving desktop product offering:
+
+- **AgentCraftworks Hub Desktop** (standalone Electron SKU)
+
+### 15.2 Core product posture
+
+One platform, two primary surfaces:
+
+1. **Hub Desktop (primary operations command center):** cross-org operations, executive visibility, advanced control-plane actions.
+2. **VS Code companion (in-flow execution):** scoped insight/action loops for engineers, leads, and operator personas.
+
+The desktop app remains the flagship SKU and source of advanced enterprise operations.
+
+## 16) Persona Model for Option A + B
+
+### 16.1 Persona catalog
+
+- `executive`
+- `platform_ops`
+- `product_ops`
+- `agent_ops`
+- `team_lead`
+- `maintainer`
+- `finops`
+- `biz_ops`
+
+### 16.2 Persona-to-surface defaults
+
+Desktop-first personas (default surface = Hub Desktop):
+
+- `executive`
+- `platform_ops`
+- `finops`
+- `biz_ops`
+
+VS Code-first personas (default surface = extension + terminal commands):
+
+- `team_lead`
+- `maintainer`
+- `product_ops`
+- `agent_ops`
+
+Escalation model:
+
+- all VS Code experiences include “Open in Hub Desktop” deep-link for advanced triage/control actions.
+
+## 17) Delivery Phases (Option A + B)
+
+### Phase A0: Foundations and contracts (1 sprint)
+
+Goals:
+
+- finalize shared type contracts for persona, scope, and insights snapshot reuse.
+- define surface entitlement matrix by role/license.
+
+Deliverables:
+
+1. Shared persona + entitlement schema in Hub and VS Code repos.
+2. Scope contract:
+  - org
+  - workspace
+  - repo
+  - team/squad
+  - window (7d/30d/custom)
+3. “Desktop authority” contract for actions requiring advanced control.
+
+Exit criteria:
+
+- both repos compile with shared contract versions pinned.
+
+### Phase A1: Option B first (terminal integration in VS Code) (1 sprint)
+
+Goals:
+
+- drive immediate adoption with low engineering risk.
+
+Deliverables:
+
+1. VS Code commands for:
+  - `hub.monitor.open`
+  - `hub.status.open`
+  - `hub.monitor.openScoped` (repo/workspace scoped)
+2. quick-pick launcher for common scope presets.
+3. command palette docs + onboarding tips.
+
+Exit criteria:
+
+- users can open and operate monitor/status flows from VS Code without context switching to external terminals.
+
+### Phase A2: Option A baseline (VS Code companion panels) (2 sprints)
+
+Goals:
+
+- add webview-based companion experiences for in-flow operations.
+
+Deliverables:
+
+1. “Hub Overview” webview (read-only hotspots + anomaly summary).
+2. “My Scope” view for repo/workspace scoped users.
+3. “Agent Ops” view for squad/team performance and operational drift.
+4. persona-based default tab routing.
+5. deep-link actions into Hub Desktop for advanced operations.
+
+Exit criteria:
+
+- users can triage common workflow issues from VS Code and escalate complex cases to Desktop in one click.
+
+### Phase A3: Controlled actions in VS Code (2 sprints)
+
+Goals:
+
+- introduce safe subset of control-plane actions in extension.
+
+Deliverables:
+
+1. toggle actions for `toggle-supported` workflows only.
+2. request/approve flow for high-impact actions.
+3. operation log sync between VS Code and Desktop.
+
+Guardrail:
+
+- destructive/high-criticality actions remain Desktop-only unless explicit policy allows extension execution.
+
+Exit criteria:
+
+- operator users can complete low-risk workflow controls in IDE with full audit trace.
+
+### Phase A4: hardening, adoption, and scale (ongoing)
+
+Goals:
+
+- stabilize enterprise rollout and improve adoption.
+
+Deliverables:
+
+1. telemetry by persona/surface (Desktop vs VS Code vs terminal).
+2. reliability SLOs for snapshot latency and action success rates.
+3. rollout playbook for customer IT/admin channels.
+
+## 18) Desktop SKU Continuity Plan (Non-negotiable)
+
+### 18.1 SKU definition
+
+Product name: **AgentCraftworks Hub Desktop**
+
+### 18.2 Continuity rules
+
+1. Desktop remains separately installable and fully functional without VS Code extension dependency.
+2. New enterprise capabilities launch Desktop-first or Desktop-parity unless explicitly approved.
+3. VS Code companion features must not deprecate Desktop capabilities.
+4. Desktop keeps the most complete cross-org control plane and executive/ops reporting feature set.
+
+### 18.3 Release governance
+
+- Separate release trains:
+  - Desktop release cadence remains independent.
+  - VS Code extension release cadence can be faster for in-flow UX iterations.
+- Compatibility matrix maintained per release:
+  - Desktop version ↔ extension version ↔ shared contract version.
+
+### 18.4 Packaging and distribution (current trajectory)
+
+1. Desktop: signed installer distribution as premium offering.
+2. VS Code: companion distribution via extension channels (public/private as customer policy requires).
+3. Enterprise entitlement service controls which capabilities light up in each surface.
+
+## 19) Workspace Alignment Check (cross-repo)
+
+This plan aligns with current repository direction:
+
+1. **AgentCraftworks-Hub:** Hub README already positions standalone Electron as central enterprise dashboard and terminal mode as VS Code-friendly complement.
+2. **AgentCraftworks-VSCode futures:** existing strategy docs already describe webview-based agent activity/ops experiences in extension.
+3. **AgentCraftworks product futures:** roadmap direction supports extension-side consumption and progressive platform integration.
+4. **PlatformOps boundary:** internal ops analytics remain separate from customer-facing product surfaces, consistent with this plan.
+
+No boundary conflicts identified with current product structure.
+
+## 20) New Acceptance Criteria for Option A + B Rollout
+
+1. `hub monitor` and `hub status` can be launched from VS Code command surface with scoped presets.
+2. VS Code companion provides persona-aware views for `maintainer`, `team_lead`, `product_ops`, and `agent_ops`.
+3. Desktop remains installable/operable independently and retains superset control-plane capabilities.
+4. All action execution paths are auditable across Desktop and VS Code surfaces.
+5. Desktop and extension releases pass shared contract compatibility checks.
+6. Enterprise entitlements can independently enable/disable Desktop and VS Code premium capabilities.
+7. No regression to existing GHAW Insights milestones and acceptance criteria in Sections 10-14.

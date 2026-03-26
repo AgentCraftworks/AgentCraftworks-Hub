@@ -9,13 +9,21 @@ import { execSync } from 'child_process'
 import type { MonitorSnapshot, RateLimitData, BillingData, CopilotUsageData } from './types.js'
 
 const ENTERPRISE = process.env.GITHUB_ENTERPRISE ?? 'AICraftWorks'
+const HUB_SCOPE = process.env.HUB_SCOPE ?? ''
 const REFRESH_MS = 30_000
 
 // ── GitHub API fetch helpers ──────────────────────────────────────────────
 
+function getRepoFromScope(scope: string): string | undefined {
+  const repoMatch = /^repo:([^/]+\/.+)$/i.exec(scope)
+  return repoMatch ? repoMatch[1] : undefined
+}
+
 function ghApi(path: string): unknown {
   try {
-    const out = execSync(`gh api ${path}`, { encoding: 'utf-8', timeout: 10_000 })
+    const repo = getRepoFromScope(HUB_SCOPE)
+    const cmd = repo ? `gh api -R ${repo} ${path}` : `gh api ${path}`
+    const out = execSync(cmd, { encoding: 'utf-8', timeout: 10_000 })
     return JSON.parse(out)
   } catch {
     return null
@@ -152,6 +160,7 @@ function Footer({ lastRefresh, refreshing }: { lastRefresh: Date | null; refresh
         <Text>q</Text><Text dimColor>: quit  </Text>
         <Text>?</Text><Text dimColor>: help</Text>
         {'  Enterprise: '}<Text color="cyan">{ENTERPRISE}</Text>
+        {HUB_SCOPE ? (<Text dimColor>{'  Scope: '}<Text color="cyan">{HUB_SCOPE}</Text></Text>) : null}
       </Text>
     </Box>
   )
