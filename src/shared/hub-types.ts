@@ -200,7 +200,7 @@ export interface ActionRequestQuery {
   scope?: string
 }
 
-export interface GhawWorkflowRun {
+export interface GhawInsightsRun {
   repo: string
   workflowName: string
   workflowPath?: string
@@ -257,8 +257,8 @@ export interface GhawMinutesSummary {
 
 export interface GhawInsightsSnapshot {
   definitions: GhawWorkflowDefinition[]
-  runs7d: GhawWorkflowRun[]
-  runs30d: GhawWorkflowRun[]
+  runs7d: GhawInsightsRun[]
+  runs30d: GhawInsightsRun[]
   anomalies: GhawAnomaly[]
   topHotspots: Array<{
     repo: string
