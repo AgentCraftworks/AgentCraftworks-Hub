@@ -49,8 +49,8 @@ export function App(): JSX.Element {
         : panel === 'audit' ? 'audit'
         : panel === 'auth' ? 'auth'
         : panel === 'requests' ? 'requests'
-        : panel === 'workflows' ? 'audit'
-        : panel === 'workflow-run' ? 'audit'
+        : panel === 'workflows' ? 'workflows'
+        : panel === 'workflow-run' ? 'workflows'
         : 'overview'
 
       let enterpriseFromScope = 'AICraftWorks'

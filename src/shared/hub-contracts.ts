@@ -37,8 +37,11 @@ function parseOptionalNumber(value: string | null): number | undefined {
   if (!value) {
     return undefined
   }
+  if (!/^\d+$/.test(value.trim())) {
+    return undefined
+  }
   const parsed = Number.parseInt(value, 10)
-  return Number.isFinite(parsed) ? parsed : undefined
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
 }
 
 function normalizeRoutePath(url: URL): string {

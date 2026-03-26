@@ -71,7 +71,7 @@ export interface AuditLogEntry {
   lastSeenAt: number
 }
 
-export interface LegacyGhawWorkflowRun {
+export interface GhawWorkflowDataRun {
   id: number
   workflowId?: number
   name: string
@@ -88,7 +88,7 @@ export interface LegacyGhawWorkflowRun {
 
 export interface GhawWorkflowData {
   repository: string
-  runs: GhawWorkflowRun[]
+  runs: GhawWorkflowDataRun[]
   summary: {
     total: number
     queued: number

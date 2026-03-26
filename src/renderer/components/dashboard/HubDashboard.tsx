@@ -23,7 +23,7 @@ interface Props {
   onClose?: () => void
 }
 
-export type DashboardFocusSection = 'overview' | 'activity' | 'billing' | 'auth' | 'audit' | 'requests'
+export type DashboardFocusSection = 'overview' | 'activity' | 'workflows' | 'billing' | 'auth' | 'audit' | 'requests'
 
 export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialFocus = 'overview', initialFilters, onClose }: Props) {
   const { snapshot, history, loading, error, lastUpdated, refresh: refreshMonitor } = useHubMonitor(enterprise)
@@ -34,8 +34,10 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
   const [actionRequestsLoading, setActionRequestsLoading] = useState(false)
   const [authority, setAuthority] = useState<ActionAuthoritySnapshot | null>(null)
   const [shareCopied, setShareCopied] = useState(false)
+  const shareCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const overviewRef = useRef<HTMLDivElement | null>(null)
   const activityRef = useRef<HTMLDivElement | null>(null)
+  const workflowsRef = useRef<HTMLDivElement | null>(null)
   const billingRef = useRef<HTMLDivElement | null>(null)
   const auditRef = useRef<HTMLDivElement | null>(null)
   const requestsRef = useRef<HTMLDivElement | null>(null)
@@ -139,8 +141,19 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
       return
     }
     setShareCopied(true)
-    setTimeout(() => setShareCopied(false), 2000)
+    if (shareCopiedTimerRef.current) {
+      clearTimeout(shareCopiedTimerRef.current)
+    }
+    shareCopiedTimerRef.current = setTimeout(() => {
+      setShareCopied(false)
+    }, 2000)
   }, [initialFocus, initialFilters, scopeLabel])
+
+  useEffect(() => () => {
+    if (shareCopiedTimerRef.current) {
+      clearTimeout(shareCopiedTimerRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (initialFocus === 'auth') {
@@ -150,6 +163,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
 
     const targetRef =
       initialFocus === 'activity' ? activityRef
+      : initialFocus === 'workflows' ? workflowsRef
       : initialFocus === 'billing' ? billingRef
       : initialFocus === 'audit' ? auditRef
       : initialFocus === 'requests' ? requestsRef
@@ -201,7 +215,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
             Auth
           </button>
           <button
-            onClick={() => { void handleCopyShareLink() }}
+            onClick={handleCopyShareLink}
             className="text-xs text-white/40 hover:text-white/70 transition-colors"
             title="Copy deep-link"
           >
@@ -266,7 +280,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
           </div>
 
           {/* Workflow Health */}
-          <div className="xl:col-span-2">
+          <div ref={workflowsRef} className="xl:col-span-2">
             <WorkflowHealthPanel
               entries={operationLog}
               actionRequests={actionRequests}
