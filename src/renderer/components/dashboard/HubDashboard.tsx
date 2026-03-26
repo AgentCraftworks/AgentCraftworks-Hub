@@ -1,5 +1,5 @@
 ﻿// HubDashboard.tsx — Main dashboard container (Task Manager style)
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useHubMonitor } from '@/hooks/useHubMonitor'
 import { RateLimitPanel } from './RateLimitPanel'
 import { TokenActivityPanel } from './TokenActivityPanel'
@@ -7,16 +7,125 @@ import { ActionsMinutesPanel } from './ActionsMinutesPanel'
 import { CopilotUsagePanel } from './CopilotUsagePanel'
 import { BillingPanel } from './BillingPanel'
 import { TokenAuthPanel } from './TokenAuthPanel'
-import { RefreshCw, Loader, Settings } from 'lucide-react'
+import { OperationLogPanel } from './OperationLogPanel'
+import { ActionRequestPanel } from './ActionRequestPanel'
+import { RefreshCw, Loader, Settings, ShieldAlert } from 'lucide-react'
+import type { ActionRequest, ActionAuthoritySnapshot, OperationLogEntry } from '@shared/hub-types'
 
 interface Props {
   enterprise?: string
+  scopeLabel?: string
+  initialFocus?: DashboardFocusSection
   onClose?: () => void
 }
 
-export function HubDashboard({ enterprise = 'AICraftWorks', onClose }: Props) {
-  const { snapshot, history, loading, error, lastUpdated, refresh } = useHubMonitor(enterprise)
+export type DashboardFocusSection = 'overview' | 'activity' | 'billing' | 'auth' | 'audit' | 'requests'
+
+export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialFocus = 'overview', onClose }: Props) {
+  const { snapshot, history, loading, error, lastUpdated, refresh: refreshMonitor } = useHubMonitor(enterprise)
   const [showAuth, setShowAuth] = useState(false)
+  const [operationLog, setOperationLog] = useState<OperationLogEntry[]>([])
+  const [operationLogLoading, setOperationLogLoading] = useState(false)
+  const [actionRequests, setActionRequests] = useState<ActionRequest[]>([])
+  const [actionRequestsLoading, setActionRequestsLoading] = useState(false)
+  const [authority, setAuthority] = useState<ActionAuthoritySnapshot | null>(null)
+  const overviewRef = useRef<HTMLDivElement | null>(null)
+  const activityRef = useRef<HTMLDivElement | null>(null)
+  const billingRef = useRef<HTMLDivElement | null>(null)
+  const auditRef = useRef<HTMLDivElement | null>(null)
+  const requestsRef = useRef<HTMLDivElement | null>(null)
+
+  const refreshOperationLog = useCallback(async () => {
+    setOperationLogLoading(true)
+    try {
+      const entries = await window.hubAPI.getOperationLog({
+        limit: 100,
+        scope: scopeLabel || undefined,
+      })
+      setOperationLog(entries)
+    } finally {
+      setOperationLogLoading(false)
+    }
+  }, [scopeLabel])
+
+  const refreshActionRequests = useCallback(async () => {
+    setActionRequestsLoading(true)
+    try {
+      const reqs = await window.hubAPI.listActionRequests({ limit: 100 })
+      setActionRequests(reqs)
+    } finally {
+      setActionRequestsLoading(false)
+    }
+  }, [])
+
+  const refreshAll = useCallback(() => {
+    void refreshMonitor()
+    void refreshOperationLog()
+    void refreshActionRequests()
+  }, [refreshMonitor, refreshOperationLog, refreshActionRequests])
+
+  useEffect(() => {
+    void refreshOperationLog()
+    void refreshActionRequests()
+    window.hubAPI.getActionAuthority().then(setAuthority).catch(() => null)
+  }, [refreshOperationLog, refreshActionRequests])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      void refreshOperationLog()
+      void refreshActionRequests()
+    }, 5000)
+
+    return () => clearInterval(timer)
+  }, [refreshOperationLog, refreshActionRequests])
+
+  useEffect(() => {
+    return window.hubAPI.onOperationLogUpdated((entry) => {
+      setOperationLog((current) => {
+        if (scopeLabel && entry.scope !== scopeLabel) {
+          return current
+        }
+
+        const deduped = current.filter((item) => item.id !== entry.id)
+        return [entry, ...deduped].slice(0, 100)
+      })
+    })
+  }, [scopeLabel])
+
+  useEffect(() => {
+    return window.hubAPI.onActionRequestUpdated((req) => {
+      setActionRequests((current) => {
+        const deduped = current.filter((r) => r.id !== req.id)
+        return [req, ...deduped].slice(0, 100)
+      })
+    })
+  }, [])
+
+  const handleApprove = useCallback(async (id: string, note?: string) => {
+    await window.hubAPI.approveActionRequest(id, note)
+    void refreshActionRequests()
+  }, [refreshActionRequests])
+
+  const handleReject = useCallback(async (id: string, note?: string) => {
+    await window.hubAPI.rejectActionRequest(id, note)
+    void refreshActionRequests()
+  }, [refreshActionRequests])
+
+  useEffect(() => {
+    if (initialFocus === 'auth') {
+      setShowAuth(true)
+      return
+    }
+
+    const targetRef =
+      initialFocus === 'activity' ? activityRef
+      : initialFocus === 'billing' ? billingRef
+      : initialFocus === 'audit' ? auditRef
+      : initialFocus === 'requests' ? requestsRef
+      : overviewRef
+
+    targetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [initialFocus])
 
   return (
     <div className="flex flex-col h-full bg-black/20 overflow-hidden">
@@ -25,6 +134,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', onClose }: Props) {
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-white/80">AgentCraftworks Hub</span>
           <span className="text-xs text-white/30">{enterprise} Enterprise</span>
+          {scopeLabel && <span className="text-xs text-blue-300/80">Scope: {scopeLabel}</span>}
         </div>
         <div className="flex items-center gap-3">
           {onClose && (
@@ -34,6 +144,16 @@ export function HubDashboard({ enterprise = 'AICraftWorks', onClose }: Props) {
               title="Return to main view"
             >
               Back to Main
+            </button>
+          )}
+          {actionRequests.filter((r) => r.state === 'pending').length > 0 && (
+            <button
+              onClick={() => requestsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="flex items-center gap-1 text-[10px] bg-yellow-500/15 text-yellow-300 rounded-full px-2 py-0.5 hover:bg-yellow-500/25 transition-colors"
+              title="Scroll to pending action requests"
+            >
+              <ShieldAlert size={10} />
+              {actionRequests.filter((r) => r.state === 'pending').length} pending
             </button>
           )}
           {lastUpdated && (
@@ -50,7 +170,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', onClose }: Props) {
             Auth
           </button>
           <button
-            onClick={refresh}
+            onClick={refreshAll}
             disabled={loading}
             className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors disabled:opacity-40"
           >
@@ -81,16 +201,16 @@ export function HubDashboard({ enterprise = 'AICraftWorks', onClose }: Props) {
           )}
 
           {/* Rate Limit — always full width on smaller, left col on xl */}
-          <div className="xl:col-span-1">
+          <div ref={overviewRef} className="xl:col-span-1">
             <RateLimitPanel
               data={snapshot?.rateLimit ?? null}
               history={history}
-              onRefresh={refresh}
+              onRefresh={refreshAll}
             />
           </div>
 
           {/* Token Activity */}
-          <div className="xl:col-span-1">
+          <div ref={activityRef} className="xl:col-span-1">
             <TokenActivityPanel
               topCallers={snapshot?.topCallers ?? []}
               error={snapshot?.auditLogError}
@@ -108,10 +228,30 @@ export function HubDashboard({ enterprise = 'AICraftWorks', onClose }: Props) {
           </div>
 
           {/* Billing — spans full width */}
-          <div className="xl:col-span-2">
+          <div ref={billingRef} className="xl:col-span-2">
             <BillingPanel
               billing={snapshot?.billing ?? null}
               copilot={snapshot?.copilot ?? null}
+            />
+          </div>
+
+          {/* Operation Log */}
+          <div ref={auditRef} className="xl:col-span-2">
+            <OperationLogPanel
+              entries={operationLog}
+              loading={operationLogLoading}
+              onRefresh={refreshOperationLog}
+            />
+          </div>
+
+          {/* Action Request Queue */}
+          <div ref={requestsRef} className="xl:col-span-2">
+            <ActionRequestPanel
+              requests={actionRequests}
+              canApprove={authority?.capabilities.includes('approve_action') ?? false}
+              loading={actionRequestsLoading}
+              onApprove={handleApprove}
+              onReject={handleReject}
             />
           </div>
         </div>
