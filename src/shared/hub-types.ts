@@ -70,12 +70,45 @@ export interface AuditLogEntry {
   lastSeenAt: number
 }
 
+export interface GhawWorkflowRun {
+  id: number
+  workflowId?: number
+  name: string
+  headBranch: string
+  status: string
+  conclusion?: string | null
+  runNumber: number
+  event: string
+  htmlUrl: string
+  createdAt: string
+  updatedAt: string
+  runStartedAt?: string | null
+}
+
+export interface GhawWorkflowData {
+  repository: string
+  runs: GhawWorkflowRun[]
+  summary: {
+    total: number
+    queued: number
+    inProgress: number
+    completed: number
+    success: number
+    failed: number
+    cancelled: number
+  }
+  fetchedAt: number
+  recovered?: boolean
+  error?: string
+}
+
 export interface MonitorSnapshot {
   rateLimit: RateLimitData | null
   billing: BillingData | null
   copilot: CopilotUsageData | null
   topCallers: AuditLogEntry[]
   auditLogError?: string
+  ghawWorkflows: GhawWorkflowData | null
   lastUpdated: Record<string, number>
 }
 
