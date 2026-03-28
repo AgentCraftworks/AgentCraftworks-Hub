@@ -12,10 +12,16 @@ import { AgentLauncher } from './agents/AgentLauncher'
 import { ConfigStore } from './config/ConfigStore'
 import { registerIpcHandlers } from './ipc/handlers'
 import { registerHubHandlers } from './ipc/hub-handlers'
-import { registerEntitlementHandlers } from './ipc/entitlement-handlers'
-import { entitlementService } from './hub/EntitlementService'
 import { PipeServer } from './config/PipeServer'
-import { parseScopeString } from '../shared/hub-contracts.js'
+
+// Simple scope parser: accepts JSON or raw string
+const parseScopeString = (input: string): unknown => {
+  try {
+    return JSON.parse(input)
+  } catch {
+    return input
+  }
+}
 
 const SESSIONS_PATH = join(homedir(), '.agentcraftworks-hub', 'sessions.json')
 
@@ -23,7 +29,6 @@ let mainWindow: BrowserWindow | null = null
 let pendingDeepLink: string | null = null
 
 const configStore = new ConfigStore()
-entitlementService.load()
 const ptyManager = new PtyManager()
 const sessionStore = new SessionStore()
 const sessionManager = new SessionManager(sessionStore, ptyManager)
@@ -70,7 +75,6 @@ function createWindow(): void {
   })
 
   registerHubHandlers(() => mainWindow && !mainWindow.isDestroyed() ? mainWindow : null)
-  registerEntitlementHandlers()
 
   if (process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
@@ -115,13 +119,13 @@ function dispatchDeepLink(rawUrl: string): void {
       }
     }
   } catch (err) {
-    console.warn('[Tangent] Failed to parse deep-link:', err)
+    console.warn('[AgentCraftworks] Failed to parse deep-link:', err)
   }
 }
 
 // Register custom protocol to serve local files (icons) to the renderer
 protocol.registerSchemesAsPrivileged([
-  { scheme: 'tangent-file', privileges: { standard: false, supportFetchAPI: true, stream: true } }
+  { scheme: 'agentcraftworks-file', privileges: { standard: false, supportFetchAPI: true, stream: true } }
 ])
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock()
@@ -132,9 +136,9 @@ if (!gotSingleInstanceLock) {
 app.whenReady().then(async () => {
   app.setAsDefaultProtocolClient('agentcraftworks-hub')
 
-  protocol.handle('tangent-file', (request) => {
-    // tangent-file:///C:/path/to/file.ico -> file:///C:/path/to/file.ico
-    const filePath = decodeURIComponent(request.url.replace('tangent-file:///', ''))
+  protocol.handle('agentcraftworks-file', (request) => {
+    // agentcraftworks-file:///C:/path/to/file.ico -> file:///C:/path/to/file.ico
+    const filePath = decodeURIComponent(request.url.replace('agentcraftworks-file:///', ''))
     return net.fetch(pathToFileURL(filePath).href)
   })
 
@@ -234,7 +238,7 @@ app.whenReady().then(async () => {
             if (resolved) return
             resolved = true
             ptyManager.removeListener('data', onData)
-            console.warn(`[Tangent] Shell ready timeout for session ${sessionId}, replaying anyway`)
+            console.warn(`[AgentCraftworks] Shell ready timeout for session ${sessionId}, replaying anyway`)
             replayCommand()
           }, SHELL_READY_TIMEOUT_MS)
           ptyManager.on('data', onData)
@@ -245,7 +249,7 @@ app.whenReady().then(async () => {
       }
     }
   } catch (err) {
-    console.warn('[Tangent] Failed to restore sessions:', err)
+    console.warn('[AgentCraftworks] Failed to restore sessions:', err)
   }
 
   if (!restored) {
@@ -301,11 +305,11 @@ app.on('before-quit', () => {
           agentEnv: s.agentEnv
         }))
       }
-      mkdirSync(join(homedir(), '.tangent'), { recursive: true })
+      mkdirSync(join(homedir(), '.AgentCraftworks'), { recursive: true })
       writeFileSync(SESSIONS_PATH, JSON.stringify(data, null, 2), 'utf-8')
     }
   } catch (err) {
-    console.warn('[Tangent] Failed to save sessions:', err)
+    console.warn('[AgentCraftworks] Failed to save sessions:', err)
   }
 })
 
