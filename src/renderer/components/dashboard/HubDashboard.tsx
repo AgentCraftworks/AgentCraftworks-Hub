@@ -265,6 +265,9 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
           <div ref={activityRef} className="xl:col-span-1">
             <TokenActivityPanel
               topCallers={snapshot?.topCallers ?? []}
+              topCallers1h={snapshot?.topCallers1h ?? []}
+              hourlyBuckets={snapshot?.hourlyBuckets ?? []}
+              auditScope={snapshot?.auditScope ?? null}
               error={snapshot?.auditLogError}
             />
           </div>
