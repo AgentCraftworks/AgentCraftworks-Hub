@@ -102,11 +102,11 @@ function HourlyChart({ buckets }: { buckets: HourlyBucket[] }) {
 }
 
 export function TokenActivityPanel({ topCallers, topCallers1h, hourlyBuckets, auditScope, error }: Props) {
-  const [window, setWindow] = useState<Window>('24h')
+  const [timeWindow, setTimeWindow] = useState<Window>('24h')
 
   if (error) {
     return (
-      <Panel auditScope={auditScope} window={window} onWindowChange={setWindow}>
+      <Panel auditScope={auditScope} timeWindow={timeWindow} onWindowChange={setTimeWindow}>
         <div className="flex flex-col items-center justify-center h-28 gap-2 text-white/30">
           <Lock size={20} />
           <p className="text-xs text-center">
@@ -121,11 +121,11 @@ export function TokenActivityPanel({ topCallers, topCallers1h, hourlyBuckets, au
     )
   }
 
-  const callers = window === '1h' ? topCallers1h : topCallers
+  const callers = timeWindow === '1h' ? topCallers1h : topCallers
   const max = callers[0]?.count ?? 1
 
   return (
-    <Panel auditScope={auditScope} window={window} onWindowChange={setWindow}>
+    <Panel auditScope={auditScope} timeWindow={timeWindow} onWindowChange={setTimeWindow}>
       {/* Copilot vs Human hourly stacked bar chart */}
       <div className="mb-3">
         <p className="text-[10px] text-white/30 mb-1">Copilot vs Human — last 24 h (hourly)</p>
@@ -134,7 +134,7 @@ export function TokenActivityPanel({ topCallers, topCallers1h, hourlyBuckets, au
 
       {/* Per-actor ranking */}
       <p className="text-[10px] text-white/30 mb-2">
-        Top callers — {window === '1h' ? 'last 1 h' : 'last 24 h'}
+        Top callers — {timeWindow === '1h' ? 'last 1 h' : 'last 24 h'}
       </p>
       {callers.length === 0 ? (
         <div className="text-white/30 text-xs text-center py-3">No API activity in this window</div>
@@ -159,12 +159,12 @@ export function TokenActivityPanel({ topCallers, topCallers1h, hourlyBuckets, au
 function Panel({
   children,
   auditScope,
-  window,
+  timeWindow,
   onWindowChange,
 }: {
   children: React.ReactNode
   auditScope: 'enterprise' | 'org' | null
-  window: Window
+  timeWindow: Window
   onWindowChange: (w: Window) => void
 }) {
   return (
@@ -185,7 +185,7 @@ function Panel({
               key={w}
               onClick={() => onWindowChange(w)}
               className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
-                window === w
+                timeWindow === w
                   ? 'bg-white/15 text-white/90'
                   : 'text-white/30 hover:text-white/60'
               }`}
