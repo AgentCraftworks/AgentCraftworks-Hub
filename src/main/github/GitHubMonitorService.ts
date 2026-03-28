@@ -77,7 +77,7 @@ export class GitHubMonitorService extends EventEmitter {
     // Billing and Copilot use org-level endpoints
     this.billingPoller = new BillingPoller(token, this.config.org, this.config.billingIntervalMs)
     this.copilotPoller = new CopilotUsagePoller(token, this.config.org, this.config.copilotIntervalMs)
-    // Audit log: tries enterprise endpoint, falls back to org endpoint automatically on 403
+    // Audit log: tries enterprise endpoint, falls back to org endpoint automatically on 403/404
     this.auditLogPoller = new AuditLogPoller(token, this.config.enterprise, this.config.org, this.config.auditLogIntervalMs)
     this.ghawWorkflowPoller = new GhawWorkflowPoller(
       token,
