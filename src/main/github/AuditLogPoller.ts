@@ -1,5 +1,5 @@
 // AuditLogPoller.ts — Polls audit log to identify top API callers every 2 min.
-// Tries enterprise endpoint first; falls back to org endpoint automatically on 403.
+// Tries enterprise endpoint first; falls back to org endpoint automatically on 403/404.
 // Paginates up to 1 000 events, classifies actors as Copilot / Human / Bot,
 // and produces hourly Copilot-vs-Human buckets for the last 24 h.
 import { EventEmitter } from 'events'
