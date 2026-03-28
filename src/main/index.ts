@@ -22,6 +22,7 @@ const parseScopeString = (input: string): unknown => {
     return input
   }
 }
+import { parseDeepLink } from '../shared/hub-contracts.js'
 
 const SESSIONS_PATH = join(homedir(), '.agentcraftworks-hub', 'sessions.json')
 
@@ -92,30 +93,19 @@ function createWindow(): void {
 
 function dispatchDeepLink(rawUrl: string): void {
   try {
-    const parsed = new URL(rawUrl)
-    if (parsed.protocol !== 'agentcraftworks-hub:') {
+    const payload = parseDeepLink(rawUrl)
+    if (!payload) {
       return
     }
-
-    const scopeRaw = parsed.searchParams.get('scope') || ''
-    const panel = parsed.searchParams.get('panel') || parsed.pathname.replace(/^\//, '') || 'overview'
-    const persona = parsed.searchParams.get('persona') || undefined
-    const parsedScope = scopeRaw ? parseScopeString(scopeRaw) : undefined
 
     if (mainWindow && !mainWindow.isDestroyed()) {
       if (mainWindow.isMinimized()) {
         mainWindow.restore()
       }
       mainWindow.focus()
-      mainWindow.webContents.send('hub:deepLinkOpen', {
-        rawUrl,
-        panel,
-        scope: parsedScope,
-        scopeRaw,
-        persona,
-      })
-      if (parsedScope && parsedScope.org) {
-        entitlementService.setLastScope({ org: parsedScope.org, ...parsedScope, window: parsedScope.window ?? '7d' })
+      mainWindow.webContents.send('hub:deepLinkOpen', payload)
+      if (payload.scope?.org) {
+        entitlementService.setLastScope({ org: payload.scope.org, ...payload.scope, window: payload.scope.window ?? '7d' })
       }
     }
   } catch (err) {

@@ -241,6 +241,7 @@ const hubAPI = {
     scopeRaw: string
     persona?: string
     scope?: unknown
+    filters?: import('@shared/hub-contracts').HubDeepLinkFilters
   }) => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, payload: {
       rawUrl: string
@@ -248,6 +249,7 @@ const hubAPI = {
       scopeRaw: string
       persona?: string
       scope?: unknown
+      filters?: import('@shared/hub-contracts').HubDeepLinkFilters
     }) => cb(payload)
     ipcRenderer.on('hub:deepLinkOpen', handler)
     return () => { ipcRenderer.removeListener('hub:deepLinkOpen', handler) }

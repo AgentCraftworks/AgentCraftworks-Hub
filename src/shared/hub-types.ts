@@ -1,5 +1,6 @@
-﻿// hub-types.ts — Shared types for Hub monitoring (used by main + renderer)
+// hub-types.ts — Shared types for Hub monitoring (used by main + renderer)
 // Keep in sync with the individual poller exports.
+import type { HubDeepLinkPayload } from './hub-contracts'
 
 export interface RateLimitEndpoint {
   limit: number
@@ -61,6 +62,16 @@ export interface CopilotUsageData {
   error?: string
 }
 
+export type ActorKind = 'Copilot' | 'Human' | 'Bot'
+
+export interface HourlyBucket {
+  hourUtc: string
+  copilot: number
+  human: number
+  bot: number
+  total: number
+}
+
 export interface AuditLogEntry {
   actor: string
   action: string
@@ -68,9 +79,10 @@ export interface AuditLogEntry {
   appSlug?: string
   count: number
   lastSeenAt: number
+  actorKind: ActorKind
 }
 
-export interface GhawWorkflowRun {
+export interface GhawWorkflowDataRun {
   id: number
   workflowId?: number
   name: string
@@ -87,7 +99,7 @@ export interface GhawWorkflowRun {
 
 export interface GhawWorkflowData {
   repository: string
-  runs: GhawWorkflowRun[]
+  runs: GhawWorkflowDataRun[]
   summary: {
     total: number
     queued: number
@@ -107,6 +119,9 @@ export interface MonitorSnapshot {
   billing: BillingData | null
   copilot: CopilotUsageData | null
   topCallers: AuditLogEntry[]
+  topCallers1h: AuditLogEntry[]
+  hourlyBuckets: HourlyBucket[]
+  auditScope: 'enterprise' | 'org' | null
   auditLogError?: string
   ghawWorkflows: GhawWorkflowData | null
   lastUpdated: Record<string, number>
@@ -327,11 +342,5 @@ export interface HubWindowAPI {
   rejectActionRequest(id: string, note?: string): Promise<HubActionResponse & { request?: ActionRequest }>
   countPendingRequests(): Promise<number>
   onActionRequestUpdated(cb: (request: ActionRequest) => void): () => void
-  onDeepLinkOpen(cb: (payload: {
-    rawUrl: string
-    panel: string
-    scopeRaw: string
-    persona?: string
-    scope?: unknown
-  }) => void): () => void
+  onDeepLinkOpen(cb: (payload: HubDeepLinkPayload) => void): () => void
 }
