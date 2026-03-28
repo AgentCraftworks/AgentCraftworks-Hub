@@ -8,6 +8,7 @@ import { AuditLogPoller, type AuditLogEntry, type AuditLogData } from './AuditLo
 import { GhawWorkflowPoller, type GhawWorkflowData } from './GhawWorkflowPoller.js'
 import { AlertService, type AlertThresholds } from './AlertService.js'
 import { appendSample, loadHistory, closeDb } from './HistoryStore.js'
+import type { HourlyBucket } from '../../shared/hub-types.js'
 
 export interface MonitorConfig {
   enterprise: string  // Enterprise slug for audit log (case-sensitive: AICraftWorks)
@@ -28,6 +29,9 @@ export interface MonitorSnapshot {
   billing: BillingData | null
   copilot: CopilotUsageData | null
   topCallers: AuditLogEntry[]
+  topCallers1h: AuditLogEntry[]
+  hourlyBuckets: HourlyBucket[]
+  auditScope: 'enterprise' | 'org' | null
   auditLogError?: string
   ghawWorkflows: GhawWorkflowData | null
   lastUpdated: Record<string, number>
@@ -58,6 +62,9 @@ export class GitHubMonitorService extends EventEmitter {
     billing: null,
     copilot: null,
     topCallers: [],
+    topCallers1h: [],
+    hourlyBuckets: [],
+    auditScope: null,
     ghawWorkflows: null,
     lastUpdated: {},
   }
@@ -70,8 +77,8 @@ export class GitHubMonitorService extends EventEmitter {
     // Billing and Copilot use org-level endpoints
     this.billingPoller = new BillingPoller(token, this.config.org, this.config.billingIntervalMs)
     this.copilotPoller = new CopilotUsagePoller(token, this.config.org, this.config.copilotIntervalMs)
-    // Audit log uses enterprise-level endpoint
-    this.auditLogPoller = new AuditLogPoller(token, this.config.enterprise, this.config.auditLogIntervalMs)
+    // Audit log: tries enterprise endpoint, falls back to org endpoint automatically on 403/404
+    this.auditLogPoller = new AuditLogPoller(token, this.config.enterprise, this.config.org, this.config.auditLogIntervalMs)
     this.ghawWorkflowPoller = new GhawWorkflowPoller(
       token,
       this.config.ghawWorkflowOwner,
@@ -118,6 +125,9 @@ export class GitHubMonitorService extends EventEmitter {
 
     this.auditLogPoller.on('data', (result: AuditLogData) => {
       this.snapshot.topCallers = result.entries
+      this.snapshot.topCallers1h = result.topCallers1h
+      this.snapshot.hourlyBuckets = result.hourlyBuckets
+      this.snapshot.auditScope = result.auditScope
       this.snapshot.auditLogError = result.error
       this.snapshot.lastUpdated.auditLog = Date.now()
       this.emit('update', this.snapshot)

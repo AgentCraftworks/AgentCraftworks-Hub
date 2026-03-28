@@ -62,6 +62,16 @@ export interface CopilotUsageData {
   error?: string
 }
 
+export type ActorKind = 'Copilot' | 'Human' | 'Bot'
+
+export interface HourlyBucket {
+  hourUtc: string
+  copilot: number
+  human: number
+  bot: number
+  total: number
+}
+
 export interface AuditLogEntry {
   actor: string
   action: string
@@ -69,6 +79,7 @@ export interface AuditLogEntry {
   appSlug?: string
   count: number
   lastSeenAt: number
+  actorKind: ActorKind
 }
 
 export interface GhawWorkflowDataRun {
@@ -108,6 +119,9 @@ export interface MonitorSnapshot {
   billing: BillingData | null
   copilot: CopilotUsageData | null
   topCallers: AuditLogEntry[]
+  topCallers1h: AuditLogEntry[]
+  hourlyBuckets: HourlyBucket[]
+  auditScope: 'enterprise' | 'org' | null
   auditLogError?: string
   ghawWorkflows: GhawWorkflowData | null
   lastUpdated: Record<string, number>
