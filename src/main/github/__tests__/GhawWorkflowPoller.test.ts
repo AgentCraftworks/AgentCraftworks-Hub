@@ -148,4 +148,105 @@ describe('GhawWorkflowPoller', () => {
 
     poller.stop()
   })
+
+  it('maps mixed run states into summary counters', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ghaw-poller-'))
+    tempDirs.push(tmpDir)
+    const sessionFilePath = path.join(tmpDir, 'session.json')
+
+    requestMock.mockResolvedValue({
+      data: {
+        workflow_runs: [
+          { id: 1, name: 'A', status: 'queued', conclusion: null },
+          { id: 2, name: 'B', status: 'in_progress', conclusion: null },
+          { id: 3, name: 'C', status: 'completed', conclusion: 'success' },
+          { id: 4, name: 'D', status: 'completed', conclusion: 'failure' },
+          { id: 5, name: 'E', status: 'completed', conclusion: 'cancelled' },
+        ],
+      },
+    })
+
+    const poller = new GhawWorkflowPoller('token', 'AgentCraftworks', 'AgentCraftworks-Hub', 1_000, { sessionFilePath })
+    const dataSpy = vi.fn()
+    poller.on('data', dataSpy)
+
+    poller.start()
+    await vi.advanceTimersByTimeAsync(0)
+
+    const emitted = dataSpy.mock.calls[dataSpy.mock.calls.length - 1][0]
+    expect(emitted.summary).toEqual({
+      total: 5,
+      queued: 1,
+      inProgress: 1,
+      completed: 3,
+      success: 1,
+      failed: 1,
+      cancelled: 1,
+    })
+
+    poller.stop()
+  })
+
+  it('falls back to default repository and fetchedAt for malformed persisted fields', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ghaw-poller-'))
+    tempDirs.push(tmpDir)
+    const sessionFilePath = path.join(tmpDir, 'session.json')
+
+    // Validate fallback behavior when persisted payload has wrong types:
+    // repository must be string; fetchedAt must be numeric unix-ms timestamp.
+    fs.writeFileSync(sessionFilePath, JSON.stringify({
+      repository: 123,
+      fetchedAt: 'bad-value',
+      runs: [
+        {
+          id: 9,
+          name: 'Recovered Workflow',
+          headBranch: 'main',
+          status: 'queued',
+          conclusion: null,
+          runNumber: 2,
+          event: 'push',
+          htmlUrl: 'https://example.invalid/runs/9',
+          createdAt: '2026-03-26T00:00:00Z',
+          updatedAt: '2026-03-26T00:00:01Z',
+          runStartedAt: null,
+        },
+      ],
+    }), 'utf-8')
+
+    requestMock.mockResolvedValue({ data: { workflow_runs: [] } })
+
+    const before = Date.now()
+    const poller = new GhawWorkflowPoller('token', 'AgentCraftworks', 'AgentCraftworks-Hub', 60_000, { sessionFilePath })
+    const dataSpy = vi.fn()
+    poller.on('data', dataSpy)
+
+    poller.start()
+    await vi.runOnlyPendingTimersAsync()
+
+    const recovered = dataSpy.mock.calls[0][0]
+    expect(recovered.recovered).toBe(true)
+    expect(recovered.repository).toBe('AgentCraftworks/AgentCraftworks-Hub')
+    expect(recovered.summary.queued).toBe(1)
+    expect(recovered.fetchedAt).toBeGreaterThanOrEqual(before)
+
+    poller.stop()
+  })
+
+  it('continues polling on interval and ignores invalid persisted JSON', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ghaw-poller-'))
+    tempDirs.push(tmpDir)
+    const sessionFilePath = path.join(tmpDir, 'session.json')
+    fs.writeFileSync(sessionFilePath, '{not-json', 'utf-8')
+
+    requestMock.mockResolvedValue({ data: { workflow_runs: [] } })
+    const poller = new GhawWorkflowPoller('token', 'AgentCraftworks', 'AgentCraftworks-Hub', 1_000, { sessionFilePath })
+
+    poller.start()
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    expect(requestMock).toHaveBeenCalledTimes(2)
+    poller.stop()
+  })
 })

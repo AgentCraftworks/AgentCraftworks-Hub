@@ -101,4 +101,26 @@ describe('buildWorkflowHealthMetrics', () => {
 
     expect(metrics.status).toBe('stale')
   })
+
+  it('aggregates 12,500 workflow entries correctly', () => {
+    const entries: OperationLogEntry[] = Array.from({ length: 10_000 }, (_, i) => operation(
+      `ok-${i}`,
+      'ok',
+      new Date(NOW - (i % 360) * 60_000).toISOString(),
+    ))
+    entries.push(...Array.from({ length: 2_500 }, (_, i) => operation(
+      `failed-${i}`,
+      'failed',
+      new Date(NOW - (i % 360) * 60_000).toISOString(),
+    )))
+    const requests: ActionRequest[] = Array.from({ length: 12 }, (_, i) => pendingRequest(`pending-${i}`))
+
+    const metrics = buildWorkflowHealthMetrics(entries, requests, NOW, new Date(NOW))
+
+    expect(metrics.totalRuns).toBe(12_500)
+    expect(metrics.failedRuns).toBe(2_500)
+    expect(metrics.pendingRequests).toBe(12)
+    expect(metrics.chart).toHaveLength(6)
+    expect(metrics.status).toBe('critical')
+  })
 })
