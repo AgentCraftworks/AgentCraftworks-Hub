@@ -40,7 +40,10 @@ function makePoller(): AuditLogPoller {
 
 function pollOnce(poller: AuditLogPoller): Promise<ReturnType<AuditLogPoller['emit']>> {
   return new Promise((resolve) => {
-    poller.on('data', (d) => resolve(d))
+    poller.once('data', (d) => {
+      poller.stop()
+      resolve(d)
+    })
     poller.start()
   })
 }
