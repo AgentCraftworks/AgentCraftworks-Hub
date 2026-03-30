@@ -23,6 +23,9 @@ Built on top of [charris-msft/tangent](https://github.com/charris-msft/tangent) 
 - GitHub Copilot Premium Request consumption per user/org
 - GitHub Enterprise billing summary and trend analysis
 - Enterprise audit log analysis (who is consuming API quota)
+- GHAW workflow health monitoring and trend analysis
+- Audit log hourly activity aggregation with actor classification
+- Deep-link routing for targeted dashboard navigation
 - The `hub` CLI and MCP server that exposes all monitoring data
 
 ## What does NOT belong here
@@ -47,7 +50,9 @@ AgentCraftworks-Hub/
 │   │   │   ├── RateLimitPoller.ts
 │   │   │   ├── BillingPoller.ts
 │   │   │   ├── CopilotUsagePoller.ts
-│   │   │   └── AuditLogPoller.ts
+│   │   │   ├── AuditLogPoller.ts        # Hourly activity aggregation, actor breakdown
+│   │   │   ├── GhawWorkflowPoller.ts    # GHAW workflow health monitoring
+│   │   │   └── ActionRequestStore.ts    # Action request approval workflow
 │   │   ├── ipc/              # IPC handlers (Tangent + Hub extensions)
 │   │   ├── pty/              # Terminal sessions (from Tangent)
 │   │   ├── session/          # Session management (from Tangent)

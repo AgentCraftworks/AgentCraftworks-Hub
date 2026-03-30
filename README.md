@@ -13,6 +13,34 @@ Built on top of [charris-msft/tangent](https://github.com/charris-msft/tangent) 
 | **Actions Minutes** | Monthly usage vs. included, OS multipliers, overage cost |
 | **Copilot Premium Requests** | Per-user/model breakdown, standard vs. premium |
 | **Billing Summary** | Estimated month-to-date spend across all GitHub products |
+| **Workflow Health** | Real-time GHAW workflow status with configurable health thresholds |
+| **Audit Log Activity** | Hourly activity aggregation (24h), actor breakdown (Copilot/Human/Bot), top API callers |
+
+## Recent Features (March 2026)
+
+### GHAW Workflow Health Panel
+
+Real-time monitoring of GitHub Actions workflow health across the organization. The `GhawWorkflowPoller` service polls workflow run data and persists it for trend analysis. Health thresholds are configurable via extracted constants.
+
+### Audit Log Hourly Activity Dashboard
+
+Comprehensive audit log polling with:
+- **Hourly aggregation** of API activity over the last 24 hours
+- **Actor breakdown** by kind: Copilot, Human, Bot
+- **Top API callers** identification within 1-hour windows
+- **Enterprise-to-org fallback** — automatically falls back from enterprise audit endpoint to org-level on 403/404
+
+### Deep-Link Routing
+
+Hub deep-link routing infrastructure enables targeted dashboard navigation with context-specific filters. Supports workflow focus and filter propagation for direct navigation to specific dashboard views.
+
+### Branding Consolidation
+
+Complete rebrand from Tangent to AgentCraftworks across all files:
+- File renames: `tangent-*.js` to `agentcraftworks-*.js`
+- Type updates: `TangentConfig` to `AgentCraftworksConfig`
+- Config paths: `~/.tangent` to `~/.agentcraftworks/`
+- MCP tool prefixes: `tangent_*` to `agentcraftworks_*`
 
 ## ⚠️ Electron ≠ VS Code Terminal
 
