@@ -14,14 +14,6 @@ import { registerIpcHandlers } from './ipc/handlers'
 import { registerHubHandlers } from './ipc/hub-handlers'
 import { PipeServer } from './config/PipeServer'
 
-// Simple scope parser: accepts JSON or raw string
-const parseScopeString = (input: string): unknown => {
-  try {
-    return JSON.parse(input)
-  } catch {
-    return input
-  }
-}
 import { parseDeepLink } from '../shared/hub-contracts.js'
 
 const SESSIONS_PATH = join(homedir(), '.agentcraftworks-hub', 'sessions.json')
@@ -104,9 +96,6 @@ function dispatchDeepLink(rawUrl: string): void {
       }
       mainWindow.focus()
       mainWindow.webContents.send('hub:deepLinkOpen', payload)
-      if (payload.scope?.org) {
-        entitlementService.setLastScope({ org: payload.scope.org, ...payload.scope, window: payload.scope.window ?? '7d' })
-      }
     }
   } catch (err) {
     console.warn('[AgentCraftworks] Failed to parse deep-link:', err)
