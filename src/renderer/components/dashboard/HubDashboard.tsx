@@ -10,6 +10,9 @@ import { TokenAuthPanel } from './TokenAuthPanel'
 import { OperationLogPanel } from './OperationLogPanel'
 import { ActionRequestPanel } from './ActionRequestPanel'
 import { WorkflowHealthPanel } from './WorkflowHealthPanel'
+import { RateGovernorPanel } from './RateGovernorPanel'
+import { HandoffFlowPanel } from './HandoffFlowPanel'
+import { SquadCoordinatorPanel } from './SquadCoordinatorPanel'
 import { RefreshCw, Loader, Settings, ShieldAlert } from 'lucide-react'
 import type { ActionRequest, ActionAuthoritySnapshot, OperationLogEntry } from '@shared/hub-types'
 import { buildDeepLink } from '@shared/hub-contracts'
@@ -257,6 +260,30 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
             <RateLimitPanel
               data={snapshot?.rateLimit ?? null}
               history={history}
+              onRefresh={refreshAll}
+            />
+          </div>
+
+          {/* Rate Governor — governance layer beside raw rate limit */}
+          <div className="xl:col-span-1">
+            <RateGovernorPanel
+              data={snapshot?.rateGovernor ?? null}
+              onRefresh={refreshAll}
+            />
+          </div>
+
+          {/* Agent Handoff Flow — full width */}
+          <div className="xl:col-span-2">
+            <HandoffFlowPanel
+              data={snapshot?.handoffs ?? null}
+              onRefresh={refreshAll}
+            />
+          </div>
+
+          {/* Squad Coordinator — full width */}
+          <div className="xl:col-span-2">
+            <SquadCoordinatorPanel
+              data={snapshot?.squadState ?? null}
               onRefresh={refreshAll}
             />
           </div>

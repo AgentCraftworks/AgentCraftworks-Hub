@@ -124,7 +124,119 @@ export interface MonitorSnapshot {
   auditScope: 'enterprise' | 'org' | null
   auditLogError?: string
   ghawWorkflows: GhawWorkflowData | null
+  rateGovernor: HubRateGovernorData | null
+  handoffs: HubHandoffData | null
+  squadState: HubSquadData | null
   lastUpdated: Record<string, number>
+}
+
+// ============================================================================
+// Rate Governor Panel Types
+// ============================================================================
+
+export type TrafficLightZone = 'GREEN' | 'AMBER' | 'RED'
+export type CircuitBreakerState = 'CLOSED' | 'PRE_EMPTIVE_OPEN' | 'OPEN' | 'HALF_OPEN'
+export type CascadeMode = 'parallel' | 'sequential'
+
+export interface HubRateGovernorAgent {
+  agentId: string
+  priority: 'P0' | 'P1' | 'P2'
+  reserved: number
+  used: number
+  quotaType: 'github' | 'copilot'
+}
+
+export interface HubRateGovernorData {
+  state: {
+    trafficLight: TrafficLightZone
+    circuitState: CircuitBreakerState
+    circuitStateByQuota: { github: CircuitBreakerState; copilot: CircuitBreakerState }
+    cascadeMode: CascadeMode
+  }
+  github: { windowTotal: number; windowRemaining: number; donationPool: number }
+  copilot: { windowTotal: number; windowRemaining: number; donationPool: number }
+  agents: HubRateGovernorAgent[]
+}
+
+// ============================================================================
+// Handoff Flow Panel Types
+// ============================================================================
+
+export type HandoffStatus = 'pending' | 'active' | 'completed' | 'failed'
+export type HandoffPriority = 'low' | 'medium' | 'high' | 'critical'
+
+export interface HubHandoffEntry {
+  handoff_id: string
+  from_agent: string
+  to_agent: string
+  status: HandoffStatus
+  priority: HandoffPriority
+  task: string
+  sla_deadline?: string
+  created_at: string
+  completed_at?: string
+  failed_at?: string
+  failure_reason?: string
+}
+
+export interface HubHandoffStats {
+  total: number
+  active: number
+  completed: number
+  failed: number
+  avgCompletionMs: number
+  slaComplianceRate: number
+}
+
+export interface HubHandoffData {
+  active: HubHandoffEntry[]
+  recent: HubHandoffEntry[]
+  stats: HubHandoffStats
+}
+
+// ============================================================================
+// Squad Coordinator Panel Types
+// ============================================================================
+
+export interface HubSquadAgent {
+  id: string
+  name: string
+  engagementLevel: number
+  priority: 'P0' | 'P1' | 'P2'
+  skills: string[]
+}
+
+export interface HubSquadInfo {
+  squadId: string
+  ceiling: number
+  agents: HubSquadAgent[]
+  defaultLane: string
+}
+
+export interface HubRoutingDecision {
+  agentId: string
+  toolName: string
+  reason: string
+  responseMode: 'DIRECT' | 'LIGHTWEIGHT' | 'STANDARD' | 'FULL'
+  zone: TrafficLightZone
+  allowed: boolean
+  timestamp: number
+}
+
+export type SquadHandoffType = 'request-response' | 'scatter-gather' | 'event-broadcast'
+
+export interface HubSquadHandoff {
+  fromSquadId: string
+  toSquadId: string
+  type: SquadHandoffType
+  priority: 'P0' | 'P1' | 'P2'
+  status: HandoffStatus
+}
+
+export interface HubSquadData {
+  squads: HubSquadInfo[]
+  recentRouting: HubRoutingDecision[]
+  squadHandoffs: HubSquadHandoff[]
 }
 
 export interface RateLimitSample {
