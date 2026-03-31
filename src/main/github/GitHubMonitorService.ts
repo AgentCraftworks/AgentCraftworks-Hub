@@ -34,6 +34,9 @@ export interface MonitorSnapshot {
   auditScope: 'enterprise' | 'org' | null
   auditLogError?: string
   ghawWorkflows: GhawWorkflowData | null
+  rateGovernor: import('@shared/hub-types').HubRateGovernorData | null
+  handoffs: import('@shared/hub-types').HubHandoffData | null
+  squadState: import('@shared/hub-types').HubSquadData | null
   lastUpdated: Record<string, number>
 }
 
@@ -66,6 +69,9 @@ export class GitHubMonitorService extends EventEmitter {
     hourlyBuckets: [],
     auditScope: null,
     ghawWorkflows: null,
+    rateGovernor: null,
+    handoffs: null,
+    squadState: null,
     lastUpdated: {},
   }
 
