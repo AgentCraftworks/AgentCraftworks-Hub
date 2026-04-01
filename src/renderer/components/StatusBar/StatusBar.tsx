@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
+import { makeStyles } from '@fluentui/react-components'
 import type { Session } from '@shared/types'
 
 declare const tangentAPI: {
@@ -18,25 +19,17 @@ interface StatusBarProps {
   hubOpen?: boolean
 }
 
-/** Agent type label mapping */
 const AGENT_LABELS: Record<string, string> = {
   'copilot-cli': 'Copilot CLI',
   'claude-code': 'Claude Code',
   shell: 'Shell'
 }
 
-/**
- * Truncate a path from the left side if it exceeds maxLen.
- * e.g., "C:\Users\me\very\long\path" -> "...\very\long\path"
- */
 function truncatePathLeft(p: string, maxLen: number): string {
   if (p.length <= maxLen) return p
   return '\u2026' + p.slice(p.length - maxLen + 1)
 }
 
-/**
- * Truncate text from the right if it exceeds maxLen.
- */
 function truncateRight(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text
   return text.slice(0, maxLen - 1) + '\u2026'
@@ -48,42 +41,149 @@ function formatTokens(count: number): string {
   return String(count)
 }
 
+const useStyles = makeStyles({
+  root: {
+    height: '24px',
+    minHeight: '24px',
+    display: 'flex',
+    alignItems: 'center',
+    paddingLeft: '12px',
+    paddingRight: '12px',
+    fontSize: '12px',
+    borderTopWidth: '1px',
+    borderTopStyle: 'solid',
+    borderTopColor: 'var(--bg-hover)',
+    backgroundColor: 'var(--bg-secondary)',
+    color: 'var(--text-secondary)',
+  },
+  left: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexShrink: 0,
+  },
+  statusDot: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '2px',
+  },
+  separator: {
+    marginLeft: '8px',
+    marginRight: '8px',
+    color: 'var(--text-muted)',
+  },
+  center: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  spacer: {
+    flex: 1,
+  },
+  right: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexShrink: 0,
+  },
+  bareBtn: {
+    cursor: 'pointer',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    padding: 0,
+    fontFamily: 'inherit',
+    fontSize: 'inherit',
+    color: 'var(--text-muted)',
+    ':hover': {
+      textDecorationLine: 'underline',
+    },
+  },
+  pathBtn: {
+    maxWidth: '200px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    cursor: 'pointer',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    padding: 0,
+    fontFamily: 'inherit',
+    fontSize: 'inherit',
+    color: 'var(--text-muted)',
+    ':hover': {
+      textDecorationLine: 'underline',
+    },
+  },
+  editorPopup: {
+    position: 'absolute',
+    bottom: '24px',
+    right: 0,
+    padding: '8px',
+    borderRadius: '4px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+    zIndex: 50,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    backgroundColor: 'var(--bg-secondary)',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--bg-hover)',
+  },
+  editorInput: {
+    paddingLeft: '6px',
+    paddingRight: '6px',
+    paddingTop: '2px',
+    paddingBottom: '2px',
+    fontSize: '12px',
+    borderRadius: '4px',
+    width: '120px',
+    backgroundColor: 'var(--bg-primary)',
+    color: 'var(--text-primary)',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--bg-hover)',
+  },
+  editorSaveBtn: {
+    paddingLeft: '6px',
+    paddingRight: '6px',
+    paddingTop: '2px',
+    paddingBottom: '2px',
+    fontSize: '12px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    backgroundColor: 'var(--bg-hover)',
+    color: 'var(--text-primary)',
+    borderWidth: 0,
+  },
+})
+
 export function StatusBar({ sessions, activeSession, onToggleSettings, onToggleHub, hubOpen }: StatusBarProps) {
+  const s = useStyles()
   const [editorPopupOpen, setEditorPopupOpen] = useState(false)
   const [editorValue, setEditorValue] = useState('')
   const popupRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Count agent sessions by status group (skip shell sessions)
   const statusCounts = useMemo(() => {
-    let running = 0
-    let idle = 0
-    let error = 0
-    for (const s of sessions) {
-      if (s.agentType === 'shell') continue
-      if (s.status === 'processing' || s.status === 'tool_executing') running++
-      else if (s.status === 'agent_ready' || s.status === 'agent_launching' || s.status === 'needs_input') idle++
-      else if (s.status === 'failed') error++
+    let running = 0, idle = 0, error = 0
+    for (const sess of sessions) {
+      if (sess.agentType === 'shell') continue
+      if (sess.status === 'processing' || sess.status === 'tool_executing') running++
+      else if (sess.status === 'agent_ready' || sess.status === 'agent_launching' || sess.status === 'needs_input') idle++
+      else if (sess.status === 'failed') error++
     }
     return { running, idle, error }
   }, [sessions])
 
-  const agentLabel = activeSession
-    ? AGENT_LABELS[activeSession.agentType] ?? activeSession.agentType
-    : 'No Session'
-
-  const lastActivity = activeSession
-    ? truncateRight(activeSession.lastActivity || '', 40)
-    : ''
-
-  const cwdPath = activeSession
-    ? truncatePathLeft(activeSession.folderPath || '', 50)
-    : ''
+  const agentLabel = activeSession ? AGENT_LABELS[activeSession.agentType] ?? activeSession.agentType : 'No Session'
+  const lastActivity = activeSession ? truncateRight(activeSession.lastActivity || '', 40) : ''
+  const cwdPath = activeSession ? truncatePathLeft(activeSession.folderPath || '', 50) : ''
 
   const handleEditorClick = useCallback(() => {
-    if (activeSession?.folderPath) {
-      tangentAPI.shell.openEditor(activeSession.folderPath)
-    }
+    if (activeSession?.folderPath) tangentAPI.shell.openEditor(activeSession.folderPath)
   }, [activeSession?.folderPath])
 
   const handleEditorContextMenu = useCallback(async (e: React.MouseEvent) => {
@@ -94,51 +194,40 @@ export function StatusBar({ sessions, activeSession, onToggleSettings, onToggleH
   }, [])
 
   const handleEditorSave = useCallback(async () => {
-    if (editorValue.trim()) {
-      await tangentAPI.shell.setEditor(editorValue.trim())
-    }
+    if (editorValue.trim()) await tangentAPI.shell.setEditor(editorValue.trim())
     setEditorPopupOpen(false)
   }, [editorValue])
 
   useEffect(() => {
-    if (editorPopupOpen && inputRef.current) {
-      inputRef.current.focus()
-      inputRef.current.select()
-    }
+    if (editorPopupOpen && inputRef.current) { inputRef.current.focus(); inputRef.current.select() }
   }, [editorPopupOpen])
 
   useEffect(() => {
     if (!editorPopupOpen) return
     const handleClickOutside = (e: MouseEvent) => {
-      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
-        setEditorPopupOpen(false)
-      }
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) setEditorPopupOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [editorPopupOpen])
 
   return (
-    <div
-      className="h-6 min-h-6 flex items-center px-3 text-xs border-t border-[var(--bg-hover)]"
-      style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
-    >
-      {/* Left section: per-status colored dots + counts */}
-      <div className="flex items-center gap-2 shrink-0">
+    <div className={s.root}>
+      <div className={s.left}>
         {statusCounts.running > 0 && (
-          <span className="flex items-center gap-0.5">
+          <span className={s.statusDot}>
             <span style={{ color: 'var(--running)' }}>{'\u25CF'}</span>
             <span>{statusCounts.running}</span>
           </span>
         )}
         {statusCounts.idle > 0 && (
-          <span className="flex items-center gap-0.5">
+          <span className={s.statusDot}>
             <span style={{ color: 'var(--idle)' }}>{'\u25CF'}</span>
             <span>{statusCounts.idle}</span>
           </span>
         )}
         {statusCounts.error > 0 && (
-          <span className="flex items-center gap-0.5">
+          <span className={s.statusDot}>
             <span style={{ color: 'var(--error)' }}>{'\u25CF'}</span>
             <span>{statusCounts.error}</span>
           </span>
@@ -148,26 +237,21 @@ export function StatusBar({ sessions, activeSession, onToggleSettings, onToggleH
         )}
       </div>
 
-      <span className="mx-2" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
+      <span className={s.separator}>{'\u2502'}</span>
 
-      {/* Center section: agent type + last activity */}
-      <div className="flex items-center gap-2 min-w-0 flex-shrink">
+      <div className={s.center}>
         <span style={{ color: 'var(--text-primary)' }}>{agentLabel}</span>
         {lastActivity && (
           <>
             <span style={{ color: 'var(--text-muted)' }}>{'\u2014'}</span>
-            <span className="truncate" style={{ color: 'var(--text-muted)' }}>
-              {lastActivity}
-            </span>
+            <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lastActivity}</span>
           </>
         )}
       </div>
 
-      {/* Spacer */}
-      <span className="flex-1" />
+      <span className={s.spacer} />
 
-      {/* Right section: Metrics + CWD + keyboard hint */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className={s.right}>
         {activeSession?.metrics && (activeSession.metrics.inputTokens > 0 || activeSession.metrics.outputTokens > 0) && (
           <>
             <span style={{ color: 'var(--text-muted)' }} title="Token usage (input / output)">
@@ -178,13 +262,13 @@ export function StatusBar({ sessions, activeSession, onToggleSettings, onToggleH
                 ${activeSession.metrics.cost.toFixed(4)}
               </span>
             )}
-            <span className="mx-0.5" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
+            <span className={s.separator}>{'\u2502'}</span>
           </>
         )}
         {cwdPath && (
           <button
-            className="max-w-[200px] truncate cursor-pointer hover:underline"
-            style={{ color: 'var(--text-muted)', background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 'inherit' }}
+            type="button"
+            className={s.pathBtn}
             title={`Open ${activeSession?.folderPath} in file explorer`}
             onClick={() => activeSession?.folderPath && tangentAPI.shell.openInExplorer(activeSession.folderPath)}
           >
@@ -192,87 +276,51 @@ export function StatusBar({ sessions, activeSession, onToggleSettings, onToggleH
           </button>
         )}
         {activeSession?.folderPath && (
-          <span className="relative">
-            <button
-              onClick={handleEditorClick}
-              onContextMenu={handleEditorContextMenu}
-              className="hover:underline cursor-pointer"
-              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 'inherit' }}
-              title="Open in editor (right-click to configure)"
-            >
+          <span style={{ position: 'relative' }}>
+            <button type="button" onClick={handleEditorClick} onContextMenu={handleEditorContextMenu} className={s.bareBtn} title="Open in editor (right-click to configure)">
               Editor
             </button>
             {editorPopupOpen && (
-              <div
-                ref={popupRef}
-                className="absolute bottom-6 right-0 p-2 rounded shadow-lg border border-[var(--bg-hover)] z-50 flex items-center gap-1"
-                style={{ background: 'var(--bg-secondary)' }}
-              >
+              <div ref={popupRef} className={s.editorPopup}>
                 <input
                   ref={inputRef}
                   type="text"
                   value={editorValue}
                   onChange={(e) => setEditorValue(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleEditorSave(); if (e.key === 'Escape') setEditorPopupOpen(false) }}
-                  className="px-1.5 py-0.5 text-xs rounded border border-[var(--bg-hover)]"
-                  style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', width: '120px' }}
+                  className={s.editorInput}
                   placeholder="e.g. code"
                 />
-                <button
-                  onClick={handleEditorSave}
-                  className="px-1.5 py-0.5 text-xs rounded cursor-pointer"
-                  style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
-                >
-                  Save
-                </button>
+                <button type="button" onClick={handleEditorSave} className={s.editorSaveBtn}>Save</button>
               </div>
             )}
           </span>
         )}
-        <span className="mx-1" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
-        <button
-          onClick={onToggleSettings}
-          className="cursor-pointer flex items-center justify-center"
-          style={{ color: 'var(--text-muted)', background: 'none', border: 'none', font: 'inherit', fontSize: 'inherit', padding: 0 }}
-          title="Settings"
-        >
-          ⚙
-        </button>
+        <span className={s.separator}>{'\u2502'}</span>
+        <button type="button" onClick={onToggleSettings} className={s.bareBtn} title="Settings">⚙</button>
         {onToggleHub && (
           <>
-            <span className="mx-1" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
+            <span className={s.separator}>{'\u2502'}</span>
             <button
+              type="button"
               onClick={onToggleHub}
-              className="cursor-pointer flex items-center justify-center"
-              style={{
-                color: hubOpen ? 'var(--text-primary)' : 'var(--text-muted)',
-                background: 'none', border: 'none', font: 'inherit', fontSize: 'inherit', padding: 0,
-                fontWeight: hubOpen ? 600 : undefined,
-              }}
-              title="Toggle GitHub Usage dashboard (API rate limits, billing, Copilot usage)"
+              className={s.bareBtn}
+              style={{ color: hubOpen ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: hubOpen ? 600 : undefined }}
+              title="Toggle GitHub Usage dashboard"
             >
               GitHub Usage
             </button>
             {hubOpen && (
               <>
-                <span className="mx-1" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
-                <button
-                  onClick={onToggleHub}
-                  className="cursor-pointer flex items-center justify-center"
-                  style={{
-                    color: 'var(--text-primary)',
-                    background: 'none', border: 'none', font: 'inherit', fontSize: 'inherit', padding: 0,
-                    fontWeight: 600,
-                  }}
-                  title="Return to main terminal view"
-                >
+                <span className={s.separator}>{'\u2502'}</span>
+                <button type="button" onClick={onToggleHub} className={s.bareBtn} style={{ color: 'var(--text-primary)', fontWeight: 600 }} title="Return to main terminal view">
                   Back to Main
                 </button>
               </>
             )}
           </>
         )}
-        <span className="mx-1" style={{ color: 'var(--text-muted)' }}>{'\u2502'}</span>
+        <span className={s.separator}>{'\u2502'}</span>
         <span style={{ color: 'var(--text-muted)' }}>Ctrl+B panels</span>
       </div>
     </div>

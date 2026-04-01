@@ -8,7 +8,25 @@ interface AgentFormProps {
   onCancel: () => void
 }
 
+// Styles defined as plain objects to avoid Griffel strict typing issues
+// with CSS custom properties (var(--*)) in shorthand properties
+const formStyles = {
+  root: { padding: '8px', borderTop: '1px solid var(--bg-hover)', background: 'var(--bg-secondary)' } as const,
+  heading: { fontSize: '12px', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: '8px', color: 'var(--text-muted)' },
+  field: { marginBottom: '8px' } as const,
+  label: { fontSize: '12px', marginBottom: '2px', display: 'block' as const, color: 'var(--text-secondary)' },
+  input: { width: '100%', padding: '4px 8px', fontSize: '13px', borderRadius: '4px', outline: 'none', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--bg-hover)', transition: 'border-color 200ms' } as React.CSSProperties,
+  cwdRow: { display: 'flex', gap: '4px' } as const,
+  browseBtn: { padding: '4px 8px', fontSize: '13px', borderRadius: '4px', flexShrink: 0, color: 'var(--text-secondary)', background: 'transparent', border: '1px solid var(--bg-hover)', cursor: 'pointer' } as React.CSSProperties,
+  suggestions: { position: 'absolute' as const, left: 0, right: 0, marginTop: '2px', borderRadius: '4px', overflowY: 'auto' as const, zIndex: 50, maxHeight: '160px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', background: 'var(--bg-tertiary)', border: '1px solid var(--border)' } as React.CSSProperties,
+  suggestionItem: { width: '100%', textAlign: 'left' as const, padding: '4px 8px', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, display: 'block', color: 'var(--text-primary)', background: 'transparent', border: 'none', cursor: 'pointer' } as React.CSSProperties,
+  buttons: { display: 'flex', gap: '8px' } as const,
+  saveBtn: { flex: 1, padding: '4px 8px', fontSize: '13px', borderRadius: '4px', cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none' } as React.CSSProperties,
+  cancelBtn: { flex: 1, padding: '4px 8px', fontSize: '13px', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)', background: 'transparent', border: '1px solid var(--bg-hover)' } as React.CSSProperties,
+}
+
 export function AgentForm({ initialValues, onSave, onCancel }: AgentFormProps) {
+  const s = formStyles
   const [name, setName] = useState(initialValues?.name ?? '')
   const [command, setCommand] = useState(initialValues?.command ?? '')
   const [argsStr, setArgsStr] = useState(initialValues?.args.join(' ') ?? '')
@@ -22,10 +40,7 @@ export function AgentForm({ initialValues, onSave, onCancel }: AgentFormProps) {
 
   const handleBrowseFolder = async () => {
     const selected = await (window as any).tangentAPI.dialog.openFolder()
-    if (selected) {
-      setCwdPath(selected)
-      setShowSuggestions(false)
-    }
+    if (selected) { setCwdPath(selected); setShowSuggestions(false) }
   }
 
   const handleCwdChange = (value: string) => {
@@ -38,54 +53,27 @@ export function AgentForm({ initialValues, onSave, onCancel }: AgentFormProps) {
           const results = await (window as any).tangentAPI.fs.suggestDirs(value)
           setSuggestions(results)
           setShowSuggestions(results.length > 0)
-        } catch {
-          setSuggestions([])
-          setShowSuggestions(false)
-        }
+        } catch { setSuggestions([]); setShowSuggestions(false) }
       }, 150)
-    } else {
-      setSuggestions([])
-      setShowSuggestions(false)
-    }
+    } else { setSuggestions([]); setShowSuggestions(false) }
   }
 
   const selectSuggestion = (path: string) => {
-    setCwdPath(path)
-    setShowSuggestions(false)
-    setSelectedSuggestion(-1)
-    cwdInputRef.current?.focus()
+    setCwdPath(path); setShowSuggestions(false); setSelectedSuggestion(-1); cwdInputRef.current?.focus()
   }
 
   const handleCwdKeyDown = (e: React.KeyboardEvent) => {
     if (!showSuggestions || suggestions.length === 0) return
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setSelectedSuggestion(prev => Math.min(prev + 1, suggestions.length - 1))
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setSelectedSuggestion(prev => Math.max(prev - 1, 0))
-    } else if (e.key === 'Enter' && selectedSuggestion >= 0) {
-      e.preventDefault()
-      selectSuggestion(suggestions[selectedSuggestion])
-    } else if (e.key === 'Tab' && selectedSuggestion >= 0) {
-      e.preventDefault()
-      // Tab-complete: set path and trigger new suggestions
-      const selected = suggestions[selectedSuggestion]
-      setCwdPath(selected + '\\')
-      setSelectedSuggestion(-1)
-      handleCwdChange(selected + '\\')
-    } else if (e.key === 'Escape') {
-      setShowSuggestions(false)
-    }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedSuggestion(prev => Math.min(prev + 1, suggestions.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedSuggestion(prev => Math.max(prev - 1, 0)) }
+    else if (e.key === 'Enter' && selectedSuggestion >= 0) { e.preventDefault(); selectSuggestion(suggestions[selectedSuggestion]) }
+    else if (e.key === 'Tab' && selectedSuggestion >= 0) { e.preventDefault(); const selected = suggestions[selectedSuggestion]; setCwdPath(selected + '\\'); setSelectedSuggestion(-1); handleCwdChange(selected + '\\') }
+    else if (e.key === 'Escape') setShowSuggestions(false)
   }
 
-  // Close suggestions on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) &&
-          cwdInputRef.current !== e.target) {
-        setShowSuggestions(false)
-      }
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) && cwdInputRef.current !== e.target) setShowSuggestions(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -95,9 +83,7 @@ export function AgentForm({ initialValues, onSave, onCancel }: AgentFormProps) {
     const trimmedName = name.trim()
     const trimmedCommand = command.trim()
     if (!trimmedName || !trimmedCommand) return
-
     const args = argsStr.trim() ? argsStr.trim().split(/\s+/) : []
-
     const agent: AgentProfile = {
       id: initialValues?.id ?? uuidv4(),
       name: trimmedName,
@@ -107,82 +93,28 @@ export function AgentForm({ initialValues, onSave, onCancel }: AgentFormProps) {
       launchTarget: cwdPath.trim() ? 'path' : 'newTab',
       ...(cwdPath.trim() ? { cwdPath: cwdPath.trim() } : {})
     }
-
-    if (initialValues?.env) {
-      agent.env = initialValues.env
-    }
-
+    if (initialValues?.env) agent.env = initialValues.env
     onSave(agent)
   }
 
-  const inputClass =
-    'w-full px-2 py-1 text-sm rounded border border-[var(--bg-hover)] outline-none focus:border-[var(--accent)]'
-  const inputStyle = {
-    background: 'var(--bg-tertiary)',
-    color: 'var(--text-primary)',
-    transition: 'border-color 200ms ease'
-  }
-
   return (
-    <div
-      className="p-2 border-t border-[var(--bg-hover)]"
-      style={{ background: 'var(--bg-secondary)' }}
-    >
-      <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
-        {initialValues ? 'Edit Agent' : 'New Agent'}
+    <div style={s.root}>
+      <div style={s.heading}>{initialValues ? 'Edit Agent' : 'New Agent'}</div>
+      <div style={s.field}>
+        <label style={s.label}>Name</label>
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Copilot CLI" style={s.input} />
       </div>
-
-      {/* Name */}
-      <div className="mb-2">
-        <label className="text-xs mb-0.5 block" style={{ color: 'var(--text-secondary)' }}>
-          Name
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Copilot CLI"
-          className={inputClass}
-          style={inputStyle}
-        />
+      <div style={s.field}>
+        <label style={s.label}>Command</label>
+        <input type="text" value={command} onChange={(e) => setCommand(e.target.value)} placeholder="e.g. copilot" style={s.input} />
       </div>
-
-      {/* Command */}
-      <div className="mb-2">
-        <label className="text-xs mb-0.5 block" style={{ color: 'var(--text-secondary)' }}>
-          Command
-        </label>
-        <input
-          type="text"
-          value={command}
-          onChange={(e) => setCommand(e.target.value)}
-          placeholder="e.g. copilot"
-          className={inputClass}
-          style={inputStyle}
-        />
+      <div style={s.field}>
+        <label style={s.label}>Arguments (space-separated)</label>
+        <input type="text" value={argsStr} onChange={(e) => setArgsStr(e.target.value)} placeholder="e.g. --flag value" style={s.input} />
       </div>
-
-      {/* Arguments */}
-      <div className="mb-2">
-        <label className="text-xs mb-0.5 block" style={{ color: 'var(--text-secondary)' }}>
-          Arguments (space-separated)
-        </label>
-        <input
-          type="text"
-          value={argsStr}
-          onChange={(e) => setArgsStr(e.target.value)}
-          placeholder="e.g. --flag value"
-          className={inputClass}
-          style={inputStyle}
-        />
-      </div>
-
-      {/* Working Directory */}
-      <div className="mb-3 relative">
-        <label className="text-xs mb-0.5 block" style={{ color: 'var(--text-secondary)' }}>
-          Working Directory
-        </label>
-        <div className="flex gap-1">
+      <div style={{ ...s.field, position: 'relative', marginBottom: '12px' }}>
+        <label style={s.label}>Working Directory</label>
+        <div style={s.cwdRow}>
           <input
             ref={cwdInputRef}
             type="text"
@@ -191,63 +123,29 @@ export function AgentForm({ initialValues, onSave, onCancel }: AgentFormProps) {
             onKeyDown={handleCwdKeyDown}
             onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true) }}
             placeholder="e.g. D:\git\myproject"
-            className={inputClass + ' flex-1'}
-            style={inputStyle}
+            style={{ ...s.input, flex: 1 }}
           />
-          <button
-            type="button"
-            onClick={handleBrowseFolder}
-            className="px-2 py-1 text-sm rounded border border-[var(--bg-hover)] hover:bg-[var(--bg-hover)] transition-colors shrink-0"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            Browse
-          </button>
+          <button type="button" onClick={handleBrowseFolder} style={s.browseBtn}>Browse</button>
         </div>
         {showSuggestions && suggestions.length > 0 && (
-          <div
-            ref={suggestionsRef}
-            className="absolute left-0 right-0 mt-0.5 rounded border overflow-y-auto z-50"
-            style={{
-              background: 'var(--bg-tertiary)',
-              borderColor: 'var(--border)',
-              maxHeight: '160px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.4)'
-            }}
-          >
-            {suggestions.map((s, i) => (
+          <div ref={suggestionsRef} style={s.suggestions}>
+            {suggestions.map((sg, i) => (
               <button
-                key={s}
-                className="w-full text-left px-2 py-1 text-xs truncate block"
-                style={{
-                  color: 'var(--text-primary)',
-                  background: i === selectedSuggestion ? 'var(--bg-hover)' : 'transparent'
-                }}
+                type="button"
+                key={sg}
+                style={{ ...s.suggestionItem, background: i === selectedSuggestion ? 'var(--bg-hover)' : 'transparent' }}
                 onMouseEnter={() => setSelectedSuggestion(i)}
-                onClick={() => selectSuggestion(s)}
+                onClick={() => selectSuggestion(sg)}
               >
-                {s}
+                {sg}
               </button>
             ))}
           </div>
         )}
       </div>
-
-      {/* Buttons */}
-      <div className="flex gap-2">
-        <button
-          onClick={handleSave}
-          className="flex-1 px-2 py-1 text-sm rounded hover:opacity-90 transition-opacity"
-          style={{ background: 'var(--accent)', color: '#fff' }}
-        >
-          Save
-        </button>
-        <button
-          onClick={onCancel}
-          className="flex-1 px-2 py-1 text-sm rounded border border-[var(--bg-hover)] hover:bg-[var(--bg-hover)] transition-colors"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          Cancel
-        </button>
+      <div style={s.buttons}>
+        <button type="button" onClick={handleSave} style={s.saveBtn}>Save</button>
+        <button type="button" onClick={onCancel} style={s.cancelBtn}>Cancel</button>
       </div>
     </div>
   )

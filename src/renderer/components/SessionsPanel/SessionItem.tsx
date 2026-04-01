@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { makeStyles, mergeClasses } from '@fluentui/react-components'
 import { mapStatusToUI } from '@shared/statusMapping'
 import type { Session } from '@shared/types'
 
@@ -14,6 +15,141 @@ interface SessionItemProps {
   onCreateAgent?: () => void
 }
 
+const useStyles = makeStyles({
+  root: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    paddingLeft: '12px',
+    paddingRight: '12px',
+    paddingTop: '8px',
+    paddingBottom: '8px',
+    marginBottom: '4px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  highlighted: {
+    boxShadow: '0 0 0 1px var(--accent)',
+  },
+  dot: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    flexShrink: 0,
+  },
+  info: {
+    flex: 1,
+    minWidth: 0,
+  },
+  nameRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  name: {
+    fontSize: '13px',
+    fontWeight: 500,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    color: 'var(--text-primary)',
+  },
+  badge: {
+    fontSize: '10px',
+    paddingLeft: '6px',
+    paddingRight: '6px',
+    paddingTop: '2px',
+    paddingBottom: '2px',
+    borderRadius: '999px',
+    flexShrink: 0,
+    backgroundColor: 'var(--bg-tertiary)',
+    color: 'var(--text-secondary)',
+  },
+  extBadge: {
+    fontSize: '10px',
+    paddingLeft: '6px',
+    paddingRight: '6px',
+    paddingTop: '2px',
+    paddingBottom: '2px',
+    borderRadius: '999px',
+    flexShrink: 0,
+    backgroundColor: 'var(--bg-tertiary)',
+    color: 'var(--error)',
+  },
+  activity: {
+    fontSize: '12px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    fontStyle: 'italic',
+    color: 'var(--text-secondary)',
+  },
+  closeBtn: {
+    opacity: 0,
+    fontSize: '12px',
+    paddingLeft: '4px',
+    paddingRight: '4px',
+    borderRadius: '4px',
+    flexShrink: 0,
+    color: 'var(--text-muted)',
+    cursor: 'pointer',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    ':hover': {
+      backgroundColor: 'var(--bg-hover)',
+    },
+  },
+  closeBtnVisible: {
+    opacity: 1,
+  },
+  renameInput: {
+    fontSize: '13px',
+    fontWeight: 500,
+    width: '100%',
+    paddingLeft: '4px',
+    paddingRight: '4px',
+    paddingTop: 0,
+    paddingBottom: 0,
+    borderRadius: '4px',
+    outlineStyle: 'none',
+    backgroundColor: 'var(--bg-tertiary)',
+    color: 'var(--text-primary)',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--accent)',
+  },
+  contextMenu: {
+    position: 'fixed',
+    zIndex: 50,
+    paddingTop: '4px',
+    paddingBottom: '4px',
+    borderRadius: '4px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+    minWidth: '180px',
+    backgroundColor: 'var(--bg-secondary)',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--bg-hover)',
+  },
+  contextMenuItem: {
+    width: '100%',
+    textAlign: 'left' as const,
+    paddingLeft: '12px',
+    paddingRight: '12px',
+    paddingTop: '6px',
+    paddingBottom: '6px',
+    fontSize: '13px',
+    color: 'var(--text-primary)',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    cursor: 'pointer',
+    ':hover': {
+      backgroundColor: 'var(--bg-hover)',
+    },
+  },
+})
+
 export function SessionItem({
   session,
   isActive,
@@ -25,22 +161,21 @@ export function SessionItem({
   onRenameCancel,
   onCreateAgent
 }: SessionItemProps) {
+  const s = useStyles()
   const ui = mapStatusToUI(session.status)
   const [renameValue, setRenameValue] = useState(session.name)
   const renameInputRef = useRef<HTMLInputElement>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+  const [hovered, setHovered] = useState(false)
 
   const bgStyle = isActive ? ui.bgTintSelected : ui.bgTint
   const borderLeft = ui.barColor ? `3px solid var(${ui.barColor})` : '3px solid transparent'
   const shadow = isActive ? ui.glowShadow : 'none'
-
-  // Determine animation class for the left bar
   const barAnimClass = ui.label === 'error' ? 'animate-pulse-fast' : ''
 
   useEffect(() => {
     if (isRenaming) {
       setRenameValue(session.name)
-      // Focus the input after render
       setTimeout(() => renameInputRef.current?.focus(), 0)
     }
   }, [isRenaming, session.name])
@@ -56,11 +191,8 @@ export function SessionItem({
 
   const handleRenameKeyDown = (e: React.KeyboardEvent) => {
     e.stopPropagation()
-    if (e.key === 'Enter') {
-      handleRenameSubmit()
-    } else if (e.key === 'Escape') {
-      onRenameCancel()
-    }
+    if (e.key === 'Enter') handleRenameSubmit()
+    else if (e.key === 'Escape') onRenameCancel()
   }
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -69,7 +201,6 @@ export function SessionItem({
     setContextMenu({ x: e.clientX, y: e.clientY })
   }
 
-  // Close context menu on outside click or scroll
   useEffect(() => {
     if (!contextMenu) return
     const close = () => setContextMenu(null)
@@ -85,7 +216,9 @@ export function SessionItem({
     <div
       onClick={onSelect}
       onContextMenu={handleContextMenu}
-      className={`relative flex items-center gap-2 px-3 py-2 mb-1 rounded cursor-pointer group ${barAnimClass} ${isHighlighted ? 'ring-1 ring-[var(--accent)]' : ''}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={mergeClasses(s.root, isHighlighted && s.highlighted, barAnimClass)}
       style={{
         background: bgStyle,
         borderLeft,
@@ -93,17 +226,15 @@ export function SessionItem({
         boxShadow: shadow
       }}
     >
-      {/* Status dot */}
       {ui.dotVisible && (
         <span
-          className={`w-2 h-2 rounded-full shrink-0 ${ui.dotAnimation === 'pulse-slow' ? 'animate-pulse-slow' : ui.dotAnimation === 'pulse-fast' ? 'animate-pulse-fast' : ''}`}
+          className={mergeClasses(s.dot, ui.dotAnimation === 'pulse-slow' ? 'animate-pulse-slow' : ui.dotAnimation === 'pulse-fast' ? 'animate-pulse-fast' : '')}
           style={{ background: ui.dotColor ? `var(${ui.dotColor})` : undefined }}
         />
       )}
 
-      {/* Session info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
+      <div className={s.info}>
+        <div className={s.nameRow}>
           {isRenaming ? (
             <input
               ref={renameInputRef}
@@ -113,41 +244,21 @@ export function SessionItem({
               onKeyDown={handleRenameKeyDown}
               onBlur={handleRenameSubmit}
               onClick={(e) => e.stopPropagation()}
-              className="text-sm font-medium w-full px-1 py-0 rounded border border-[var(--accent)] outline-none"
-              style={{
-                background: 'var(--bg-tertiary)',
-                color: 'var(--text-primary)'
-              }}
+              className={s.renameInput}
+              aria-label="Rename session"
             />
           ) : (
             <>
-              <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                {session.name}
-              </span>
-              {/* Agent badge */}
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0"
-                style={{
-                  background: 'var(--bg-tertiary)',
-                  color: 'var(--text-secondary)'
-                }}
-              >
+              <span className={s.name}>{session.name}</span>
+              <span className={s.badge}>
                 {session.agentType === 'copilot-cli' ? 'copilot' : session.agentType === 'claude-code' ? 'claude' : 'shell'}
               </span>
-              {/* External badge */}
-              {session.isExternal && (
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0"
-                  style={{ background: 'var(--bg-tertiary)', color: 'var(--error)' }}
-                >
-                  ext
-                </span>
-              )}
+              {session.isExternal && <span className={s.extBadge}>ext</span>}
             </>
           )}
         </div>
         {!isRenaming && (
-          <div className="text-xs truncate italic" style={{ color: 'var(--text-secondary)' }}>
+          <div className={s.activity}>
             {session.agentType !== 'shell' && (!session.lastActivity || session.lastActivity.includes('cmd.exe'))
               ? (session.status === 'processing' || session.status === 'tool_executing' ? 'Thinking...' : 'Waiting...')
               : session.lastActivity || 'idle'}
@@ -155,41 +266,32 @@ export function SessionItem({
         )}
       </div>
 
-      {/* Close button */}
       {!session.isExternal && !isRenaming && (
         <button
           onClick={(e) => { e.stopPropagation(); onClose() }}
-          className="opacity-0 group-hover:opacity-100 text-xs px-1 rounded hover:bg-[var(--bg-hover)] shrink-0"
-          style={{ color: 'var(--text-muted)' }}
+          className={mergeClasses(s.closeBtn, hovered && s.closeBtnVisible)}
         >
           ×
         </button>
       )}
 
-      {/* Context menu */}
       {contextMenu && (
         <div
-          className="fixed z-50 py-1 rounded shadow-lg border border-[var(--bg-hover)] min-w-[180px]"
-          style={{
-            left: contextMenu.x,
-            top: contextMenu.y,
-            background: 'var(--bg-secondary)',
-          }}
+          className={s.contextMenu}
+          style={{ left: contextMenu.x, top: contextMenu.y }}
           onMouseDown={(e) => e.stopPropagation()}
         >
           {onCreateAgent && (
             <button
               onClick={() => { setContextMenu(null); onCreateAgent() }}
-              className="w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--bg-hover)] transition-colors"
-              style={{ color: 'var(--text-primary)' }}
+              className={s.contextMenuItem}
             >
               Save as Agent...
             </button>
           )}
           <button
             onClick={() => { setContextMenu(null); onClose() }}
-            className="w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--bg-hover)] transition-colors"
-            style={{ color: 'var(--text-primary)' }}
+            className={s.contextMenuItem}
           >
             Close Session
           </button>

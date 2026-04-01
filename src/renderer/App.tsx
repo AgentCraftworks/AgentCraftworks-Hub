@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { makeStyles } from '@fluentui/react-components'
 import { v4 as uuidv4 } from 'uuid'
 import { useSessions } from '@/hooks/useSession'
 import { useAgents } from '@/hooks/useAgents'
@@ -16,7 +17,29 @@ import { ZOOM } from '@shared/constants'
 import type { AgentProfile, Session } from '@shared/types'
 import type { HubDeepLinkFilters } from '@shared/hub-contracts'
 
+const useStyles = makeStyles({
+  root: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100vh',
+    width: '100vw',
+    position: 'relative',
+  },
+  main: {
+    display: 'flex',
+    flex: 1,
+    minHeight: 0,
+  },
+  hubOverlay: {
+    position: 'absolute',
+    inset: '0',
+    zIndex: 10,
+    backgroundColor: '#0d1117',
+  },
+})
+
 export function App(): JSX.Element {
+  const styles = useStyles()
   const { sessions, activeId, activeSession, createSession, selectSession, closeSession, renameSession } =
     useSessions()
   const { groups, launchAgent } = useAgents()
@@ -132,8 +155,8 @@ export function App(): JSX.Element {
   })
 
   return (
-    <div className="flex flex-col h-screen w-screen relative">
-      <div className="flex flex-1 min-h-0">
+    <div className={styles.root}>
+      <div className={styles.main}>
         {sessionsPanelVisible && (
           <SessionsPanel
             sessions={sessions}
@@ -150,7 +173,7 @@ export function App(): JSX.Element {
         )}
         <TerminalViewport sessions={sessions} activeId={activeId} fontSize={fontSize} />
         {hubOpen && (
-          <div className="absolute inset-0 z-10 bg-[#0d1117]">
+          <div className={styles.hubOverlay}>
             <HubDashboard
               enterprise={hubEnterprise}
               scopeLabel={hubScopeLabel}

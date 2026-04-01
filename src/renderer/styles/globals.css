@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
-/* === GitHub Dark Color Theme === */
+/* === AgentCraftworks Hub — Global Styles === */
+/* FluentUI makeStyles used for migrated components.
+   Tailwind retained for unmigrated components during progressive migration. */
+
+/* === GitHub Dark Color Theme (Hub-specific) === */
 :root {
   --bg-primary: #0d1117;
   --bg-secondary: #161b22;
@@ -15,6 +19,7 @@
   --error: #ff4444;
   --idle: #ffb800;
   --attention: #ff6a33;
+  --border: #30363d;
 
   --font-mono: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', monospace;
   --font-ui: system-ui, -apple-system, sans-serif;
@@ -40,10 +45,7 @@
 }
 
 /* === Base Styles === */
-/* NOTE: Tailwind v4 preflight (included via @import "tailwindcss") already
-   resets margin, padding, and box-sizing on all elements inside @layer base.
-   A duplicate unlayered reset here would override ALL Tailwind padding/margin
-   utilities because unlayered CSS beats layered CSS in the cascade. */
+/* Tailwind v4 preflight handles box-sizing/margin/padding reset */
 
 body {
   background: var(--bg-primary);
@@ -51,6 +53,8 @@ body {
   font-family: var(--font-ui);
   overflow: hidden;
   user-select: none;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* === Scrollbar Styling === */
