@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { makeStyles } from '@fluentui/react-components'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
@@ -6,9 +7,7 @@ import '@xterm/xterm/css/xterm.css'
 import { SdkLineBuffer } from '@shared/SdkLineBuffer'
 import type { SessionKind } from '@shared/types'
 
-// Global registry so other modules (useKeyboard) can access terminal instances
 export const terminalRegistry = new Map<string, Terminal>()
-// Search addon registry for keyboard handler access
 export const searchRegistry = new Map<string, SearchAddon>()
 
 interface TerminalViewportProps {
@@ -25,20 +24,78 @@ interface TerminalInstance {
   cleanup: () => void
 }
 
+const useStyles = makeStyles({
+  root: {
+    flex: 1,
+    minWidth: 0,
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    paddingLeft: '8px',
+    backgroundColor: 'var(--bg-primary)',
+  },
+  searchBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    paddingLeft: '12px',
+    paddingRight: '12px',
+    paddingTop: '6px',
+    paddingBottom: '6px',
+    borderBottomWidth: '1px',
+    borderBottomStyle: 'solid',
+    borderBottomColor: 'var(--border)',
+    backgroundColor: 'var(--bg-secondary)',
+  },
+  searchInput: {
+    flex: 1,
+    paddingLeft: '8px',
+    paddingRight: '8px',
+    paddingTop: '4px',
+    paddingBottom: '4px',
+    fontSize: '13px',
+    borderRadius: '4px',
+    outlineStyle: 'none',
+    backgroundColor: 'var(--bg-primary)',
+    color: 'var(--text-primary)',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--border)',
+  },
+  searchBtn: {
+    paddingLeft: '6px',
+    paddingRight: '6px',
+    paddingTop: '2px',
+    paddingBottom: '2px',
+    fontSize: '12px',
+    borderRadius: '4px',
+    color: 'var(--text-secondary)',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    cursor: 'pointer',
+    ':hover': {
+      opacity: 0.8,
+    },
+  },
+  container: {
+    flex: 1,
+    minWidth: 0,
+  },
+})
+
 export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewportProps) {
+  const s = useStyles()
   const containerRef = useRef<HTMLDivElement>(null)
   const instancesRef = useRef<Map<string, TerminalInstance>>(new Map())
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  // Toggle search bar
   const toggleSearch = () => {
     setSearchOpen(prev => {
       if (!prev) {
         setTimeout(() => searchInputRef.current?.focus(), 50)
       } else {
-        // Clear highlights when closing
         if (activeId) {
           const inst = instancesRef.current.get(activeId)
           inst?.searchAddon.clearDecorations()
@@ -60,12 +117,10 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
     }
   }
 
-  // Create/destroy terminal instances as sessions change
   useEffect(() => {
     const currentIds = new Set(sessions.map(s => s.id))
     const instances = instancesRef.current
 
-    // Remove terminals for closed sessions
     for (const [id, inst] of instances) {
       if (!currentIds.has(id)) {
         inst.cleanup()
@@ -77,7 +132,6 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
       }
     }
 
-    // Create terminals for new sessions
     for (const session of sessions) {
       if (!instances.has(session.id) && containerRef.current) {
         const terminal = new Terminal({
@@ -111,28 +165,20 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
         div.style.display = 'none'
         div.dataset.sessionId = session.id
         containerRef.current.appendChild(div)
-
         terminal.open(div)
 
-        // Intercept app shortcuts BEFORE xterm processes them.
-        // Returning false tells xterm to NOT handle the key event,
-        // allowing the window-level useKeyboard handler to process it.
         terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
-          // Ctrl+Backspace: delete previous word (send ^W to PTY)
           if (e.ctrlKey && e.key === 'Backspace' && !e.shiftKey && !e.altKey && e.type === 'keydown') {
             window.tangentAPI.terminal.write(session.id, '\x17')
             return false
           }
-          // Ctrl+Enter: new line in Copilot CLI input (send \n instead of \r)
           if (e.ctrlKey && e.key === 'Enter' && !e.shiftKey && !e.altKey && e.type === 'keydown') {
             window.tangentAPI.terminal.write(session.id, '\n')
             return false
           }
           if (!e.ctrlKey) return true
           const key = e.key.toLowerCase()
-          // Ctrl+V: handled by useKeyboard (clipboard paste to PTY)
           if (key === 'v' && !e.shiftKey && !e.altKey) return false
-          // Ctrl+C: copy selection if any, otherwise send SIGINT (or clear line for SDK)
           if (key === 'c' && !e.shiftKey && !e.altKey && e.type === 'keydown') {
             const selection = terminal.getSelection()
             if (selection) {
@@ -140,116 +186,67 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
               terminal.clearSelection()
               return false
             }
-            return true // No selection — let xterm handle (PTY: ^C, SDK: line buffer handles it)
+            return true
           }
-          // Let xterm ignore these — they're app shortcuts
-          if (key === 'b' || key === 'n' || key === 'tab' ||
-              key === '=' || key === '+' || key === '-' || key === '0') {
-            return false
-          }
-          // Ctrl+Shift+W: close session (app shortcut, don't send to terminal)
-          if (key === 'w' && e.shiftKey) {
-            return false
-          }
-          // Ctrl+Shift+F: terminal search
-          if (key === 'f' && e.shiftKey) {
-            return false
-          }
-          // Ctrl+Shift+1-9 for agent quick-launch
-          if (e.shiftKey && /^[1-9!@#$%^&*(]$/.test(e.key)) {
-            return false
-          }
+          if (key === 'b' || key === 'n' || key === 'tab' || key === '=' || key === '+' || key === '-' || key === '0') return false
+          if (key === 'w' && e.shiftKey) return false
+          if (key === 'f' && e.shiftKey) return false
+          if (e.shiftKey && /^[1-9!@#$%^&*(]$/.test(e.key)) return false
           return true
         })
 
         const cleanupFns: (() => void)[] = []
 
         if (session.kind === 'copilot-sdk') {
-          // === SDK session: line-buffered input, SDK output ===
           const sessionId = session.id
           const lineBuffer = new SdkLineBuffer(
             (data) => terminal.write(data),
             (line) => window.tangentAPI.sdk.sendMessage(sessionId, line)
           )
-
-          // SDK output → terminal display
-          const unsubSdkOutput = window.tangentAPI.sdk.onOutput(session.id, (data: string) => {
-            terminal.write(data)
-          })
+          const unsubSdkOutput = window.tangentAPI.sdk.onOutput(session.id, (data: string) => { terminal.write(data) })
           cleanupFns.push(unsubSdkOutput)
-
-          // User keystrokes → line buffer (local echo + send on Enter)
-          const onDataDisposable = terminal.onData((data) => {
-            lineBuffer.handleInput(data)
-          })
+          const onDataDisposable = terminal.onData((data) => { lineBuffer.handleInput(data) })
           cleanupFns.push(() => onDataDisposable.dispose())
         } else {
-          // === PTY session: direct PTY I/O ===
           window.tangentAPI.terminal.attach(session.id)
-          const unsubData = window.tangentAPI.terminal.onData(session.id, (data: string) => {
-            terminal.write(data)
-          })
+          const unsubData = window.tangentAPI.terminal.onData(session.id, (data: string) => { terminal.write(data) })
           cleanupFns.push(unsubData)
-
-          // Forward user input to PTY
-          const onDataDisposable = terminal.onData((data) => {
-            window.tangentAPI.terminal.write(session.id, data)
-          })
+          const onDataDisposable = terminal.onData((data) => { window.tangentAPI.terminal.write(session.id, data) })
           cleanupFns.push(() => onDataDisposable.dispose())
-
-          // Report resize
-          const onResizeDisposable = terminal.onResize(({ cols, rows }) => {
-            window.tangentAPI.terminal.resize(session.id, cols, rows)
-          })
+          const onResizeDisposable = terminal.onResize(({ cols, rows }) => { window.tangentAPI.terminal.resize(session.id, cols, rows) })
           cleanupFns.push(() => onResizeDisposable.dispose())
         }
 
-        instances.set(session.id, {
-          terminal,
-          fitAddon,
-          searchAddon,
-          div,
-          cleanup: () => cleanupFns.forEach(fn => fn())
-        })
+        instances.set(session.id, { terminal, fitAddon, searchAddon, div, cleanup: () => cleanupFns.forEach(fn => fn()) })
         terminalRegistry.set(session.id, terminal)
         searchRegistry.set(session.id, searchAddon)
       }
     }
   }, [sessions, fontSize])
 
-  // Show/hide terminals based on active session
   useEffect(() => {
     const instances = instancesRef.current
     for (const [id, inst] of instances) {
       if (id === activeId) {
         inst.div.style.display = 'block'
-        // Small delay to let DOM render before fitting
-        requestAnimationFrame(() => {
-          inst.fitAddon.fit()
-          inst.terminal.focus()
-        })
+        requestAnimationFrame(() => { inst.fitAddon.fit(); inst.terminal.focus() })
       } else {
         inst.div.style.display = 'none'
       }
     }
   }, [activeId])
 
-  // Handle container resize
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-
     const observer = new ResizeObserver(() => {
       const inst = activeId ? instancesRef.current.get(activeId) : null
-      if (inst) {
-        inst.fitAddon.fit()
-      }
+      if (inst) inst.fitAddon.fit()
     })
     observer.observe(container)
     return () => observer.disconnect()
   }, [activeId])
 
-  // Update font size across all terminals
   useEffect(() => {
     for (const [, inst] of instancesRef.current) {
       inst.terminal.options.fontSize = fontSize
@@ -257,68 +254,37 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
     }
   }, [fontSize])
 
-  // Listen for Ctrl+Shift+F globally to toggle search
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') {
-        e.preventDefault()
-        toggleSearch()
-      }
-      // Escape closes search
-      if (e.key === 'Escape' && searchOpen) {
-        e.preventDefault()
-        toggleSearch()
-      }
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleSearch() }
+      if (e.key === 'Escape' && searchOpen) { e.preventDefault(); toggleSearch() }
     }
     window.addEventListener('keydown', handler, { capture: true })
     return () => window.removeEventListener('keydown', handler, { capture: true })
-  }, [searchOpen])
+  }, [searchOpen, activeId])
 
   return (
-    <div className="flex-1 min-w-0 h-full flex flex-col pl-2" style={{ background: 'var(--bg-primary)' }}>
+    <div className={s.root}>
       {searchOpen && (
-        <div className="flex items-center gap-2 px-3 py-1.5 border-b" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
+        <div className={s.searchBar}>
           <input
             ref={searchInputRef}
             type="text"
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value)
-              doSearch(e.target.value)
-            }}
+            onChange={(e) => { setSearchQuery(e.target.value); doSearch(e.target.value) }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                doSearch(searchQuery, e.shiftKey ? 'prev' : 'next')
-              }
-              if (e.key === 'Escape') {
-                toggleSearch()
-              }
+              if (e.key === 'Enter') doSearch(searchQuery, e.shiftKey ? 'prev' : 'next')
+              if (e.key === 'Escape') toggleSearch()
             }}
             placeholder="Search terminal..."
-            className="flex-1 px-2 py-1 text-sm rounded outline-none"
-            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+            className={s.searchInput}
           />
-          <button
-            onClick={() => doSearch(searchQuery, 'prev')}
-            className="px-1.5 py-0.5 text-xs rounded hover:opacity-80"
-            style={{ color: 'var(--text-secondary)' }}
-            title="Previous (Shift+Enter)"
-          >▲</button>
-          <button
-            onClick={() => doSearch(searchQuery, 'next')}
-            className="px-1.5 py-0.5 text-xs rounded hover:opacity-80"
-            style={{ color: 'var(--text-secondary)' }}
-            title="Next (Enter)"
-          >▼</button>
-          <button
-            onClick={toggleSearch}
-            className="px-1.5 py-0.5 text-xs rounded hover:opacity-80"
-            style={{ color: 'var(--text-secondary)' }}
-            title="Close (Esc)"
-          >✕</button>
+          <button type="button" onClick={() => doSearch(searchQuery, 'prev')} className={s.searchBtn} title="Previous (Shift+Enter)">▲</button>
+          <button type="button" onClick={() => doSearch(searchQuery, 'next')} className={s.searchBtn} title="Next (Enter)">▼</button>
+          <button type="button" onClick={toggleSearch} className={s.searchBtn} title="Close (Esc)">✕</button>
         </div>
       )}
-      <div ref={containerRef} className="flex-1 min-w-0" />
+      <div ref={containerRef} className={s.container} />
     </div>
   )
 }

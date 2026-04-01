@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import { makeStyles } from '@fluentui/react-components'
 
 interface SessionFilterProps {
   value: string
@@ -6,7 +7,34 @@ interface SessionFilterProps {
   onClose: () => void
 }
 
+const useStyles = makeStyles({
+  root: {
+    paddingLeft: '8px',
+    paddingRight: '8px',
+    paddingBottom: '8px',
+  },
+  input: {
+    width: '100%',
+    paddingLeft: '8px',
+    paddingRight: '8px',
+    paddingTop: '4px',
+    paddingBottom: '4px',
+    fontSize: '13px',
+    borderRadius: '4px',
+    outlineStyle: 'none',
+    backgroundColor: 'var(--bg-tertiary)',
+    color: 'var(--text-primary)',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--bg-hover)',
+    ':focus': {
+      borderColor: 'var(--accent)',
+    },
+  },
+})
+
 export function SessionFilter({ value, onChange, onClose }: SessionFilterProps) {
+  const styles = useStyles()
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -14,7 +42,7 @@ export function SessionFilter({ value, onChange, onClose }: SessionFilterProps) 
   }, [])
 
   return (
-    <div className="px-2 pb-2">
+    <div className={styles.root}>
       <input
         ref={inputRef}
         type="text"
@@ -24,11 +52,7 @@ export function SessionFilter({ value, onChange, onClose }: SessionFilterProps) 
           if (e.key === 'Escape') onClose()
         }}
         placeholder="Filter sessions..."
-        className="w-full px-2 py-1 text-sm rounded border border-[var(--bg-hover)] outline-none focus:border-[var(--accent)]"
-        style={{
-          background: 'var(--bg-tertiary)',
-          color: 'var(--text-primary)'
-        }}
+        className={styles.input}
       />
     </div>
   )
