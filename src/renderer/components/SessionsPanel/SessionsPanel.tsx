@@ -235,8 +235,7 @@ export function SessionsPanel({ sessions, activeId, onSelect, onClose, onCreate,
       </div>
       <div
         onMouseDown={handleDragStart}
-        className={s.dragHandle}
-        style={{ background: isDragging ? 'var(--accent)' : 'var(--bg-hover)' }}
+        className={`${s.dragHandle} ${isDragging ? s.dragHandleDragging : ''}`}
       />
     </div>
   )
