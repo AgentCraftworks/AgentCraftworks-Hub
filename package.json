@@ -84,6 +84,8 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
+    "@fluentui/react-components": "^9.73.7",
+    "@fluentui/react-icons": "^2.0.323",
     "@github/copilot-sdk": "file:vendor/copilot-sdk",
     "@octokit/rest": "^21.1.1",
     "@xterm/addon-fit": "^0.11.0",
