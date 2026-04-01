@@ -1,0 +1,86 @@
+name: "GH-AW: Staging Build"
+
+# Builds cross-platform Electron app packages from the staging branch.
+# Artifacts are uploaded for internal testing — NOT published to GitHub Releases.
+# Production releases use release.yml triggered by v* tags on main.
+#
+# Engagement Level: T3 (Peer Programmer) — builds artifacts, no deployment.
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+    inputs:
+      full_installers:
+        description: "Build full installers (slower) instead of unpacked dirs"
+        type: boolean
+        default: false
+
+concurrency:
+  group: staging-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-staging:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            artifact_glob: "dist/*.exe"
+          - os: macos-latest
+            platform: mac
+            artifact_glob: "dist/*.dmg"
+          - os: ubuntu-latest
+            platform: linux
+            artifact_glob: "dist/*.AppImage"
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron app
+        run: |
+          npx electron-vite build
+          if [ "${{ inputs.full_installers }}" = "true" ] || [ "${{ github.event_name }}" = "push" ]; then
+            npx electron-builder --${{ matrix.platform == 'win' && 'win' || matrix.platform == 'mac' && 'mac' || 'linux' }}
+          else
+            npx electron-builder --${{ matrix.platform == 'win' && 'win' || matrix.platform == 'mac' && 'mac' || 'linux' }} --dir
+          fi
+        shell: bash
+        env:
+          # Do NOT set GH_TOKEN — prevents publishing to GitHub Releases
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Upload staging artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hub-staging-${{ matrix.platform }}-${{ github.sha }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.snap
+            dist/win-unpacked/
+            dist/mac/
+            dist/linux-unpacked/
+          if-no-files-found: warn
+          retention-days: 7
