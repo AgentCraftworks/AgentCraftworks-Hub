@@ -40,4 +40,7 @@ export const lightTheme: Theme = {
   colorBrandBackground: '#0c6fd1',
 }
 
-export const highContrastTheme: Theme = createHighContrastTheme()
+export const highContrastTheme: Theme = {
+  ...createHighContrastTheme(agentCraftworksBrand),
+  colorBrandBackground: '#0c6fd1',
+}
