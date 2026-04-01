@@ -261,7 +261,7 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
     }
     window.addEventListener('keydown', handler, { capture: true })
     return () => window.removeEventListener('keydown', handler, { capture: true })
-  }, [searchOpen])
+  }, [searchOpen, activeId])
 
   return (
     <div className={s.root}>
