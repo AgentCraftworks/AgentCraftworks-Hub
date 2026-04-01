@@ -37,6 +37,7 @@ export function AgentForm({ initialValues, onSave, onCancel }: AgentFormProps) {
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const cwdInputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const isMountedRef = useRef(true)
 
   const handleBrowseFolder = async () => {
     const selected = await (window as any).tangentAPI.dialog.openFolder()
@@ -51,9 +52,13 @@ export function AgentForm({ initialValues, onSave, onCancel }: AgentFormProps) {
       debounceRef.current = setTimeout(async () => {
         try {
           const results = await (window as any).tangentAPI.fs.suggestDirs(value)
+          if (!isMountedRef.current) return
           setSuggestions(results)
           setShowSuggestions(results.length > 0)
-        } catch { setSuggestions([]); setShowSuggestions(false) }
+        } catch {
+          if (!isMountedRef.current) return
+          setSuggestions([]); setShowSuggestions(false)
+        }
       }, 150)
     } else { setSuggestions([]); setShowSuggestions(false) }
   }
@@ -70,6 +75,13 @@ export function AgentForm({ initialValues, onSave, onCancel }: AgentFormProps) {
     else if (e.key === 'Tab' && selectedSuggestion >= 0) { e.preventDefault(); const selected = suggestions[selectedSuggestion]; setCwdPath(selected + '\\'); setSelectedSuggestion(-1); handleCwdChange(selected + '\\') }
     else if (e.key === 'Escape') setShowSuggestions(false)
   }
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
