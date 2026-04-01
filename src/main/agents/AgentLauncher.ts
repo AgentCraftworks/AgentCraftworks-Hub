@@ -8,7 +8,7 @@ function psEscape(value: string): string {
   return value.replace(/'/g, "''")
 }
 
-// Local dev build of Copilot CLI — used by Tangent only, not installed globally
+// Local dev build of Copilot CLI — used by AgentCraftworks Hub only, not installed globally
 const LOCAL_CLI_PATH = 'D:\\git\\tools\\copilot-agent-runtime\\dist-cli\\index.js'
 
 function isCopilotAgent(agent: AgentProfile): boolean {

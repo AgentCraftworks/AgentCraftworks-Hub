@@ -8,7 +8,10 @@ import { AuditLogPoller, type AuditLogEntry, type AuditLogData } from './AuditLo
 import { GhawWorkflowPoller, type GhawWorkflowData } from './GhawWorkflowPoller.js'
 import { AlertService, type AlertThresholds } from './AlertService.js'
 import { appendSample, loadHistory, closeDb } from './HistoryStore.js'
-import type { HourlyBucket } from '../../shared/hub-types.js'
+import { RateGovernorPoller } from './RateGovernorPoller.js'
+import { HandoffPoller } from './HandoffPoller.js'
+import { SquadStatePoller } from './SquadStatePoller.js'
+import type { HourlyBucket, HubRateGovernorData, HubHandoffData, HubSquadData } from '../../shared/hub-types.js'
 
 export interface MonitorConfig {
   enterprise: string  // Enterprise slug for audit log (case-sensitive: AICraftWorks)
@@ -59,6 +62,9 @@ export class GitHubMonitorService extends EventEmitter {
   private copilotPoller: CopilotUsagePoller
   private auditLogPoller: AuditLogPoller
   private ghawWorkflowPoller: GhawWorkflowPoller
+  private rateGovernorPoller: RateGovernorPoller
+  private handoffPoller: HandoffPoller
+  private squadStatePoller: SquadStatePoller
   private alertService: AlertService
   private snapshot: MonitorSnapshot = {
     rateLimit: null,
@@ -91,6 +97,9 @@ export class GitHubMonitorService extends EventEmitter {
       this.config.ghawWorkflowRepo,
       this.config.ghawWorkflowIntervalMs,
     )
+    this.rateGovernorPoller = new RateGovernorPoller(5000)
+    this.handoffPoller = new HandoffPoller(10000)
+    this.squadStatePoller = new SquadStatePoller(10000)
     this.alertService = new AlertService(this.config.alertThresholds)
 
     // Pre-fill rate limit history from disk
@@ -145,11 +154,32 @@ export class GitHubMonitorService extends EventEmitter {
       this.emit('update', this.snapshot)
     })
 
+    this.rateGovernorPoller.on('data', (data: HubRateGovernorData) => {
+      this.snapshot.rateGovernor = data
+      this.snapshot.lastUpdated.rateGovernor = Date.now()
+      this.emit('update', this.snapshot)
+    })
+
+    this.handoffPoller.on('data', (data: HubHandoffData) => {
+      this.snapshot.handoffs = data
+      this.snapshot.lastUpdated.handoffs = Date.now()
+      this.emit('update', this.snapshot)
+    })
+
+    this.squadStatePoller.on('data', (data: HubSquadData) => {
+      this.snapshot.squadState = data
+      this.snapshot.lastUpdated.squadState = Date.now()
+      this.emit('update', this.snapshot)
+    })
+
     this.rateLimitPoller.start()
     this.billingPoller.start()
     this.copilotPoller.start()
     this.auditLogPoller.start()
     this.ghawWorkflowPoller.start()
+    this.rateGovernorPoller.start()
+    this.handoffPoller.start()
+    this.squadStatePoller.start()
   }
 
   stop(): void {
@@ -158,6 +188,9 @@ export class GitHubMonitorService extends EventEmitter {
     this.copilotPoller.stop()
     this.auditLogPoller.stop()
     this.ghawWorkflowPoller.stop()
+    this.rateGovernorPoller.stop()
+    this.handoffPoller.stop()
+    this.squadStatePoller.stop()
     closeDb()
   }
 

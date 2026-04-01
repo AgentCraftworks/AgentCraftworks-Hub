@@ -23,7 +23,7 @@ export function PermissionDialog({ sessionId }: PermissionDialogProps) {
 
   useEffect(() => {
     if (!sessionId) return
-    const unsub = window.tangentAPI.sdk.onPermissionRequest(sessionId, (req: PermissionRequest) => {
+    const unsub = window.agentCraftworksAPI.sdk.onPermissionRequest(sessionId, (req: PermissionRequest) => {
       setRequest(req)
     })
     return () => unsub()
@@ -31,14 +31,14 @@ export function PermissionDialog({ sessionId }: PermissionDialogProps) {
 
   const handleApprove = useCallback(() => {
     if (sessionId) {
-      window.tangentAPI.sdk.approvePermission(sessionId, true)
+      window.agentCraftworksAPI.sdk.approvePermission(sessionId, true)
     }
     setRequest(null)
   }, [sessionId])
 
   const handleDeny = useCallback(() => {
     if (sessionId) {
-      window.tangentAPI.sdk.approvePermission(sessionId, false)
+      window.agentCraftworksAPI.sdk.approvePermission(sessionId, false)
     }
     setRequest(null)
   }, [sessionId])

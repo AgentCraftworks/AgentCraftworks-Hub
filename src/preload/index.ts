@@ -1,6 +1,6 @@
 ﻿import { contextBridge, ipcRenderer } from 'electron'
 
-const tangentAPI = {
+const agentCraftworksAPI = {
   session: {
     getAll: () => ipcRenderer.invoke('session:getAll'),
     create: () => ipcRenderer.invoke('session:create'),
@@ -103,6 +103,28 @@ const tangentAPI = {
       ipcRenderer.invoke('dialog:saveFile', options)
   },
 
+  tooluse: {
+    getAll: (sessionId: string) => ipcRenderer.invoke('tooluse:getAll', sessionId),
+    onEntry: (cb: (entry: any) => void) => {
+      const handler = (_: any, entry: any) => cb(entry)
+      ipcRenderer.on('tooluse:entry', handler)
+      return () => { ipcRenderer.removeListener('tooluse:entry', handler) }
+    }
+  },
+
+  context: {
+    get: (sessionId: string) => ipcRenderer.invoke('context:get', sessionId),
+    getPrompts: (sessionId: string) => ipcRenderer.invoke('context:getPrompts', sessionId),
+    recordPrompt: (sessionId: string, text: string, source: 'terminal' | 'sdk') => {
+      ipcRenderer.send('context:recordPrompt', sessionId, text, source)
+    },
+    onUpdated: (cb: (ctx: any) => void) => {
+      const handler = (_: any, ctx: any) => cb(ctx)
+      ipcRenderer.on('context:updated', handler)
+      return () => { ipcRenderer.removeListener('context:updated', handler) }
+    }
+  },
+
   config: {
     get: () => ipcRenderer.invoke('config:get'),
     update: (key: string, value: unknown) => ipcRenderer.invoke('config:update', { key, value }),
@@ -129,9 +151,9 @@ const tangentAPI = {
   }
 }
 
-contextBridge.exposeInMainWorld('tangentAPI', tangentAPI)
+contextBridge.exposeInMainWorld('agentCraftworksAPI', agentCraftworksAPI)
 
-// Hub monitoring API — separate namespace to avoid collisions with Tangent internals
+// Hub monitoring API — separate namespace to avoid collisions with AgentCraftworks internals
 const hubAPI = {
   start: (enterprise?: string): Promise<import('@shared/hub-types').HubActionResponse> =>
     ipcRenderer.invoke('hub:start', enterprise),

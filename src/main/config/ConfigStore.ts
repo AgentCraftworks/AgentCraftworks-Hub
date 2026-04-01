@@ -3,25 +3,27 @@ import { join } from 'path'
 import { homedir } from 'os'
 import { EventEmitter } from 'events'
 
-export interface TangentConfig {
+export interface AgentCraftworksConfig {
   startFolder?: string
   editor?: string
   fontSize?: number
+  defaultAgentCommand?: string
+  defaultAgentArgs?: string
 }
 
-const CONFIG_DIR = join(homedir(), '.tangent')
+const CONFIG_DIR = join(homedir(), '.agentcraftworks')
 const CONFIG_PATH = join(CONFIG_DIR, 'config.json')
 
-const DEFAULTS: TangentConfig = {
+const DEFAULTS: AgentCraftworksConfig = {
   startFolder: undefined
 }
 
 export class ConfigStore extends EventEmitter {
-  private config: TangentConfig = { ...DEFAULTS }
+  private config: AgentCraftworksConfig = { ...DEFAULTS }
   private watcher: FSWatcher | null = null
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-  load(): TangentConfig {
+  load(): AgentCraftworksConfig {
     try {
       if (existsSync(CONFIG_PATH)) {
         const raw = readFileSync(CONFIG_PATH, 'utf-8')
@@ -36,7 +38,7 @@ export class ConfigStore extends EventEmitter {
     return this.config
   }
 
-  get(): TangentConfig {
+  get(): AgentCraftworksConfig {
     return this.config
   }
 
@@ -44,7 +46,7 @@ export class ConfigStore extends EventEmitter {
     return this.config.startFolder || homedir()
   }
 
-  getAll(): TangentConfig {
+  getAll(): AgentCraftworksConfig {
     return { ...this.config }
   }
 
@@ -60,7 +62,7 @@ export class ConfigStore extends EventEmitter {
     this.save({ editor })
   }
 
-  save(updates: Partial<TangentConfig>): void {
+  save(updates: Partial<AgentCraftworksConfig>): void {
     this.config = { ...this.config, ...updates }
     try {
       mkdirSync(CONFIG_DIR, { recursive: true })

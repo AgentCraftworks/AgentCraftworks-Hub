@@ -5,12 +5,12 @@ import os from 'os'
 import type { StatusFile, SessionStatus } from '@shared/types'
 import { STATUS_FILE_MAP } from '@shared/constants'
 
-const STATUS_DIR = path.join(os.homedir(), '.tangent', 'status')
+const STATUS_DIR = path.join(os.homedir(), '.agentcraftworks', 'status')
 
 /**
  * System A — File Watcher
  *
- * Watches `~/.tangent/status/<ptyId>.json` for status file changes.
+ * Watches `~/.agentcraftworks/status/<ptyId>.json` for status file changes.
  * When a status file is created/modified, parses it and emits the mapped status.
  * When the file is deleted, emits 'deactivate' so StatusEngine falls back to System B.
  *

@@ -13,14 +13,16 @@ export interface KeyboardConfig {
   setFontSize: (fn: (prev: number) => number) => void
   toggleSessionsPanel: () => void
   toggleSidebar: () => void
+  toggleContextPanel: () => void
   launchAgentByIndex: (index: number) => void
 }
 
 /**
- * Global keyboard shortcut handler for Tangent.
+ * Global keyboard shortcut handler for AgentCraftworks Hub.
  *
  * Shortcuts:
  *   Ctrl+B          Toggle sessions panel visibility
+ *   Ctrl+I          Toggle human context panel
  *   Ctrl+N          New session
  *   Ctrl+Shift+W    Close active session
  *   Ctrl+W          Delete previous word (passed to terminal)
@@ -45,6 +47,7 @@ export function useKeyboard(config: KeyboardConfig): void {
     setFontSize,
     toggleSessionsPanel,
     toggleSidebar,
+    toggleContextPanel,
     launchAgentByIndex
   } = config
 
@@ -57,11 +60,14 @@ export function useKeyboard(config: KeyboardConfig): void {
 
       // Ctrl+V: paste from clipboard into active terminal
       if ((key === 'v' || key === 'V') && !e.shiftKey && !e.altKey) {
+        // Allow native paste when an input/textarea is focused
+        const activeEl = document.activeElement
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) return
         if (activeId) {
           e.preventDefault()
           navigator.clipboard.readText().then(text => {
             if (text) {
-              window.tangentAPI.terminal.write(activeId, text)
+              window.agentCraftworksAPI.terminal.write(activeId, text)
             }
           }).catch(() => {})
         }
@@ -73,6 +79,15 @@ export function useKeyboard(config: KeyboardConfig): void {
         if (!e.shiftKey && !e.altKey) {
           e.preventDefault()
           toggleSessionsPanel()
+          return
+        }
+      }
+
+      // Ctrl+I: toggle human context panel
+      if (key === 'i' || key === 'I') {
+        if (!e.shiftKey && !e.altKey) {
+          e.preventDefault()
+          toggleContextPanel()
           return
         }
       }
@@ -169,6 +184,7 @@ export function useKeyboard(config: KeyboardConfig): void {
       setFontSize,
       toggleSessionsPanel,
       toggleSidebar,
+      toggleContextPanel,
       launchAgentByIndex
     ]
   )
@@ -194,7 +210,7 @@ export function useKeyboard(config: KeyboardConfig): void {
           try {
             const text = await navigator.clipboard.readText()
             if (text) {
-              window.tangentAPI.terminal.write(activeId, text)
+              window.agentCraftworksAPI.terminal.write(activeId, text)
             }
           } catch {
             // Clipboard access may be denied

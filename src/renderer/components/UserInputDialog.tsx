@@ -17,7 +17,7 @@ export function UserInputDialog({ sessionId }: UserInputDialogProps) {
 
   useEffect(() => {
     if (!sessionId) return
-    const unsub = window.tangentAPI.sdk.onUserInput(sessionId, (req: UserInputRequest) => {
+    const unsub = window.agentCraftworksAPI.sdk.onUserInput(sessionId, (req: UserInputRequest) => {
       setRequest(req)
       setFreeformText('')
     })
@@ -32,7 +32,7 @@ export function UserInputDialog({ sessionId }: UserInputDialogProps) {
 
   const handleSubmit = useCallback((answer: string, wasFreeform: boolean) => {
     if (sessionId) {
-      window.tangentAPI.sdk.answerInput(sessionId, answer, wasFreeform)
+      window.agentCraftworksAPI.sdk.answerInput(sessionId, answer, wasFreeform)
     }
     setRequest(null)
   }, [sessionId])

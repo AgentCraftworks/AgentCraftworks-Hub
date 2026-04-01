@@ -5,11 +5,11 @@ export function useAgents() {
   const [groups, setGroups] = useState<ProjectFolder[]>([])
 
   useEffect(() => {
-    window.tangentAPI.agents.getGroups().then((loaded: ProjectFolder[]) => {
+    window.agentCraftworksAPI.agents.getGroups().then((loaded: ProjectFolder[]) => {
       setGroups(loaded)
     })
 
-    const unsubscribe = window.tangentAPI.agents.onUpdated((updated: ProjectFolder[]) => {
+    const unsubscribe = window.agentCraftworksAPI.agents.onUpdated((updated: ProjectFolder[]) => {
       setGroups(updated)
     })
 
@@ -19,11 +19,11 @@ export function useAgents() {
   }, [])
 
   const saveGroups = useCallback(async (updatedGroups: ProjectFolder[]) => {
-    await window.tangentAPI.agents.saveGroups(updatedGroups)
+    await window.agentCraftworksAPI.agents.saveGroups(updatedGroups)
   }, [])
 
   const launchAgent = useCallback(async (agentId: string, sessionId: string) => {
-    await window.tangentAPI.agents.launch(agentId, sessionId)
+    await window.agentCraftworksAPI.agents.launch(agentId, sessionId)
   }, [])
 
   return { groups, saveGroups, launchAgent }

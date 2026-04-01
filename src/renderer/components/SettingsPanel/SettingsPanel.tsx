@@ -4,7 +4,7 @@ import type { ProjectFolder, AgentProfile } from '@shared/types'
 
 declare global {
   interface Window {
-    tangentAPI: any
+    agentCraftworksAPI: any
   }
 }
 
@@ -38,12 +38,12 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
   const [agentForm, setAgentForm] = useState({ name: '', command: '', args: '', cwdPath: '' })
 
   useEffect(() => {
-    window.tangentAPI.config.get().then((config: any) => {
+    window.agentCraftworksAPI.config.get().then((config: any) => {
       if (config.editor) setEditor(config.editor)
       if (config.startFolder) setStartFolder(config.startFolder)
     })
-    window.tangentAPI.agents.getGroups().then(setFolders)
-    const unsub = window.tangentAPI.config.onChanged((config: any) => {
+    window.agentCraftworksAPI.agents.getGroups().then(setFolders)
+    const unsub = window.agentCraftworksAPI.config.onChanged((config: any) => {
       if (config.editor) setEditor(config.editor)
       if (config.startFolder) setStartFolder(config.startFolder)
     })
@@ -52,32 +52,32 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
 
   const handleEditorChange = useCallback((value: string) => {
     setEditor(value)
-    window.tangentAPI.config.update('editor', value)
+    window.agentCraftworksAPI.config.update('editor', value)
   }, [])
 
   const handleStartFolderChange = useCallback((value: string) => {
     setStartFolder(value)
-    window.tangentAPI.config.update('startFolder', value)
+    window.agentCraftworksAPI.config.update('startFolder', value)
   }, [])
 
   const handleBrowseFolder = useCallback(async () => {
-    const folder = await window.tangentAPI.dialog.openFolder()
+    const folder = await window.agentCraftworksAPI.dialog.openFolder()
     if (folder) handleStartFolderChange(folder)
   }, [handleStartFolderChange])
 
   const handleFontSizeChange = useCallback((value: number) => {
     const clamped = Math.max(ZOOM.MIN, Math.min(ZOOM.MAX, value))
     setFontSize(() => clamped)
-    window.tangentAPI.config.update('fontSize', clamped)
+    window.agentCraftworksAPI.config.update('fontSize', clamped)
   }, [setFontSize])
 
   const handleOpenConfig = useCallback(() => {
-    window.tangentAPI.config.openFile()
+    window.agentCraftworksAPI.config.openFile()
   }, [])
 
   const saveFolders = useCallback(async (updated: ProjectFolder[]) => {
     setFolders(updated)
-    await window.tangentAPI.agents.saveGroups(updated)
+    await window.agentCraftworksAPI.agents.saveGroups(updated)
   }, [])
 
   const handleAddFolder = useCallback(() => {
@@ -363,14 +363,14 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                 <div className="flex gap-2">
                   <button
                     onClick={async () => {
-                      const bundle = await window.tangentAPI.config.exportConfig()
-                      const filePath = await window.tangentAPI.dialog.saveFile({
-                        defaultPath: 'tangent-config.json',
+                      const bundle = await window.agentCraftworksAPI.config.exportConfig()
+                      const filePath = await window.agentCraftworksAPI.dialog.saveFile({
+                        defaultPath: 'agentcraftworks-config.json',
                         filters: [{ name: 'JSON', extensions: ['json'] }]
                       })
                       if (!filePath) return
                       // Write the exported JSON to the chosen path via IPC
-                      await window.tangentAPI.config.writeExport(filePath, bundle)
+                      await window.agentCraftworksAPI.config.writeExport(filePath, bundle)
                     }}
                     className="px-3 py-1.5 text-xs rounded cursor-pointer"
                     style={{
@@ -385,13 +385,13 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                   </button>
                   <button
                     onClick={async () => {
-                      const filePath = await window.tangentAPI.dialog.openFile([
+                      const filePath = await window.agentCraftworksAPI.dialog.openFile([
                         { name: 'JSON', extensions: ['json'] }
                       ])
                       if (!filePath) return
-                      const bundle = await window.tangentAPI.config.readImport(filePath)
+                      const bundle = await window.agentCraftworksAPI.config.readImport(filePath)
                       if (!bundle) return
-                      const result = await window.tangentAPI.config.importConfig(bundle)
+                      const result = await window.agentCraftworksAPI.config.importConfig(bundle)
                       if (result.config) {
                         if (result.config.editor) setEditor(result.config.editor)
                         if (result.config.startFolder) setStartFolder(result.config.startFolder)
@@ -631,7 +631,7 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                               />
                               <button
                                 onClick={async () => {
-                                  const selected = await (window as any).tangentAPI.dialog.openFolder()
+                                  const selected = await (window as any).agentCraftworksAPI.dialog.openFolder()
                                   if (selected) setAgentForm(prev => ({ ...prev, cwdPath: selected }))
                                 }}
                                 className="px-2 py-1 text-xs rounded shrink-0 cursor-pointer"

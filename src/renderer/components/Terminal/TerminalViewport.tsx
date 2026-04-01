@@ -117,15 +117,74 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
         // Intercept app shortcuts BEFORE xterm processes them.
         // Returning false tells xterm to NOT handle the key event,
         // allowing the window-level useKeyboard handler to process it.
+        let sdkLineBuffer: SdkLineBuffer | null = null
+
+        // Prompt history navigation for PTY agent sessions (up/down arrow)
+        let ptyHistory: string[] = []
+        let ptyHistoryIndex = -1
+        let ptyHistoryLoaded = false
+        if (session.kind !== 'copilot-sdk') {
+          // Pre-load history for PTY sessions
+          window.agentCraftworksAPI.context.getPrompts(session.id).then((prompts: any[]) => {
+            ptyHistory = prompts.map((p: any) => p.text)
+            ptyHistoryLoaded = true
+          })
+        }
+
         terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+          // Up/Down arrow for prompt history in PTY agent sessions
+          if (!e.ctrlKey && !e.shiftKey && !e.altKey && e.type === 'keydown' &&
+              (e.key === 'ArrowUp' || e.key === 'ArrowDown') &&
+              session.kind !== 'copilot-sdk' && ptyHistoryLoaded && ptyHistory.length > 0) {
+            // Only intercept for agent sessions (shell sessions have native history)
+            const isAgent = session.kind === 'shell' && false // Let shell sessions use native history
+            const sess = sessions.find(s => s.id === session.id)
+            if (sess && sess.agentType !== 'shell') {
+              if (e.key === 'ArrowUp') {
+                if (ptyHistoryIndex === -1) {
+                  ptyHistoryIndex = ptyHistory.length - 1
+                } else if (ptyHistoryIndex > 0) {
+                  ptyHistoryIndex--
+                } else {
+                  return false // At oldest, do nothing
+                }
+                // Clear current line (Ctrl+U) then type the history entry
+                window.agentCraftworksAPI.terminal.write(session.id, '\x15') // Ctrl+U clears line
+                window.agentCraftworksAPI.terminal.write(session.id, ptyHistory[ptyHistoryIndex])
+                return false
+              }
+              if (e.key === 'ArrowDown') {
+                if (ptyHistoryIndex === -1) return false // Not browsing
+                if (ptyHistoryIndex < ptyHistory.length - 1) {
+                  ptyHistoryIndex++
+                  window.agentCraftworksAPI.terminal.write(session.id, '\x15')
+                  window.agentCraftworksAPI.terminal.write(session.id, ptyHistory[ptyHistoryIndex])
+                } else {
+                  // Clear and return to empty prompt
+                  ptyHistoryIndex = -1
+                  window.agentCraftworksAPI.terminal.write(session.id, '\x15')
+                }
+                return false
+              }
+            }
+          }
+          // Shift+Enter: new line (multiline input for agents)
+          if (e.shiftKey && e.key === 'Enter' && !e.ctrlKey && !e.altKey && e.type === 'keydown') {
+            if (session.kind === 'copilot-sdk' && sdkLineBuffer) {
+              sdkLineBuffer.insertNewline()
+            } else {
+              window.agentCraftworksAPI.terminal.write(session.id, '\n')
+            }
+            return false
+          }
           // Ctrl+Backspace: delete previous word (send ^W to PTY)
           if (e.ctrlKey && e.key === 'Backspace' && !e.shiftKey && !e.altKey && e.type === 'keydown') {
-            window.tangentAPI.terminal.write(session.id, '\x17')
+            window.agentCraftworksAPI.terminal.write(session.id, '\x17')
             return false
           }
           // Ctrl+Enter: new line in Copilot CLI input (send \n instead of \r)
           if (e.ctrlKey && e.key === 'Enter' && !e.shiftKey && !e.altKey && e.type === 'keydown') {
-            window.tangentAPI.terminal.write(session.id, '\n')
+            window.agentCraftworksAPI.terminal.write(session.id, '\n')
             return false
           }
           if (!e.ctrlKey) return true
@@ -143,7 +202,7 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
             return true // No selection — let xterm handle (PTY: ^C, SDK: line buffer handles it)
           }
           // Let xterm ignore these — they're app shortcuts
-          if (key === 'b' || key === 'n' || key === 'tab' ||
+          if (key === 'b' || key === 'i' || key === 'n' || key === 'tab' ||
               key === '=' || key === '+' || key === '-' || key === '0') {
             return false
           }
@@ -167,39 +226,96 @@ export function TerminalViewport({ sessions, activeId, fontSize }: TerminalViewp
         if (session.kind === 'copilot-sdk') {
           // === SDK session: line-buffered input, SDK output ===
           const sessionId = session.id
-          const lineBuffer = new SdkLineBuffer(
+          sdkLineBuffer = new SdkLineBuffer(
             (data) => terminal.write(data),
-            (line) => window.tangentAPI.sdk.sendMessage(sessionId, line)
+            (line) => {
+              window.agentCraftworksAPI.sdk.sendMessage(sessionId, line)
+              // Record prompt for the human context panel
+              window.agentCraftworksAPI.context.recordPrompt(sessionId, line, 'sdk')
+            }
           )
 
+          // Load prompt history for up-arrow recall
+          window.agentCraftworksAPI.context.getPrompts(sessionId).then((prompts: any[]) => {
+            sdkLineBuffer?.setHistory(prompts.map((p: any) => p.text))
+          })
+
           // SDK output → terminal display
-          const unsubSdkOutput = window.tangentAPI.sdk.onOutput(session.id, (data: string) => {
+          const unsubSdkOutput = window.agentCraftworksAPI.sdk.onOutput(session.id, (data: string) => {
             terminal.write(data)
           })
           cleanupFns.push(unsubSdkOutput)
 
           // User keystrokes → line buffer (local echo + send on Enter)
           const onDataDisposable = terminal.onData((data) => {
-            lineBuffer.handleInput(data)
+            sdkLineBuffer!.handleInput(data)
           })
           cleanupFns.push(() => onDataDisposable.dispose())
         } else {
           // === PTY session: direct PTY I/O ===
-          window.tangentAPI.terminal.attach(session.id)
-          const unsubData = window.tangentAPI.terminal.onData(session.id, (data: string) => {
+          window.agentCraftworksAPI.terminal.attach(session.id)
+          const unsubData = window.agentCraftworksAPI.terminal.onData(session.id, (data: string) => {
             terminal.write(data)
           })
           cleanupFns.push(unsubData)
 
-          // Forward user input to PTY
+          // Forward user input to PTY, with line buffer for prompt capture
+          let inputBuffer = ''
+          let inEscSeq: false | 'esc' | 'csi' = false
           const onDataDisposable = terminal.onData((data) => {
-            window.tangentAPI.terminal.write(session.id, data)
+            window.agentCraftworksAPI.terminal.write(session.id, data)
+
+            // Build a line buffer to capture prompts for the context panel.
+            // When the user presses Enter, record accumulated text as a prompt.
+            for (const ch of data) {
+              const code = ch.charCodeAt(0)
+
+              // Track escape sequences to avoid capturing them as user input.
+              // ESC starts a sequence; for CSI (ESC [), skip until a letter/~ ends it.
+              // For non-CSI escapes (ESC followed by non-[), skip just that one char.
+              if (ch === '\x1b') {
+                inEscSeq = 'esc'
+                continue
+              }
+              if (inEscSeq === 'esc') {
+                if (ch === '[' || ch === 'O') {
+                  inEscSeq = 'csi' // CSI or SS3 sequence — wait for terminator
+                } else {
+                  inEscSeq = false // Single-char escape (e.g. ESC =) — done
+                }
+                continue
+              }
+              if (inEscSeq === 'csi') {
+                // CSI/SS3 sequences end with a letter or ~
+                if (/[A-Za-z~]/.test(ch)) inEscSeq = false
+                continue
+              }
+
+              if (ch === '\r' || ch === '\n') {
+                const trimmed = inputBuffer.trim()
+                if (trimmed.length >= 2) {
+                  window.agentCraftworksAPI.context.recordPrompt(session.id, trimmed, 'terminal')
+                  ptyHistory.push(trimmed) // Add to local history for up-arrow
+                }
+                inputBuffer = ''
+                ptyHistoryIndex = -1 // Reset history navigation
+              } else if (ch === '\x7f' || ch === '\b') {
+                inputBuffer = inputBuffer.slice(0, -1)
+              } else if (ch === '\x03') {
+                // Ctrl+C — user abort, clear buffer
+                inputBuffer = ''
+              } else if (code >= 32) {
+                inputBuffer += ch
+              }
+              // Other control characters are silently ignored — TUIs send
+              // many (tab, bell, form feed, etc.) that shouldn't reset the buffer
+            }
           })
           cleanupFns.push(() => onDataDisposable.dispose())
 
           // Report resize
           const onResizeDisposable = terminal.onResize(({ cols, rows }) => {
-            window.tangentAPI.terminal.resize(session.id, cols, rows)
+            window.agentCraftworksAPI.terminal.resize(session.id, cols, rows)
           })
           cleanupFns.push(() => onResizeDisposable.dispose())
         }

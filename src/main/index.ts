@@ -7,6 +7,7 @@ import { PtyManager } from './pty/PtyManager'
 import { SessionStore } from './session/SessionStore'
 import { SessionManager } from './session/SessionManager'
 import { SdkSessionManager } from './session/SdkSessionManager'
+import { ContextStore } from './session/ContextStore'
 import { AgentStore } from './agents/AgentStore'
 import { AgentLauncher } from './agents/AgentLauncher'
 import { ConfigStore } from './config/ConfigStore'
@@ -26,12 +27,75 @@ const configStore = new ConfigStore()
 entitlementService.load()
 const ptyManager = new PtyManager()
 const sessionStore = new SessionStore()
+const contextStore = new ContextStore(sessionStore)
 const sessionManager = new SessionManager(sessionStore, ptyManager)
+sessionManager.setContextStore(contextStore)
 const sdkSessionManager = new SdkSessionManager(sessionStore, ptyManager)
 sessionManager.setSdkManager(sdkSessionManager)
 const agentStore = new AgentStore()
 const agentLauncher = new AgentLauncher(ptyManager, sessionStore, sessionManager)
 const pipeServer = new PipeServer(configStore, agentStore)
+
+/** Persist restorable sessions to disk immediately. Called on every session change. */
+function persistSessions(): void {
+  try {
+    const all = sessionStore.getAll()
+    const activeId = sessionManager.getActiveSessionId()
+    const restorable = all.filter(s => !s.isExternal && s.status !== 'exited')
+    const dir = join(homedir(), '.agentcraftworks')
+    mkdirSync(dir, { recursive: true })
+    if (restorable.length > 0) {
+      const activeIndex = restorable.findIndex(s => s.id === activeId)
+      const data = {
+        activeIndex: activeIndex >= 0 ? activeIndex : 0,
+        sessions: restorable.map(s => ({
+          kind: s.kind,
+          name: s.name,
+          folderPath: s.folderPath,
+          folderName: s.folderName,
+          isRenamed: s.isRenamed,
+          agentType: s.agentType,
+          agentCommand: s.agentCommand,
+          agentArgs: s.agentArgs,
+          agentEnv: s.agentEnv
+        }))
+      }
+      writeFileSync(SESSIONS_PATH, JSON.stringify(data, null, 2), 'utf-8')
+    } else {
+      // No restorable sessions — remove stale file
+      if (existsSync(SESSIONS_PATH)) {
+        unlinkSync(SESSIONS_PATH)
+      }
+    }
+  } catch (err) {
+    console.warn('[AgentCraftworks] Failed to persist sessions:', err)
+  }
+}
+
+// Debounced session persistence — writes at most once per second
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+function schedulePersist(): void {
+  if (persistTimer) return
+  persistTimer = setTimeout(() => {
+    persistTimer = null
+    persistSessions()
+  }, 1000)
+}
+
+function persistNow(): void {
+  if (persistTimer) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  persistSessions()
+}
+
+// Structural changes: persist immediately
+sessionStore.on('created', () => persistNow())
+sessionStore.on('closed', () => persistNow())
+
+// Other updates (status, rename, agent info, activity, metrics): debounced
+sessionStore.on('updated', () => schedulePersist())
 
 // When an agent is auto-detected from output (user typed `copilot` manually),
 // attach the SDK to watch for the ui-server port
@@ -42,6 +106,9 @@ sessionStore.on('agent-promoted', ({ id, agentType, ptyId }: { id: string; agent
 })
 
 function createWindow(): void {
+  // Set app identity so Windows taskbar uses the AgentCraftworks icon, not the Electron icon
+  app.setAppUserModelId('com.agentcraftworks.hub')
+
   mainWindow = new BrowserWindow({
     title: 'AgentCraftworks Hub',
     width: 1200,
@@ -59,9 +126,24 @@ function createWindow(): void {
     }
   })
 
+  // Tell Windows to relaunch via agentcraftworks.exe when pinned to taskbar
+  if (process.platform === 'win32') {
+    const hubExe = join(__dirname, '../../agentcraftworks.exe')
+    if (existsSync(hubExe)) {
+      mainWindow.setAppDetails({
+        appId: 'com.agentcraftworks.hub',
+        appIconPath: join(__dirname, '../../assets/agentcraftworks.ico'),
+        appIconIndex: 0,
+        relaunchCommand: `"${hubExe}"`,
+        relaunchDisplayName: 'AgentCraftworks Hub'
+      })
+    }
+  }
+
   registerIpcHandlers({
     sessionManager,
     sessionStore,
+    contextStore,
     ptyManager,
     agentStore,
     agentLauncher,
@@ -104,13 +186,13 @@ function dispatchDeepLink(rawUrl: string): void {
       }
     }
   } catch (err) {
-    console.warn('[Tangent] Failed to parse deep-link:', err)
+    console.warn('[AgentCraftworks] Failed to parse deep-link:', err)
   }
 }
 
 // Register custom protocol to serve local files (icons) to the renderer
 protocol.registerSchemesAsPrivileged([
-  { scheme: 'tangent-file', privileges: { standard: false, supportFetchAPI: true, stream: true } }
+  { scheme: 'agentcraftworks-file', privileges: { standard: false, supportFetchAPI: true, stream: true } }
 ])
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock()
@@ -121,9 +203,9 @@ if (!gotSingleInstanceLock) {
 app.whenReady().then(async () => {
   app.setAsDefaultProtocolClient('agentcraftworks-hub')
 
-  protocol.handle('tangent-file', (request) => {
-    // tangent-file:///C:/path/to/file.ico -> file:///C:/path/to/file.ico
-    const filePath = decodeURIComponent(request.url.replace('tangent-file:///', ''))
+  protocol.handle('agentcraftworks-file', (request) => {
+    // agentcraftworks-file:///C:/path/to/file.ico -> file:///C:/path/to/file.ico
+    const filePath = decodeURIComponent(request.url.replace('agentcraftworks-file:///', ''))
     return net.fetch(pathToFileURL(filePath).href)
   })
 
@@ -223,18 +305,17 @@ app.whenReady().then(async () => {
             if (resolved) return
             resolved = true
             ptyManager.removeListener('data', onData)
-            console.warn(`[Tangent] Shell ready timeout for session ${sessionId}, replaying anyway`)
+            console.warn(`[AgentCraftworks] Shell ready timeout for session ${sessionId}, replaying anyway`)
             replayCommand()
           }, SHELL_READY_TIMEOUT_MS)
           ptyManager.on('data', onData)
         }
 
         restored = true
-        unlinkSync(SESSIONS_PATH)
       }
     }
   } catch (err) {
-    console.warn('[Tangent] Failed to restore sessions:', err)
+    console.warn('[AgentCraftworks] Failed to restore sessions:', err)
   }
 
   if (!restored) {
@@ -269,33 +350,7 @@ app.on('second-instance', (_event, argv) => {
 })
 
 app.on('before-quit', () => {
-  // Save restorable sessions to disk
-  try {
-    const all = sessionStore.getAll()
-    const activeId = sessionManager.getActiveSessionId()
-    const restorable = all.filter(s => !s.isExternal && s.status !== 'exited')
-    if (restorable.length > 0) {
-      const activeIndex = restorable.findIndex(s => s.id === activeId)
-      const data = {
-        activeIndex: activeIndex >= 0 ? activeIndex : 0,
-        sessions: restorable.map(s => ({
-          kind: s.kind,
-          name: s.name,
-          folderPath: s.folderPath,
-          folderName: s.folderName,
-          isRenamed: s.isRenamed,
-          agentType: s.agentType,
-          agentCommand: s.agentCommand,
-          agentArgs: s.agentArgs,
-          agentEnv: s.agentEnv
-        }))
-      }
-      mkdirSync(join(homedir(), '.tangent'), { recursive: true })
-      writeFileSync(SESSIONS_PATH, JSON.stringify(data, null, 2), 'utf-8')
-    }
-  } catch (err) {
-    console.warn('[Tangent] Failed to save sessions:', err)
-  }
+  persistNow()
 })
 
 app.on('window-all-closed', () => {

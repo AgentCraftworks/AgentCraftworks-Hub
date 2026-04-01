@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import type { Session } from '@shared/types'
 
-declare const tangentAPI: {
+declare const agentCraftworksAPI: {
   shell: {
     openEditor: (folderPath: string) => Promise<void>
     openInExplorer: (folderPath: string) => Promise<void>
@@ -82,20 +82,20 @@ export function StatusBar({ sessions, activeSession, onToggleSettings, onToggleH
 
   const handleEditorClick = useCallback(() => {
     if (activeSession?.folderPath) {
-      tangentAPI.shell.openEditor(activeSession.folderPath)
+      agentCraftworksAPI.shell.openEditor(activeSession.folderPath)
     }
   }, [activeSession?.folderPath])
 
   const handleEditorContextMenu = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault()
-    const current = await tangentAPI.shell.getEditor()
+    const current = await agentCraftworksAPI.shell.getEditor()
     setEditorValue(current)
     setEditorPopupOpen(true)
   }, [])
 
   const handleEditorSave = useCallback(async () => {
     if (editorValue.trim()) {
-      await tangentAPI.shell.setEditor(editorValue.trim())
+      await agentCraftworksAPI.shell.setEditor(editorValue.trim())
     }
     setEditorPopupOpen(false)
   }, [editorValue])
@@ -186,7 +186,7 @@ export function StatusBar({ sessions, activeSession, onToggleSettings, onToggleH
             className="max-w-[200px] truncate cursor-pointer hover:underline"
             style={{ color: 'var(--text-muted)', background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 'inherit' }}
             title={`Open ${activeSession?.folderPath} in file explorer`}
-            onClick={() => activeSession?.folderPath && tangentAPI.shell.openInExplorer(activeSession.folderPath)}
+            onClick={() => activeSession?.folderPath && agentCraftworksAPI.shell.openInExplorer(activeSession.folderPath)}
           >
             {cwdPath}
           </button>

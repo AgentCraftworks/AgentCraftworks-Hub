@@ -61,6 +61,9 @@ function inferPanel(path: string): string {
   if (/^\/ghaw\/workflows\/[^/]+$/i.test(normalized)) return 'workflows'
   if (/^\/ghaw\/runs\/[^/]+$/i.test(normalized)) return 'workflow-run'
   if (/^\/ghaw\/workflows\/[^/]+\/runs\/[^/]+$/i.test(normalized)) return 'workflow-run'
+  if (normalized === '/rate-governor') return 'rate-governor'
+  if (normalized === '/handoffs') return 'handoffs'
+  if (normalized === '/squads') return 'squads'
   return 'overview'
 }
 

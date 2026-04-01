@@ -10,8 +10,12 @@ import { StatusBar } from '@/components/StatusBar/StatusBar'
 import { SettingsPanel } from '@/components/SettingsPanel/SettingsPanel'
 import { PermissionDialog } from '@/components/PermissionDialog'
 import { UserInputDialog } from '@/components/UserInputDialog'
+<<<<<<< HEAD
 import { HubDashboard } from '@/components/dashboard/HubDashboard'
 import type { DashboardFocusSection } from '@/components/dashboard/HubDashboard'
+=======
+import { HumanContextPanel } from '@/components/HumanContextPanel/HumanContextPanel'
+>>>>>>> 8e52ffa0e897f1e5297f52cbfbf1addfaddfc588
 import { ZOOM } from '@shared/constants'
 import type { AgentProfile, Session } from '@shared/types'
 import type { HubDeepLinkFilters } from '@shared/hub-contracts'
@@ -25,6 +29,7 @@ export function App(): JSX.Element {
   const [sessionsPanelWidth, setSessionsPanelWidth] = useState(240)
   const [prefillAgent, setPrefillAgent] = useState<AgentProfile | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+<<<<<<< HEAD
   const [hubOpen, setHubOpen] = useState(false)
   const [hubEnterprise, setHubEnterprise] = useState<string>('AICraftWorks')
   const [hubScopeLabel, setHubScopeLabel] = useState<string>('')
@@ -51,6 +56,9 @@ export function App(): JSX.Element {
         : panel === 'requests' ? 'requests'
         : panel === 'workflows' ? 'workflows'
         : panel === 'workflow-run' ? 'workflows'
+        : panel === 'rate-governor' ? 'rate-governor'
+        : panel === 'handoffs' ? 'handoffs'
+        : panel === 'squads' ? 'squads'
         : 'overview'
 
       let enterpriseFromScope = 'AICraftWorks'
@@ -75,6 +83,9 @@ export function App(): JSX.Element {
       unsub()
     }
   }, [])
+=======
+  const [contextPanelVisible, setContextPanelVisible] = useState(true)
+>>>>>>> 8e52ffa0e897f1e5297f52cbfbf1addfaddfc588
 
   const handleCreateAgentFromSession = useCallback((session: Session) => {
     const command = session.agentCommand || ''
@@ -104,6 +115,10 @@ export function App(): JSX.Element {
     setSessionsPanelVisible(prev => !prev)
   }, [])
 
+  const toggleContextPanel = useCallback(() => {
+    setContextPanelVisible(prev => !prev)
+  }, [])
+
   const toggleSidebar = useCallback(() => {
     // No-op — sidebar is now always-visible tabs
   }, [])
@@ -128,6 +143,7 @@ export function App(): JSX.Element {
     setFontSize,
     toggleSessionsPanel,
     toggleSidebar,
+    toggleContextPanel,
     launchAgentByIndex
   })
 
@@ -148,6 +164,7 @@ export function App(): JSX.Element {
             onCollapse={() => setSessionsPanelVisible(false)}
           />
         )}
+<<<<<<< HEAD
         <TerminalViewport sessions={sessions} activeId={activeId} fontSize={fontSize} />
         {hubOpen && (
           <div className="absolute inset-0 z-10 bg-[#0d1117]">
@@ -160,6 +177,14 @@ export function App(): JSX.Element {
             />
           </div>
         )}
+=======
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+          {contextPanelVisible && (
+            <HumanContextPanel sessionId={activeId} />
+          )}
+          <TerminalViewport sessions={sessions} activeId={activeId} fontSize={fontSize} />
+        </div>
+>>>>>>> 8e52ffa0e897f1e5297f52cbfbf1addfaddfc588
         <AgentsSidebar activeSessionId={activeId} prefillAgent={prefillAgent} onPrefillConsumed={() => setPrefillAgent(null)} />
       </div>
       <StatusBar sessions={sessions} activeSession={activeSession} onToggleSettings={toggleSettings} onToggleHub={toggleHub} hubOpen={hubOpen} />

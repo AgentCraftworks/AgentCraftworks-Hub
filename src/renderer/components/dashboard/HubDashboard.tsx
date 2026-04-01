@@ -44,6 +44,9 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
   const billingRef = useRef<HTMLDivElement | null>(null)
   const auditRef = useRef<HTMLDivElement | null>(null)
   const requestsRef = useRef<HTMLDivElement | null>(null)
+  const rateGovernorRef = useRef<HTMLDivElement | null>(null)
+  const handoffsRef = useRef<HTMLDivElement | null>(null)
+  const squadsRef = useRef<HTMLDivElement | null>(null)
 
   const refreshOperationLog = useCallback(async () => {
     setOperationLogLoading(true)
@@ -170,6 +173,9 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
       : initialFocus === 'billing' ? billingRef
       : initialFocus === 'audit' ? auditRef
       : initialFocus === 'requests' ? requestsRef
+      : initialFocus === 'rate-governor' ? rateGovernorRef
+      : initialFocus === 'handoffs' ? handoffsRef
+      : initialFocus === 'squads' ? squadsRef
       : overviewRef
 
     targetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -265,7 +271,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
           </div>
 
           {/* Rate Governor — governance layer beside raw rate limit */}
-          <div className="xl:col-span-1">
+          <div ref={rateGovernorRef} className="xl:col-span-1">
             <RateGovernorPanel
               data={snapshot?.rateGovernor ?? null}
               onRefresh={refreshAll}
@@ -273,7 +279,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
           </div>
 
           {/* Agent Handoff Flow — full width */}
-          <div className="xl:col-span-2">
+          <div ref={handoffsRef} className="xl:col-span-2">
             <HandoffFlowPanel
               data={snapshot?.handoffs ?? null}
               onRefresh={refreshAll}
@@ -281,7 +287,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
           </div>
 
           {/* Squad Coordinator — full width */}
-          <div className="xl:col-span-2">
+          <div ref={squadsRef} className="xl:col-span-2">
             <SquadCoordinatorPanel
               data={snapshot?.squadState ?? null}
               onRefresh={refreshAll}
