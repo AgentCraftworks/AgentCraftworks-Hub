@@ -6,7 +6,7 @@ name: "GH-AW: Build & Deploy"
 #   1. workflow_dispatch — manual trigger with environment + action selector
 #   2. push to staging/main — auto-builds for the corresponding environment
 #      (staging: unpacked dirs for testing; production: full installers)
-#   3. v* tags on main — full production release published to GitHub Releases
+#   3. v* tags — full production release published to GitHub Releases
 #
 # Engagement Level: T4 (Agent Team) — builds artifacts, publishes releases.
 
