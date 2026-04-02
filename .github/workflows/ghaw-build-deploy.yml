@@ -71,6 +71,10 @@ jobs:
         shell: bash
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ github.event.inputs.action }}" = "build-and-release" ] && [ "${{ github.event.inputs.environment }}" != "production" ]; then
+              echo "::error::build-and-release publishes to GitHub Releases and must target 'production'. Select environment: production or change action to build-and-upload."
+              exit 1
+            fi
             echo "env_name=${{ github.event.inputs.environment }}" >> "$GITHUB_OUTPUT"
             echo "action=${{ github.event.inputs.action }}" >> "$GITHUB_OUTPUT"
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
