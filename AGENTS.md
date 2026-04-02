@@ -132,7 +132,7 @@ feature/* → staging → main → v* tag → GitHub Release
 |----------|---------|---------|
 | `ci.yml` | Push to non-main/staging branches; PRs to staging/main | Lint + build validation |
 | `ghaw-branch-policy-guard.yml` | PRs to staging/main | Enforces branch flow |
-| `ghaw-staging-build.yml` | Push to staging | Cross-platform installer builds (artifacts) |
+| `ghaw-staging-build.yml` | Push to staging | Cross-platform staging builds (unpacked dirs; optional installers) |
 | `ghaw-staging-refresh.yml` | staging→main PR merged | Resets staging to match main |
 | `release.yml` | `v*` tags | Cross-platform build + publish to GitHub Releases |
 
