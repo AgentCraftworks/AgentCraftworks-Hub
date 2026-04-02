@@ -104,14 +104,14 @@ hub status     # Single-line summary
 This repo follows the org-standard promotion flow:
 
 ```
-feature/* → staging → main → v* tag → GitHub Release
+feature/|feat/|fix/|hotfix/|chore/|docs/* → staging → main → v* tag → GitHub Release
 ```
 
 | Branch | Purpose | Protection |
 |--------|---------|------------|
 | `main` | Production-ready code; tags trigger releases | PRs from staging only, 1 review required |
 | `staging` | Integration testing; pushes trigger cross-platform builds | PRs from branches starting with `feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, or `docs/`; 1 review required |
-| `feature/*` | Development work | No restrictions |
+| `feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, `docs/` | Development work | No restrictions |
 
 ### Accepted branch prefixes for PRs to staging
 
