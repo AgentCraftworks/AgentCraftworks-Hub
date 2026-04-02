@@ -1,0 +1,39 @@
+name: "Recording Studio: Cross-Repo Test (Hub)"
+
+# Tests that RecordingStudio workflow_call triggers work from AgentCraftworks-Hub.
+# Validates pipeline validation and SkillUp script generation workflows.
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_scope:
+        description: "Which test to run"
+        required: true
+        type: choice
+        options:
+          - pipeline-validate
+          - skillup-script
+          - all
+        default: pipeline-validate
+
+jobs:
+  test-pipeline-validate:
+    name: "Test: Pipeline Validate"
+    if: inputs.test_scope == 'pipeline-validate' || inputs.test_scope == 'all'
+    uses: AgentCraftworks/RecordingStudio/.github/workflows/recording-studio-pipeline.yml@main
+    with:
+      slug: "all"
+      run_voice: false
+      voice: "stock"
+
+  test-skillup-script:
+    name: "Test: SkillUp Script Generation"
+    if: inputs.test_scope == 'skillup-script' || inputs.test_scope == 'all'
+    uses: AgentCraftworks/RecordingStudio/.github/workflows/skillup.yml@main
+    with:
+      topic: "AgentCraftworks Hub MCP Server Architecture"
+      format: "video"
+      skill_level: "intermediate"
+      tech_stack: "TypeScript, Electron, MCP"
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
