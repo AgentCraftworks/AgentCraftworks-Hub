@@ -16,6 +16,8 @@ on:
           - all
         default: pipeline-validate
 
+permissions:
+  contents: read
 jobs:
   test-pipeline-validate:
     name: "Test: Pipeline Validate"
