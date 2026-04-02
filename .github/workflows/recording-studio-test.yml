@@ -2,6 +2,14 @@ name: "Recording Studio: Cross-Repo Test (Hub)"
 
 # Tests that RecordingStudio workflow_call triggers work from AgentCraftworks-Hub.
 # Validates pipeline validation and SkillUp script generation workflows.
+#
+# SECURITY: The reusable workflows below reference @main, a mutable ref. Until
+# RecordingStudio publishes an immutable tag or agreed-upon SHA, a manual-approval
+# gate is enforced via the `recording-studio-external` GitHub environment.
+# To activate the gate: Settings → Environments → recording-studio-external →
+# add required reviewers. To complete the SHA pin, replace @main with the output of:
+#   git ls-remote https://github.com/AgentCraftworks/RecordingStudio.git refs/heads/main
+# and append `# main` as a trailing comment on each `uses:` line.
 
 on:
   workflow_dispatch:
@@ -18,15 +26,23 @@ on:
 
 permissions:
   contents: read
+
 jobs:
+  gate-external-call:
+    name: "Gate: Approve external workflow_call"
+    runs-on: ubuntu-latest
+    # Requires manual approval — configure required reviewers in
+    # Settings → Environments → recording-studio-external
+    environment: recording-studio-external
+    steps:
+      - run: echo "External workflow_call approved."
+
   test-pipeline-validate:
     name: "Test: Pipeline Validate"
+    needs: gate-external-call
     if: inputs.test_scope == 'pipeline-validate' || inputs.test_scope == 'all'
-    # TODO(security): pin to an immutable SHA instead of @main to prevent supply-chain drift.
-    # Obtain the current SHA with:
-    #   git ls-remote https://github.com/AgentCraftworks/RecordingStudio.git refs/heads/main
-    # Then replace @main with @<SHA> and add a trailing comment: # main
-    uses: AgentCraftworks/RecordingStudio/.github/workflows/recording-studio-pipeline.yml@main
+    # Replace @main with a pinned SHA once RecordingStudio publishes a stable ref.
+    uses: AgentCraftworks/RecordingStudio/.github/workflows/recording-studio-pipeline.yml@main # main
     with:
       slug: "all"
       run_voice: false
@@ -34,12 +50,10 @@ jobs:
 
   test-skillup-script:
     name: "Test: SkillUp Script Generation"
+    needs: gate-external-call
     if: inputs.test_scope == 'skillup-script' || inputs.test_scope == 'all'
-    # TODO(security): pin to an immutable SHA instead of @main to prevent supply-chain drift.
-    # Obtain the current SHA with:
-    #   git ls-remote https://github.com/AgentCraftworks/RecordingStudio.git refs/heads/main
-    # Then replace @main with @<SHA> and add a trailing comment: # main
-    uses: AgentCraftworks/RecordingStudio/.github/workflows/skillup.yml@main
+    # Replace @main with a pinned SHA once RecordingStudio publishes a stable ref.
+    uses: AgentCraftworks/RecordingStudio/.github/workflows/skillup.yml@main # main
     with:
       topic: "AgentCraftworks Hub MCP Server Architecture"
       format: "video"
