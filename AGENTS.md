@@ -99,6 +99,43 @@ hub monitor    # Full Ink TUI (refreshes every 30s)
 hub status     # Single-line summary
 ```
 
+## Branching Policy (MANDATORY)
+
+This repo follows the org-standard promotion flow:
+
+```
+feature/|feat/|fix/|hotfix/|chore/|docs/* → staging → main → v* tag → GitHub Release
+```
+
+| Branch | Purpose | Protection |
+|--------|---------|------------|
+| `main` | Production-ready code; tags trigger releases | PRs from staging only, 1 review required |
+| `staging` | Integration testing; pushes trigger cross-platform builds | PRs from branches starting with `feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, or `docs/`; 1 review required |
+| `feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, `docs/` | Development work | No restrictions |
+
+### Accepted branch prefixes for PRs to staging
+
+`feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, `docs/`
+
+### Release process
+
+1. Feature branch → PR to staging (CI runs, review required)
+2. Push to staging triggers cross-platform staging builds (artifacts)
+3. Test staging artifacts internally
+4. staging → PR to main (policy guard enforces this)
+5. After merge, staging-refresh recreates staging from main
+6. Tag main with `vX.Y.Z` to trigger release to GitHub Releases
+
+### Workflows
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | Push to non-main/staging branches; PRs to staging/main | Lint + build validation |
+| `ghaw-branch-policy-guard.yml` | PRs to staging/main | Enforces branch flow |
+| `ghaw-staging-build.yml` | Push to staging | Cross-platform staging builds (unpacked dirs; optional installers) |
+| `ghaw-staging-refresh.yml` | staging→main PR merged | Resets staging to match main |
+| `release.yml` | `v*` tags | Cross-platform build + publish to GitHub Releases |
+
 ## Build & Run
 
 ```bash
