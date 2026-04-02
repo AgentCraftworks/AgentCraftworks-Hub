@@ -33,7 +33,7 @@ jobs:
 
           echo "PR flow: ${HEAD} -> ${BASE}"
 
-          # Enforce branch naming: main <- staging only
+          # Enforce promotion flow: PRs into main must come from staging only
           if [[ "${BASE}" == "main" ]]; then
             if [[ "${HEAD}" != "staging" ]]; then
               echo "::error::PRs into main must come from staging. Got ${HEAD} -> main."
