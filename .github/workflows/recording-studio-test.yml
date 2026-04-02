@@ -22,6 +22,10 @@ jobs:
   test-pipeline-validate:
     name: "Test: Pipeline Validate"
     if: inputs.test_scope == 'pipeline-validate' || inputs.test_scope == 'all'
+    # TODO(security): pin to an immutable SHA instead of @main to prevent supply-chain drift.
+    # Obtain the current SHA with:
+    #   git ls-remote https://github.com/AgentCraftworks/RecordingStudio.git refs/heads/main
+    # Then replace @main with @<SHA> and add a trailing comment: # main
     uses: AgentCraftworks/RecordingStudio/.github/workflows/recording-studio-pipeline.yml@main
     with:
       slug: "all"
@@ -31,6 +35,10 @@ jobs:
   test-skillup-script:
     name: "Test: SkillUp Script Generation"
     if: inputs.test_scope == 'skillup-script' || inputs.test_scope == 'all'
+    # TODO(security): pin to an immutable SHA instead of @main to prevent supply-chain drift.
+    # Obtain the current SHA with:
+    #   git ls-remote https://github.com/AgentCraftworks/RecordingStudio.git refs/heads/main
+    # Then replace @main with @<SHA> and add a trailing comment: # main
     uses: AgentCraftworks/RecordingStudio/.github/workflows/skillup.yml@main
     with:
       topic: "AgentCraftworks Hub MCP Server Architecture"
