@@ -6,7 +6,7 @@ on:
       - main
       - staging
     tags-ignore:
-      - v*
+      - '**'
   pull_request:
     branches:
       - staging

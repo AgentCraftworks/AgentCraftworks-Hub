@@ -104,14 +104,14 @@ hub status     # Single-line summary
 This repo follows the org-standard promotion flow:
 
 ```
-feature/* → staging → main → v* tag → GitHub Release
+feature/|feat/|fix/|hotfix/|chore/|docs/* → staging → main → v* tag → GitHub Release
 ```
 
 | Branch | Purpose | Protection |
 |--------|---------|------------|
 | `main` | Production-ready code; tags trigger releases | PRs from staging only, 1 review required |
-| `staging` | Integration testing; pushes trigger cross-platform builds | PRs from feature/* branches, 1 review required |
-| `feature/*` | Development work | No restrictions |
+| `staging` | Integration testing; pushes trigger cross-platform builds | PRs from branches starting with `feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, or `docs/`; 1 review required |
+| `feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, `docs/` | Development work | No restrictions |
 
 ### Accepted branch prefixes for PRs to staging
 
@@ -130,9 +130,9 @@ feature/* → staging → main → v* tag → GitHub Release
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `ci.yml` | Push to feature branches, PRs to staging/main | Lint + build validation |
+| `ci.yml` | Push to non-main/staging branches; PRs to staging/main | Lint + build validation |
 | `ghaw-branch-policy-guard.yml` | PRs to staging/main | Enforces branch flow |
-| `ghaw-staging-build.yml` | Push to staging | Cross-platform installer builds (artifacts) |
+| `ghaw-staging-build.yml` | Push to staging | Cross-platform staging builds (unpacked dirs; optional installers) |
 | `ghaw-staging-refresh.yml` | staging→main PR merged | Resets staging to match main |
 | `release.yml` | `v*` tags | Cross-platform build + publish to GitHub Releases |
 

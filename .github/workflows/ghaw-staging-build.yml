@@ -32,13 +32,10 @@ jobs:
         include:
           - os: windows-latest
             platform: win
-            artifact_glob: "dist/*.exe"
           - os: macos-latest
             platform: mac
-            artifact_glob: "dist/*.dmg"
           - os: ubuntu-latest
             platform: linux
-            artifact_glob: "dist/*.AppImage"
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -59,10 +56,10 @@ jobs:
       - name: Build Electron app
         run: |
           npx electron-vite build
-          if [ "${{ inputs.full_installers }}" = "true" ] || [ "${{ github.event_name }}" = "push" ]; then
-            npx electron-builder --${{ matrix.platform == 'win' && 'win' || matrix.platform == 'mac' && 'mac' || 'linux' }}
+          if [ "${{ inputs.full_installers }}" = "true" ]; then
+            npx electron-builder --${{ matrix.platform }}
           else
-            npx electron-builder --${{ matrix.platform == 'win' && 'win' || matrix.platform == 'mac' && 'mac' || 'linux' }} --dir
+            npx electron-builder --${{ matrix.platform }} --dir
           fi
         shell: bash
         env:
