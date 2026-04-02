@@ -1,0 +1,67 @@
+name: "Recording Studio: Cross-Repo Test (Hub)"
+
+# Tests that RecordingStudio workflow_call triggers work from AgentCraftworks-Hub.
+# Validates pipeline validation and SkillUp script generation workflows.
+#
+# SECURITY: Both reusable workflow refs are pinned below to immutable commit SHAs.
+# The placeholder SHA (40 zeros) must be replaced with the real SHA before the
+# workflow can run. To obtain the correct SHA, run:
+#
+#   git ls-remote https://github.com/AgentCraftworks/RecordingStudio.git refs/heads/main
+#
+# Then replace each `0000000000000000000000000000000000000000` with the output SHA
+# and keep `# main` as the trailing branch-provenance comment.
+#
+# The `recording-studio-external` environment gate enforces manual approval before
+# any external workflow_call fires (including before secrets are forwarded).
+# To activate the gate: Settings → Environments → recording-studio-external →
+# add required reviewers.
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_scope:
+        description: "Which test to run"
+        required: true
+        type: choice
+        options:
+          - pipeline-validate
+          - skillup-script
+          - all
+        default: pipeline-validate
+
+permissions:
+  contents: read
+
+jobs:
+  gate-external-call:
+    name: "Gate: Approve external workflow_call"
+    runs-on: ubuntu-latest
+    # Requires manual approval — configure required reviewers in
+    # Settings → Environments → recording-studio-external
+    environment: recording-studio-external
+    steps:
+      - run: echo "External workflow_call approved."
+
+  test-pipeline-validate:
+    name: "Test: Pipeline Validate"
+    needs: gate-external-call
+    if: inputs.test_scope == 'pipeline-validate' || inputs.test_scope == 'all'
+    uses: AgentCraftworks/RecordingStudio/.github/workflows/recording-studio-pipeline.yml@0000000000000000000000000000000000000000 # main
+    with:
+      slug: "all"
+      run_voice: false
+      voice: "stock"
+
+  test-skillup-script:
+    name: "Test: SkillUp Script Generation"
+    needs: gate-external-call
+    if: inputs.test_scope == 'skillup-script' || inputs.test_scope == 'all'
+    uses: AgentCraftworks/RecordingStudio/.github/workflows/skillup.yml@0000000000000000000000000000000000000000 # main
+    with:
+      topic: "AgentCraftworks Hub MCP Server Architecture"
+      format: "video"
+      skill_level: "intermediate"
+      tech_stack: "TypeScript, Electron, MCP"
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
