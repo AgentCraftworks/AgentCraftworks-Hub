@@ -251,7 +251,7 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                       </div>
                     ) : (
                       <button type="button" onClick={() => setDeletingId(folder.id)} style={{ ...hoverDeleteBtn, opacity: hoveredFolderId === folder.id ? 1 : 0, color: hoveredBtnKey === `del-f-${folder.id}` ? '#f85149' : 'var(--text-muted)' }}
-                        onMouseEnter={() => setHoveredBtnKey(`del-f-${folder.id}`)} onMouseLeave={() => setHoveredBtnKey(null)} title="Delete project">✕</button>
+                        onMouseEnter={() => setHoveredBtnKey(`del-f-${folder.id}`)} onMouseLeave={() => setHoveredBtnKey(null)} title="Delete project" aria-label="Delete project">✕</button>
                     )}
                   </div>
                   {expandedIds.has(folder.id) && folder.agents.length > 0 && (
