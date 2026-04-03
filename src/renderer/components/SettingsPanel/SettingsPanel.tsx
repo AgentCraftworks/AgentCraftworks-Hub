@@ -75,11 +75,13 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null)
   const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null)
   const [hoveredBtnKey, setHoveredBtnKey] = useState<string | null>(null)
+  const [focusedInputKey, setFocusedInputKey] = useState<string | null>(null)
 
   useEffect(() => {
     setHoveredFolderId(null)
     setHoveredAgentId(null)
     setHoveredBtnKey(null)
+    setFocusedInputKey(null)
   }, [activeTab, selectedFolderId])
 
   useEffect(() => {
@@ -173,16 +175,16 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
               {/* Editor */}
               <div style={fieldGroup}>
                 <label style={labelStyle}>Editor Command</label>
-                <input type="text" value={editor} onChange={(e) => handleEditorChange(e.target.value)} placeholder="code" style={inputStyle}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')} onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--bg-hover)')} />
+                <input type="text" value={editor} onChange={(e) => handleEditorChange(e.target.value)} placeholder="code" style={{ ...inputStyle, borderColor: focusedInputKey === 'editor' ? 'var(--accent)' : 'var(--bg-hover)' }}
+                  onFocus={() => setFocusedInputKey('editor')} onBlur={() => setFocusedInputKey(null)} />
                 <p style={helpText}>Command used to open files and folders (e.g. code, cursor, vim)</p>
               </div>
               {/* Start Folder */}
               <div style={fieldGroup}>
                 <label style={labelStyle}>Start Folder</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input type="text" value={startFolder} onChange={(e) => handleStartFolderChange(e.target.value)} placeholder="Default: home directory" style={{ ...inputStyle, flex: 1 }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')} onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--bg-hover)')} />
+                  <input type="text" value={startFolder} onChange={(e) => handleStartFolderChange(e.target.value)} placeholder="Default: home directory" style={{ ...inputStyle, flex: 1, borderColor: focusedInputKey === 'start-folder' ? 'var(--accent)' : 'var(--bg-hover)' }}
+                    onFocus={() => setFocusedInputKey('start-folder')} onBlur={() => setFocusedInputKey(null)} />
                   <button type="button" onClick={handleBrowseFolder} style={{ ...outlineBtn, flexShrink: 0, background: hoveredBtnKey === 'browse-folder' ? 'var(--bg-hover)' : 'var(--bg-secondary)' }}
                     onMouseEnter={() => setHoveredBtnKey('browse-folder')} onMouseLeave={() => setHoveredBtnKey(null)}>Browse</button>
                 </div>
@@ -291,14 +293,16 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                             <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                               <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)' }}>{lbl}</label>
                               <input autoFocus={key === 'name'} type="text" value={agentForm[key]} onChange={(e) => setAgentForm(prev => ({ ...prev, [key]: e.target.value }))} placeholder={ph}
-                                className="focus:outline-none focus:ring-1 focus:ring-[var(--accent)]" style={{ ...inputStyle, background: 'var(--bg-primary)' }} />
+                                style={{ ...inputStyle, background: 'var(--bg-primary)', borderColor: focusedInputKey === `agent-form-${key}` ? 'var(--accent)' : 'var(--bg-hover)' }}
+                                onFocus={() => setFocusedInputKey(`agent-form-${key}`)} onBlur={() => setFocusedInputKey(null)} />
                             </div>
                           ))}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)' }}>Working Directory</label>
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <input type="text" value={agentForm.cwdPath} onChange={(e) => setAgentForm(prev => ({ ...prev, cwdPath: e.target.value }))} placeholder="e.g. D:\git\myproject"
-                                className="focus:outline-none focus:ring-1 focus:ring-[var(--accent)]" style={{ ...inputStyle, flex: 1, background: 'var(--bg-primary)' }} />
+                                style={{ ...inputStyle, flex: 1, background: 'var(--bg-primary)', borderColor: focusedInputKey === 'agent-form-cwd' ? 'var(--accent)' : 'var(--bg-hover)' }}
+                                onFocus={() => setFocusedInputKey('agent-form-cwd')} onBlur={() => setFocusedInputKey(null)} />
                               <button type="button" onClick={async () => { const s = await (window as any).tangentAPI.dialog.openFolder(); if (s) setAgentForm(prev => ({ ...prev, cwdPath: s })) }}
                                 style={{ ...outlineBtn, flexShrink: 0, paddingLeft: '8px', paddingRight: '8px', paddingTop: '4px', paddingBottom: '4px', background: 'none', color: 'var(--text-secondary)' }}>Browse</button>
                             </div>
@@ -315,7 +319,7 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                             <div style={{ fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>{agent.command}{agent.args.length > 0 ? ` ${agent.args.join(' ')}` : ''}</div>
                           </div>
                           <button type="button" onClick={() => handleEditAgent(agent)} style={{ ...hoverDeleteBtn, opacity: hoveredAgentId === agent.id ? 1 : 0, fontSize: '11px', color: hoveredBtnKey === `edit-a-${agent.id}` ? 'var(--text-primary)' : 'var(--text-muted)' }}
-                            onMouseEnter={() => setHoveredBtnKey(`edit-a-${agent.id}`)} onMouseLeave={() => setHoveredBtnKey(null)} title="Edit agent">✎</button>
+                            onMouseEnter={() => setHoveredBtnKey(`edit-a-${agent.id}`)} onMouseLeave={() => setHoveredBtnKey(null)} title="Edit agent" aria-label="Edit agent">✎</button>
                           {deletingAgentId === agent.id ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                               <button type="button" onClick={() => handleDeleteAgent(agent.id)} style={dangerBtn}>Confirm</button>
@@ -323,7 +327,7 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                             </div>
                           ) : (
                             <button type="button" onClick={() => setDeletingAgentId(agent.id)} style={{ ...hoverDeleteBtn, opacity: hoveredAgentId === agent.id ? 1 : 0, color: hoveredBtnKey === `del-a-${agent.id}` ? '#f85149' : 'var(--text-muted)' }}
-                              onMouseEnter={() => setHoveredBtnKey(`del-a-${agent.id}`)} onMouseLeave={() => setHoveredBtnKey(null)} title="Delete agent">✕</button>
+                              onMouseEnter={() => setHoveredBtnKey(`del-a-${agent.id}`)} onMouseLeave={() => setHoveredBtnKey(null)} title="Delete agent" aria-label="Delete agent">✕</button>
                           )}
                         </div>
                       )}
