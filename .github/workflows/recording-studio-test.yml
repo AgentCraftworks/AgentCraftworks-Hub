@@ -3,13 +3,13 @@ name: "Recording Studio: Cross-Repo Test (Hub)"
 # Tests that RecordingStudio workflow_call triggers work from AgentCraftworks-Hub.
 # Validates pipeline validation and SkillUp script generation workflows.
 #
-# SECURITY: The reusable workflows below reference @main, a mutable ref. Until
-# RecordingStudio publishes an immutable tag or agreed-upon SHA, a manual-approval
-# gate is enforced via the `recording-studio-external` GitHub environment.
+# SECURITY: Reusable workflows below are pinned to an immutable commit SHA from
+# RecordingStudio's main branch (pinned 2026-04-02). A manual-approval gate is
+# also enforced via the `recording-studio-external` GitHub environment.
 # To activate the gate: Settings → Environments → recording-studio-external →
-# add required reviewers. To complete the SHA pin, replace @main with the output of:
+# add required reviewers. To update the pinned SHA, run:
 #   git ls-remote https://github.com/AgentCraftworks/RecordingStudio.git refs/heads/main
-# and append `# main` as a trailing comment on each `uses:` line.
+# and replace the SHA on each `uses:` line, keeping the `# main` trailing comment.
 
 on:
   workflow_dispatch:
@@ -41,8 +41,7 @@ jobs:
     name: "Test: Pipeline Validate"
     needs: gate-external-call
     if: inputs.test_scope == 'pipeline-validate' || inputs.test_scope == 'all'
-    # Replace @main with a pinned SHA once RecordingStudio publishes a stable ref.
-    uses: AgentCraftworks/RecordingStudio/.github/workflows/recording-studio-pipeline.yml@main # main
+    uses: AgentCraftworks/RecordingStudio/.github/workflows/recording-studio-pipeline.yml@b91943ffa818c0e06f087fb08afd9e18e496bd87 # main
     with:
       slug: "all"
       run_voice: false
@@ -52,8 +51,7 @@ jobs:
     name: "Test: SkillUp Script Generation"
     needs: gate-external-call
     if: inputs.test_scope == 'skillup-script' || inputs.test_scope == 'all'
-    # Replace @main with a pinned SHA once RecordingStudio publishes a stable ref.
-    uses: AgentCraftworks/RecordingStudio/.github/workflows/skillup.yml@main # main
+    uses: AgentCraftworks/RecordingStudio/.github/workflows/skillup.yml@b91943ffa818c0e06f087fb08afd9e18e496bd87 # main
     with:
       topic: "AgentCraftworks Hub MCP Server Architecture"
       format: "video"
