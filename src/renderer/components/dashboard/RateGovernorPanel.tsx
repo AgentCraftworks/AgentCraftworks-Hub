@@ -1,6 +1,7 @@
 // RateGovernorPanel.tsx — Traffic light zone, quota pools, priority tiers, circuit breakers
 import type { HubRateGovernorData } from '@shared/hub-types'
-import { RefreshCw, Shield, Zap } from 'lucide-react'
+import { RefreshCw, Shield } from 'lucide-react'
+import * as ps from './panel-styles'
 
 interface Props {
   data: HubRateGovernorData | null
@@ -8,29 +9,29 @@ interface Props {
 }
 
 const zoneColors = {
-  GREEN: { bg: 'bg-green-500', glow: 'shadow-green-500/40', text: 'text-green-400', label: 'Normal' },
-  AMBER: { bg: 'bg-amber-500', glow: 'shadow-amber-500/40', text: 'text-amber-400', label: 'Pressure' },
-  RED: { bg: 'bg-red-500', glow: 'shadow-red-500/40', text: 'text-red-400', label: 'Critical' },
+  GREEN: { bg: '#22c55e', glow: '0 0 8px rgba(34,197,94,0.4)', text: '#4ade80', label: 'Normal' },
+  AMBER: { bg: '#f59e0b', glow: '0 0 8px rgba(245,158,11,0.4)', text: '#fbbf24', label: 'Pressure' },
+  RED: { bg: '#ef4444', glow: '0 0 8px rgba(239,68,68,0.4)', text: '#f87171', label: 'Critical' },
 } as const
 
 const circuitLabels = {
-  CLOSED: { text: 'text-green-400', label: '●' },
-  PRE_EMPTIVE_OPEN: { text: 'text-amber-400', label: '◐' },
-  HALF_OPEN: { text: 'text-amber-400', label: '◑' },
-  OPEN: { text: 'text-red-400', label: '○' },
+  CLOSED: { text: '#4ade80', label: '●' },
+  PRE_EMPTIVE_OPEN: { text: '#fbbf24', label: '◐' },
+  HALF_OPEN: { text: '#fbbf24', label: '◑' },
+  OPEN: { text: '#f87171', label: '○' },
 } as const
 
 function QuotaBar({ label, remaining, total }: { label: string; remaining: number; total: number }) {
   const pct = total > 0 ? (remaining / total) * 100 : 0
-  const color = pct > 40 ? 'bg-green-500' : pct > 15 ? 'bg-amber-500' : 'bg-red-500'
+  const color = pct > 40 ? '#22c55e' : pct > 15 ? '#f59e0b' : '#ef4444'
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-white/60">{label}</span>
-        <span className="text-white/80 tabular-nums">{remaining.toLocaleString()} / {total.toLocaleString()}</span>
+    <div style={{ ...ps.stackSm, gap: '4px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+        <span style={ps.textSecondary}>{label}</span>
+        <span style={{ ...ps.textPrimary, fontVariantNumeric: 'tabular-nums' }}>{remaining.toLocaleString()} / {total.toLocaleString()}</span>
       </div>
-      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${Math.max(pct, 1)}%` }} />
+      <div style={{ ...ps.thinBarTrack, height: '6px' }}>
+        <div style={{ height: '100%', borderRadius: '999px', transition: 'width 500ms', backgroundColor: color, width: `${Math.max(pct, 1)}%` }} />
       </div>
     </div>
   )
@@ -38,16 +39,16 @@ function QuotaBar({ label, remaining, total }: { label: string; remaining: numbe
 
 function PriorityBadge({ tier, zone }: { tier: 'P0' | 'P1' | 'P2'; zone: 'GREEN' | 'AMBER' | 'RED' }) {
   const status =
-    tier === 'P0' ? { label: 'Active', color: 'text-green-400' } :
-    tier === 'P1' ? (zone === 'RED' ? { label: 'Constrained', color: 'text-amber-400' } : { label: 'Active', color: 'text-green-400' }) :
-    zone === 'RED' ? { label: 'Parked', color: 'text-red-400' } :
-    zone === 'AMBER' ? { label: 'Throttled', color: 'text-amber-400' } :
-    { label: 'Active', color: 'text-green-400' }
+    tier === 'P0' ? { label: 'Active', color: '#4ade80' } :
+    tier === 'P1' ? (zone === 'RED' ? { label: 'Constrained', color: '#fbbf24' } : { label: 'Active', color: '#4ade80' }) :
+    zone === 'RED' ? { label: 'Parked', color: '#f87171' } :
+    zone === 'AMBER' ? { label: 'Throttled', color: '#fbbf24' } :
+    { label: 'Active', color: '#4ade80' }
 
   return (
-    <div className="flex items-center justify-between text-xs" data-testid={`hub-priority-${tier.toLowerCase()}`}>
-      <span className="text-white/60 font-mono">{tier}</span>
-      <span className={`font-medium ${status.color}`}>{status.label}</span>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }} data-testid={`hub-priority-${tier.toLowerCase()}`}>
+      <span style={{ ...ps.textSecondary, fontFamily: 'monospace' }}>{tier}</span>
+      <span style={{ fontWeight: 500, color: status.color }}>{status.label}</span>
     </div>
   )
 }
@@ -55,14 +56,14 @@ function PriorityBadge({ tier, zone }: { tier: 'P0' | 'P1' | 'P2'; zone: 'GREEN'
 export function RateGovernorPanel({ data, onRefresh }: Props) {
   if (!data) {
     return (
-      <div className="bg-white/5 rounded-xl p-4 border border-white/10" data-testid="hub-rate-governor">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-white/80 text-sm font-medium">
+      <div style={ps.panelCard} data-testid="hub-rate-governor">
+        <div style={ps.panelHeaderSpaced}>
+          <div style={{ ...ps.flexRow, fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.8)' }}>
             <Shield size={14} /> Rate Governor
           </div>
-          <button onClick={onRefresh} className="text-white/40 hover:text-white/80 transition"><RefreshCw size={12} /></button>
+          <button type="button" onClick={onRefresh} style={ps.refreshBtn}><RefreshCw size={12} /></button>
         </div>
-        <div className="text-white/30 text-xs text-center py-6">No rate governor data</div>
+        <div style={{ ...ps.loadingState, paddingTop: '24px', paddingBottom: '24px' }}>No rate governor data</div>
       </div>
     )
   }
@@ -71,77 +72,76 @@ export function RateGovernorPanel({ data, onRefresh }: Props) {
   const zone = zoneColors[state.trafficLight]
 
   return (
-    <div className="bg-white/5 rounded-xl p-4 border border-white/10" data-testid="hub-rate-governor">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 text-white/80 text-sm font-medium">
+    <div style={ps.panelCard} data-testid="hub-rate-governor">
+      <div style={ps.panelHeaderSpaced}>
+        <div style={{ ...ps.flexRow, fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.8)' }}>
           <Shield size={14} /> Rate Governor
         </div>
-        <button onClick={onRefresh} className="text-white/40 hover:text-white/80 transition"><RefreshCw size={12} /></button>
+        <button type="button" onClick={onRefresh} style={ps.refreshBtn}><RefreshCw size={12} /></button>
       </div>
 
       {/* Traffic Light */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex gap-1.5">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', gap: '6px' }}>
           {(['GREEN', 'AMBER', 'RED'] as const).map((z) => (
             <div
               key={z}
-              className={`w-5 h-5 rounded-full transition-all ${
-                z === state.trafficLight
-                  ? `${zoneColors[z].bg} ${zoneColors[z].glow} shadow-lg`
-                  : 'bg-white/10'
-              }`}
+              style={{
+                width: '20px', height: '20px', borderRadius: '50%', transition: 'all 300ms',
+                backgroundColor: z === state.trafficLight ? zoneColors[z].bg : 'rgba(255,255,255,0.1)',
+                boxShadow: z === state.trafficLight ? zoneColors[z].glow : 'none',
+              }}
               data-testid={`hub-zone-${z.toLowerCase()}`}
             />
           ))}
         </div>
         <div>
-          <span className={`text-lg font-bold ${zone.text}`} data-testid="hub-zone-label">{state.trafficLight}</span>
-          <span className="text-white/40 text-xs ml-2">{zone.label}</span>
+          <span style={{ fontSize: '18px', fontWeight: 700, color: zone.text }} data-testid="hub-zone-label">{state.trafficLight}</span>
+          <span style={{ ...ps.textMuted, fontSize: '12px', marginLeft: '8px' }}>{zone.label}</span>
         </div>
       </div>
 
       {/* Quota Pools */}
-      <div className="space-y-2 mb-4" data-testid="hub-quota-pools">
+      <div style={{ ...ps.stackSm, marginBottom: '16px' }} data-testid="hub-quota-pools">
         <QuotaBar label="GitHub" remaining={github.windowRemaining} total={github.windowTotal} />
         <QuotaBar label="Copilot" remaining={copilot.windowRemaining} total={copilot.windowTotal} />
       </div>
 
       {/* Priority Tiers */}
-      <div className="space-y-1.5 mb-4" data-testid="hub-priority-tiers">
-        <div className="text-[10px] text-white/40 uppercase tracking-wider">Priority Tiers</div>
+      <div style={{ ...ps.stackSm, gap: '6px', marginBottom: '16px' }} data-testid="hub-priority-tiers">
+        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Priority Tiers</div>
         <PriorityBadge tier="P0" zone={state.trafficLight} />
         <PriorityBadge tier="P1" zone={state.trafficLight} />
         <PriorityBadge tier="P2" zone={state.trafficLight} />
       </div>
 
       {/* Circuit Breakers */}
-      <div className="flex items-center gap-3 text-xs mb-3" data-testid="hub-circuits">
-        <span className="text-white/40">Circuits:</span>
-        <span className={circuitLabels[state.circuitStateByQuota.github].text}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', marginBottom: '12px' }} data-testid="hub-circuits">
+        <span style={ps.textMuted}>Circuits:</span>
+        <span style={{ color: circuitLabels[state.circuitStateByQuota.github].text }}>
           {circuitLabels[state.circuitStateByQuota.github].label} GitHub
         </span>
-        <span className={circuitLabels[state.circuitStateByQuota.copilot].text}>
+        <span style={{ color: circuitLabels[state.circuitStateByQuota.copilot].text }}>
           {circuitLabels[state.circuitStateByQuota.copilot].label} Copilot
         </span>
         {state.cascadeMode === 'sequential' && (
-          <span className="text-amber-400">◐ Sequential</span>
+          <span style={{ color: '#fbbf24' }}>◐ Sequential</span>
         )}
       </div>
 
-      {/* Agent Tokens (compact) */}
+      {/* Agent Tokens */}
       {agents.length > 0 && (
         <div data-testid="hub-agent-tokens">
-          <div className="text-[10px] text-white/40 uppercase tracking-wider mb-1">Agents ({agents.length})</div>
-          <div className="space-y-1 max-h-28 overflow-y-auto">
+          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Agents ({agents.length})</div>
+          <div style={{ ...ps.stackSm, gap: '4px', maxHeight: '112px', overflowY: 'auto' }}>
             {agents.map((a) => {
               const utilPct = a.reserved > 0 ? Math.round((a.used / a.reserved) * 100) : 0
               return (
-                <div key={a.agentId} className="flex items-center justify-between text-[11px]">
-                  <span className="text-white/60 font-mono truncate max-w-[120px]">{a.agentId}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white/40">{a.priority}</span>
-                    <span className={`tabular-nums ${utilPct > 80 ? 'text-red-400' : utilPct > 50 ? 'text-amber-400' : 'text-green-400'}`}>
+                <div key={a.agentId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{a.agentId}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={ps.textMuted}>{a.priority}</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums', color: utilPct > 80 ? '#f87171' : utilPct > 50 ? '#fbbf24' : '#4ade80' }}>
                       {utilPct}%
                     </span>
                   </div>

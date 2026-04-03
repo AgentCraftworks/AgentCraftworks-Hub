@@ -1,22 +1,23 @@
 // ActionsMinutesPanel.tsx — GitHub Actions minutes usage and estimated total cost
 import type { BillingData } from '@shared/hub-types'
 import { Timer, AlertTriangle } from 'lucide-react'
+import * as ps from './panel-styles'
 
 interface Props {
   data: BillingData | null
 }
 
 const OS_MULTIPLIERS = [
-  { label: 'Ubuntu (1×)', key: 'ubuntu' as const, color: 'bg-green-500' },
-  { label: 'Windows (2×)', key: 'windows' as const, color: 'bg-blue-500' },
-  { label: 'macOS (10×)', key: 'macos' as const, color: 'bg-orange-500' },
+  { label: 'Ubuntu (1×)', key: 'ubuntu' as const, color: '#22c55e' },
+  { label: 'Windows (2×)', key: 'windows' as const, color: '#3b82f6' },
+  { label: 'macOS (10×)', key: 'macos' as const, color: '#f97316' },
 ]
 
 export function ActionsMinutesPanel({ data }: Props) {
   if (!data) {
     return (
       <Panel>
-        <div className="text-white/30 text-xs flex items-center justify-center h-16">Loading…</div>
+        <div style={{ ...ps.loadingState, height: '64px' }}>Loading…</div>
       </Panel>
     )
   }
@@ -24,10 +25,10 @@ export function ActionsMinutesPanel({ data }: Props) {
   if (data.error) {
     return (
       <Panel>
-        <div className="flex flex-col items-center justify-center h-24 gap-2 text-white/30">
+        <div style={{ ...ps.errorState, height: '96px' }}>
           <AlertTriangle size={18} />
-          <p className="text-xs text-center">
-            Requires <span className="text-white/60">read:enterprise</span> scope
+          <p style={ps.errorDetail}>
+            Requires <span style={ps.scopeHighlight}>read:enterprise</span> scope
           </p>
         </div>
       </Panel>
@@ -35,39 +36,37 @@ export function ActionsMinutesPanel({ data }: Props) {
   }
 
   const m = data.actionsMinutes!
-  const pct = m.includedMinutes > 0
-    ? Math.min(100, Math.round((m.totalMinutesUsed / m.includedMinutes) * 100))
-    : 0
-  const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-green-500'
+  const pct = m.includedMinutes > 0 ? Math.min(100, Math.round((m.totalMinutesUsed / m.includedMinutes) * 100)) : 0
+  const barColor = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#22c55e'
   const breakdown = m.minutesUsedBreakdown
   const total = m.totalMinutesUsed || 1
 
   return (
     <Panel>
       {/* Main progress */}
-      <div className="mb-4">
-        <div className="flex justify-between text-xs mb-1.5">
-          <span className="text-white/60">{m.totalMinutesUsed.toLocaleString()} min used</span>
-          <span className="text-white/40">{m.includedMinutes.toLocaleString()} included</span>
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
+          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{m.totalMinutesUsed.toLocaleString()} min used</span>
+          <span style={ps.textMuted}>{m.includedMinutes.toLocaleString()} included</span>
         </div>
-        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+        <div style={ps.barTrack}>
+          <div style={{ height: '100%', borderRadius: '999px', transition: 'width 300ms', backgroundColor: barColor, width: `${pct}%` }} />
         </div>
-        <div className="text-[10px] text-white/30 mt-1">{pct}% of included minutes used</div>
+        <div style={{ ...ps.finePrint, marginTop: '4px' }}>{pct}% of included minutes used</div>
       </div>
 
       {/* OS breakdown bars */}
-      <div className="space-y-1.5 mb-4">
+      <div style={{ ...ps.stackSm, gap: '6px', marginBottom: '16px' }}>
         {OS_MULTIPLIERS.map(({ label, key, color }) => {
           const mins = breakdown[key] ?? 0
           const barW = Math.round((mins / total) * 100)
           return (
-            <div key={key} className="flex items-center gap-2 text-[11px]">
-              <span className="text-white/40 w-28 flex-shrink-0">{label}</span>
-              <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${color}`} style={{ width: `${barW}%` }} />
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
+              <span style={{ ...ps.textMuted, width: '112px', flexShrink: 0 }}>{label}</span>
+              <div style={{ ...ps.thinBarTrack, flex: 1 }}>
+                <div style={{ height: '100%', borderRadius: '999px', backgroundColor: color, width: `${barW}%` }} />
               </div>
-              <span className="text-white/50 tabular-nums w-14 text-right">
+              <span style={{ color: 'rgba(255,255,255,0.5)', fontVariantNumeric: 'tabular-nums', width: '56px', textAlign: 'right' }}>
                 {mins.toLocaleString()} min
               </span>
             </div>
@@ -77,15 +76,15 @@ export function ActionsMinutesPanel({ data }: Props) {
 
       {/* Overage */}
       {m.totalPaidMinutesUsed > 0 && (
-        <div className="border-t border-white/10 pt-3 flex justify-between text-xs">
-          <span className="text-amber-400">Overage minutes</span>
-          <span className="text-amber-400 font-mono">{m.totalPaidMinutesUsed.toLocaleString()}</span>
+        <div style={{ ...ps.divider, display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+          <span style={{ color: '#fbbf24' }}>Overage minutes</span>
+          <span style={{ color: '#fbbf24', fontFamily: 'monospace' }}>{m.totalPaidMinutesUsed.toLocaleString()}</span>
         </div>
       )}
       {m.estimatedCostUsd > 0 && (
-        <div className="flex justify-between text-xs mt-1">
-          <span className="text-white/40">Est. total cost</span>
-          <span className="text-amber-400 font-mono">${m.estimatedCostUsd.toFixed(2)}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '4px' }}>
+          <span style={ps.textMuted}>Est. total cost</span>
+          <span style={{ color: '#fbbf24', fontFamily: 'monospace' }}>${m.estimatedCostUsd.toFixed(2)}</span>
         </div>
       )}
     </Panel>
@@ -94,8 +93,8 @@ export function ActionsMinutesPanel({ data }: Props) {
 
 function Panel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-      <div className="flex items-center gap-2 text-sm font-semibold text-white/80 mb-3">
+    <div style={ps.panelCard}>
+      <div style={ps.panelHeader}>
         <Timer size={14} />
         Actions Minutes
       </div>
