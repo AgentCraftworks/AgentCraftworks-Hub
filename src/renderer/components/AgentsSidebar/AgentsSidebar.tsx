@@ -12,8 +12,10 @@ interface AgentsSidebarProps {
 }
 
 // --- Shared inline styles ---
+const TAB_STRIP_WIDTH_PX = 44
+
 const overlayPanel = (width: string): React.CSSProperties => ({
-  position: 'absolute', right: '44px', top: 0, bottom: 0, width,
+  position: 'absolute', right: `${TAB_STRIP_WIDTH_PX}px`, top: 0, bottom: 0, width,
   display: 'flex', flexDirection: 'column',
   borderLeft: '1px solid var(--bg-hover)', zIndex: 20,
   background: 'var(--bg-secondary)', boxShadow: '-4px 0 16px rgba(0, 0, 0, 0.35)',
