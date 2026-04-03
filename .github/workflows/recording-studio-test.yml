@@ -41,7 +41,6 @@ jobs:
     name: "Test: Pipeline Validate"
     needs: gate-external-call
     if: inputs.test_scope == 'pipeline-validate' || inputs.test_scope == 'all'
-    # Replace @main with a pinned SHA once RecordingStudio publishes a stable ref.
     uses: AgentCraftworks/RecordingStudio/.github/workflows/recording-studio-pipeline.yml@b91943ffa818c0e06f087fb08afd9e18e496bd87 # main
     with:
       slug: "all"
@@ -52,7 +51,6 @@ jobs:
     name: "Test: SkillUp Script Generation"
     needs: gate-external-call
     if: inputs.test_scope == 'skillup-script' || inputs.test_scope == 'all'
-    # Replace @main with a pinned SHA once RecordingStudio publishes a stable ref.
     uses: AgentCraftworks/RecordingStudio/.github/workflows/skillup.yml@b91943ffa818c0e06f087fb08afd9e18e496bd87 # main
     with:
       topic: "AgentCraftworks Hub MCP Server Architecture"
