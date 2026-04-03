@@ -27,7 +27,7 @@ const sectionHeader: React.CSSProperties = {
 const smallBtn: React.CSSProperties = {
   fontSize: '12px', paddingLeft: '4px', paddingRight: '4px', paddingTop: '2px', paddingBottom: '2px',
   borderRadius: '4px', background: 'transparent', border: 'none', cursor: 'pointer',
-  color: 'var(--text-muted)', transition: 'background 150ms',
+  color: 'var(--text-muted)',
 }
 
 const outlineBtn: React.CSSProperties = {
