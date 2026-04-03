@@ -76,6 +76,16 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
   const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null)
 
   useEffect(() => {
+    setHoveredFolderId(null)
+    setHoveredAgentId(null)
+
+    return () => {
+      setHoveredFolderId(null)
+      setHoveredAgentId(null)
+    }
+  }, [activeTab, selectedFolderId])
+
+  useEffect(() => {
     window.tangentAPI.config.get().then((config: any) => {
       if (config.editor) setEditor(config.editor)
       if (config.startFolder) setStartFolder(config.startFolder)
