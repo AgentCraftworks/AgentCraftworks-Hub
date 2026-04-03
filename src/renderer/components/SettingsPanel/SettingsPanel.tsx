@@ -74,14 +74,17 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
   const [agentForm, setAgentForm] = useState({ name: '', command: '', args: '', cwdPath: '' })
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null)
   const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null)
+  const [hoveredBtnKey, setHoveredBtnKey] = useState<string | null>(null)
 
   useEffect(() => {
     setHoveredFolderId(null)
     setHoveredAgentId(null)
+    setHoveredBtnKey(null)
 
     return () => {
       setHoveredFolderId(null)
       setHoveredAgentId(null)
+      setHoveredBtnKey(null)
     }
   }, [activeTab, selectedFolderId])
 
@@ -153,9 +156,9 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '16px', paddingRight: '16px', paddingTop: '12px', paddingBottom: '12px', borderBottom: '1px solid var(--bg-hover)', background: 'var(--bg-secondary)' }}>
           <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>Settings</span>
-          <button type="button" onClick={onClose} style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-muted)', background: 'none', border: 'none' }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'none')} title="Close settings" aria-label="Close settings">✕</button>
+          <button type="button" onClick={onClose} style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-muted)', background: hoveredBtnKey === 'close' ? 'var(--bg-hover)' : 'none', border: 'none' }}
+            onMouseEnter={() => setHoveredBtnKey('close')}
+            onMouseLeave={() => setHoveredBtnKey(null)} title="Close settings" aria-label="Close settings">✕</button>
         </div>
 
         {/* Tabs */}
@@ -186,8 +189,8 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input type="text" value={startFolder} onChange={(e) => handleStartFolderChange(e.target.value)} placeholder="Default: home directory" style={{ ...inputStyle, flex: 1 }}
                     onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')} onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--bg-hover)')} />
-                  <button type="button" onClick={handleBrowseFolder} style={{ ...outlineBtn, flexShrink: 0 }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--bg-secondary)')}>Browse</button>
+                  <button type="button" onClick={handleBrowseFolder} style={{ ...outlineBtn, flexShrink: 0, background: hoveredBtnKey === 'browse-folder' ? 'var(--bg-hover)' : 'var(--bg-secondary)' }}
+                    onMouseEnter={() => setHoveredBtnKey('browse-folder')} onMouseLeave={() => setHoveredBtnKey(null)}>Browse</button>
                 </div>
                 <p style={helpText}>Default working directory for new terminal sessions</p>
               </div>
@@ -204,8 +207,8 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
               {/* Config File */}
               <div style={fieldGroup}>
                 <label style={labelStyle}>Configuration File</label>
-                <button type="button" onClick={handleOpenConfig} style={outlineBtn}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--bg-secondary)')}>Open Config File</button>
+                <button type="button" onClick={handleOpenConfig} style={{ ...outlineBtn, background: hoveredBtnKey === 'open-config' ? 'var(--bg-hover)' : 'var(--bg-secondary)' }}
+                  onMouseEnter={() => setHoveredBtnKey('open-config')} onMouseLeave={() => setHoveredBtnKey(null)}>Open Config File</button>
                 <p style={helpText}>Open ~/AgentCraftworks/config.json in your editor</p>
               </div>
               {/* Import / Export */}
@@ -216,14 +219,14 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                     const bundle = await window.tangentAPI.config.exportConfig()
                     const filePath = await window.tangentAPI.dialog.saveFile({ defaultPath: 'tangent-config.json', filters: [{ name: 'JSON', extensions: ['json'] }] })
                     if (!filePath) return; await window.tangentAPI.config.writeExport(filePath, bundle)
-                  }} style={outlineBtn} onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--bg-secondary)')}>Export Config</button>
+                  }} style={{ ...outlineBtn, background: hoveredBtnKey === 'export-config' ? 'var(--bg-hover)' : 'var(--bg-secondary)' }} onMouseEnter={() => setHoveredBtnKey('export-config')} onMouseLeave={() => setHoveredBtnKey(null)}>Export Config</button>
                   <button type="button" onClick={async () => {
                     const filePath = await window.tangentAPI.dialog.openFile([{ name: 'JSON', extensions: ['json'] }])
                     if (!filePath) return; const bundle = await window.tangentAPI.config.readImport(filePath); if (!bundle) return
                     const result = await window.tangentAPI.config.importConfig(bundle)
                     if (result.config) { if (result.config.editor) setEditor(result.config.editor); if (result.config.startFolder) setStartFolder(result.config.startFolder); if (result.config.fontSize) handleFontSizeChange(result.config.fontSize) }
                     if (result.agents) setFolders(result.agents)
-                  }} style={outlineBtn} onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--bg-secondary)')}>Import Config</button>
+                  }} style={{ ...outlineBtn, background: hoveredBtnKey === 'import-config' ? 'var(--bg-hover)' : 'var(--bg-secondary)' }} onMouseEnter={() => setHoveredBtnKey('import-config')} onMouseLeave={() => setHoveredBtnKey(null)}>Import Config</button>
                 </div>
                 <p style={helpText}>Export or import config.json and agents.json as a single file</p>
               </div>
@@ -253,8 +256,8 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                         <button type="button" onClick={() => setDeletingId(null)} style={cancelBtn}>Cancel</button>
                       </div>
                     ) : (
-                      <button type="button" onClick={() => setDeletingId(folder.id)} style={{ ...hoverDeleteBtn, opacity: hoveredFolderId === folder.id ? 1 : 0 }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = '#f85149')} onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')} title="Delete project">✕</button>
+                      <button type="button" onClick={() => setDeletingId(folder.id)} style={{ ...hoverDeleteBtn, opacity: hoveredFolderId === folder.id ? 1 : 0, color: hoveredBtnKey === `del-f-${folder.id}` ? '#f85149' : 'var(--text-muted)' }}
+                        onMouseEnter={() => setHoveredBtnKey(`del-f-${folder.id}`)} onMouseLeave={() => setHoveredBtnKey(null)} title="Delete project">✕</button>
                     )}
                   </div>
                   {expandedIds.has(folder.id) && folder.agents.length > 0 && (
@@ -269,9 +272,9 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                   )}
                 </div>
               ))}
-              <button type="button" onClick={handleAddFolder} style={dashedAddBtn}
-                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-muted)' }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--bg-hover)' }}>+ Add Folder</button>
+              <button type="button" onClick={handleAddFolder} style={{ ...dashedAddBtn, color: hoveredBtnKey === 'add-folder' ? 'var(--text-primary)' : 'var(--text-muted)', borderColor: hoveredBtnKey === 'add-folder' ? 'var(--text-muted)' : 'var(--bg-hover)' }}
+                onMouseEnter={() => setHoveredBtnKey('add-folder')}
+                onMouseLeave={() => setHoveredBtnKey(null)}>+ Add Folder</button>
             </div>
           )}
 
@@ -317,16 +320,16 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                             <div style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{agent.name}</div>
                             <div style={{ fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>{agent.command}{agent.args.length > 0 ? ` ${agent.args.join(' ')}` : ''}</div>
                           </div>
-                          <button type="button" onClick={() => handleEditAgent(agent)} style={{ ...hoverDeleteBtn, opacity: hoveredAgentId === agent.id ? 1 : 0, fontSize: '11px' }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')} onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')} title="Edit agent">✎</button>
+                          <button type="button" onClick={() => handleEditAgent(agent)} style={{ ...hoverDeleteBtn, opacity: hoveredAgentId === agent.id ? 1 : 0, fontSize: '11px', color: hoveredBtnKey === `edit-a-${agent.id}` ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                            onMouseEnter={() => setHoveredBtnKey(`edit-a-${agent.id}`)} onMouseLeave={() => setHoveredBtnKey(null)} title="Edit agent">✎</button>
                           {deletingAgentId === agent.id ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                               <button type="button" onClick={() => handleDeleteAgent(agent.id)} style={dangerBtn}>Confirm</button>
                               <button type="button" onClick={() => setDeletingAgentId(null)} style={cancelBtn}>Cancel</button>
                             </div>
                           ) : (
-                            <button type="button" onClick={() => setDeletingAgentId(agent.id)} style={{ ...hoverDeleteBtn, opacity: hoveredAgentId === agent.id ? 1 : 0 }}
-                              onMouseEnter={(e) => (e.currentTarget.style.color = '#f85149')} onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')} title="Delete agent">✕</button>
+                            <button type="button" onClick={() => setDeletingAgentId(agent.id)} style={{ ...hoverDeleteBtn, opacity: hoveredAgentId === agent.id ? 1 : 0, color: hoveredBtnKey === `del-a-${agent.id}` ? '#f85149' : 'var(--text-muted)' }}
+                              onMouseEnter={() => setHoveredBtnKey(`del-a-${agent.id}`)} onMouseLeave={() => setHoveredBtnKey(null)} title="Delete agent">✕</button>
                           )}
                         </div>
                       )}
@@ -335,9 +338,9 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                   {selectedFolder.agents.length === 0 && (
                     <p style={{ fontSize: '12px', paddingLeft: '8px', paddingRight: '8px', paddingTop: '4px', paddingBottom: '4px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No agents in this folder</p>
                   )}
-                  <button type="button" onClick={handleAddAgent} style={dashedAddBtn}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-muted)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--bg-hover)' }}>+ Add Agent</button>
+                  <button type="button" onClick={handleAddAgent} style={{ ...dashedAddBtn, color: hoveredBtnKey === 'add-agent' ? 'var(--text-primary)' : 'var(--text-muted)', borderColor: hoveredBtnKey === 'add-agent' ? 'var(--text-muted)' : 'var(--bg-hover)' }}
+                    onMouseEnter={() => setHoveredBtnKey('add-agent')}
+                    onMouseLeave={() => setHoveredBtnKey(null)}>+ Add Agent</button>
                 </div>
               )}
               {!selectedFolderId && <p style={helpText}>Select a project folder to manage its agents</p>}
