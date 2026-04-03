@@ -291,14 +291,14 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
                             <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                               <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)' }}>{lbl}</label>
                               <input autoFocus={key === 'name'} type="text" value={agentForm[key]} onChange={(e) => setAgentForm(prev => ({ ...prev, [key]: e.target.value }))} placeholder={ph}
-                                style={{ ...inputStyle, background: 'var(--bg-primary)' }} onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')} onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--bg-hover)')} />
+                                className="focus:outline-none focus:ring-1 focus:ring-[var(--accent)]" style={{ ...inputStyle, background: 'var(--bg-primary)' }} />
                             </div>
                           ))}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)' }}>Working Directory</label>
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <input type="text" value={agentForm.cwdPath} onChange={(e) => setAgentForm(prev => ({ ...prev, cwdPath: e.target.value }))} placeholder="e.g. D:\git\myproject"
-                                style={{ ...inputStyle, flex: 1, background: 'var(--bg-primary)' }} onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')} onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--bg-hover)')} />
+                                className="focus:outline-none focus:ring-1 focus:ring-[var(--accent)]" style={{ ...inputStyle, flex: 1, background: 'var(--bg-primary)' }} />
                               <button type="button" onClick={async () => { const s = await (window as any).tangentAPI.dialog.openFolder(); if (s) setAgentForm(prev => ({ ...prev, cwdPath: s })) }}
                                 style={{ ...outlineBtn, flexShrink: 0, paddingLeft: '8px', paddingRight: '8px', paddingTop: '4px', paddingBottom: '4px', background: 'none', color: 'var(--text-secondary)' }}>Browse</button>
                             </div>
