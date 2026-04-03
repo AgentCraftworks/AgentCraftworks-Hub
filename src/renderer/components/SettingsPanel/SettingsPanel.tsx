@@ -155,7 +155,7 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
           <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>Settings</span>
           <button type="button" onClick={onClose} style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-muted)', background: 'none', border: 'none' }}
             onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'none')} title="Close settings">✕</button>
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'none')} title="Close settings" aria-label="Close settings">✕</button>
         </div>
 
         {/* Tabs */}
