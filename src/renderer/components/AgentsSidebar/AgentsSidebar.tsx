@@ -32,11 +32,10 @@ const smallBtn: React.CSSProperties = {
   color: 'var(--text-muted)',
 }
 
-const outlineBtn: React.CSSProperties = {
+const outlineBtnBase: React.CSSProperties = {
   paddingLeft: '8px', paddingRight: '8px', paddingTop: '6px', paddingBottom: '6px',
   fontSize: '13px', borderRadius: '4px', cursor: 'pointer',
-  color: 'var(--text-secondary)', background: 'transparent',
-  border: '1px solid var(--bg-hover)', transition: 'background 150ms',
+  color: 'var(--text-secondary)', border: '1px solid var(--bg-hover)', transition: 'background 150ms',
 }
 
 export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed }: AgentsSidebarProps) {
@@ -175,14 +174,14 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
           </div>
           <div style={{ flex: 1, overflowY: 'auto', paddingLeft: '4px', paddingRight: '4px', paddingTop: '4px', paddingBottom: '4px' }}>
             {groups.map((group, idx) => (
-              <button type="button" key={group.id} onClick={() => handlePickGroup(idx)} style={{ ...outlineBtn, width: '100%', textAlign: 'left', marginBottom: '2px', border: 'none', color: 'var(--text-primary)' }}>
+              <OutlineButton key={group.id} onClick={() => handlePickGroup(idx)} style={{ width: '100%', textAlign: 'left', marginBottom: '2px', border: 'none', color: 'var(--text-primary)' }}>
                 {group.name} <span style={{ fontSize: '12px', marginLeft: '4px', color: 'var(--text-muted)' }}>({group.agents.length})</span>
-              </button>
+              </OutlineButton>
             ))}
           </div>
           <div style={{ padding: '8px', borderTop: '1px solid var(--bg-hover)', display: 'flex', gap: '8px' }}>
-            <button type="button" onClick={handlePickNewGroup} style={{ ...outlineBtn, flex: 1 }}>+ New Project</button>
-            <button type="button" onClick={() => setPendingPrefill(null)} style={{ ...outlineBtn, color: 'var(--text-muted)' }}>Cancel</button>
+            <OutlineButton onClick={handlePickNewGroup} style={{ flex: 1 }}>+ New Project</OutlineButton>
+            <OutlineButton onClick={() => setPendingPrefill(null)} style={{ color: 'var(--text-muted)' }}>Cancel</OutlineButton>
           </div>
         </div>
       )}
@@ -215,7 +214,7 @@ export function AgentsSidebar({ activeSessionId, prefillAgent, onPrefillConsumed
           </div>
           {showForm ? <AgentForm initialValues={editingAgent ?? undefined} onSave={handleSaveAgent} onCancel={handleCancelForm} /> : (
             <div style={{ padding: '8px', borderTop: '1px solid var(--bg-hover)' }}>
-              <button type="button" onClick={() => { setEditingAgent(null); setShowForm(true) }} style={{ ...outlineBtn, width: '100%' }}>+ Add Agent</button>
+              <OutlineButton onClick={() => { setEditingAgent(null); setShowForm(true) }} style={{ width: '100%' }}>+ Add Agent</OutlineButton>
             </div>
           )}
         </div>
@@ -246,6 +245,20 @@ const EMOJI_RE = /^([\p{Emoji_Presentation}\p{Extended_Pictographic}][\u{FE00}-\
 function parseGroupName(name: string): { emoji: string | null; text: string } {
   const m = name.match(EMOJI_RE)
   return m ? { emoji: m[1], text: name.slice(m[0].length) } : { emoji: null, text: name }
+}
+
+// --- Outline Button Component (with hover background) ---
+function OutlineButton({ style, children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      type="button"
+      {...props}
+      onMouseEnter={(e) => { setHovered(true); props.onMouseEnter?.(e) }}
+      onMouseLeave={(e) => { setHovered(false); props.onMouseLeave?.(e) }}
+      style={{ ...outlineBtnBase, background: hovered ? 'var(--bg-hover)' : 'transparent', ...style }}
+    >{children}</button>
+  )
 }
 
 // --- Vertical Tab Component ---
