@@ -1,6 +1,6 @@
 // HubDashboard.tsx — Main dashboard container (Task Manager style)
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { makeStyles } from '@fluentui/react-components'
+import { makeStyles, Spinner } from '@fluentui/react-components'
 import { useHubMonitor } from '@/hooks/useHubMonitor'
 import { RateLimitPanel } from './RateLimitPanel'
 import { TokenActivityPanel } from './TokenActivityPanel'
@@ -14,7 +14,7 @@ import { WorkflowHealthPanel } from './WorkflowHealthPanel'
 import { RateGovernorPanel } from './RateGovernorPanel'
 import { HandoffFlowPanel } from './HandoffFlowPanel'
 import { SquadCoordinatorPanel } from './SquadCoordinatorPanel'
-import { RefreshCw, Loader, Settings, ShieldAlert } from 'lucide-react'
+import { RefreshCw, Settings, ShieldAlert } from 'lucide-react'
 import type { ActionRequest, ActionAuthoritySnapshot, OperationLogEntry } from '@shared/hub-types'
 import { buildDeepLink } from '@shared/hub-contracts'
 import type { HubDeepLinkFilters } from '@shared/hub-contracts'
@@ -311,7 +311,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
             {shareCopied ? 'Copied' : 'Share'}
           </button>
           <button type="button" onClick={refreshAll} disabled={loading} className={s.headerBtn} style={{ opacity: loading ? 0.4 : undefined }}>
-            {loading ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={12} />}
+            {loading ? <Spinner size="extra-small" /> : <RefreshCw size={12} />}
             Refresh
           </button>
         </div>
