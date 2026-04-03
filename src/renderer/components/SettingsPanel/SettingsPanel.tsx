@@ -80,12 +80,6 @@ export function SettingsPanel({ onClose, fontSize, setFontSize }: SettingsPanelP
     setHoveredFolderId(null)
     setHoveredAgentId(null)
     setHoveredBtnKey(null)
-
-    return () => {
-      setHoveredFolderId(null)
-      setHoveredAgentId(null)
-      setHoveredBtnKey(null)
-    }
   }, [activeTab, selectedFolderId])
 
   useEffect(() => {
