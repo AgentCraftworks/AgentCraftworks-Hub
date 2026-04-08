@@ -70,6 +70,38 @@ AgentCraftworks-Hub/
 └── AGENTS.md
 ```
 
+## Definition of Done — Customer Experience (MANDATORY)
+
+> **⚠️ API tests passing alone does NOT constitute "done."**
+> A feature is only complete when a real customer can experience it and that experience has been validated with real product screenshots.
+
+### How CX validation is triggered — the `cx:required` label
+
+Not every PR produces a tangible customer-facing outcome. To keep the standard meaningful without blocking unrelated work:
+
+- **Label issues and PRs with `cx:required`** when the work directly produces or modifies a customer-visible experience.
+- Work **without** `cx:required` must carry `cx:exempt` **and** a one-line justification in the PR description (e.g., "backend-only refactor", "partial implementation — CX tracked in #456").
+- Author or maintainer can apply `cx:exempt`. **When in doubt, apply `cx:required`.**
+
+### Blocking requirements for all PRs
+
+- [ ] Unit tests pass
+- [ ] TypeScript compiles clean
+- [ ] ESLint passes
+- [ ] PR reviewed and approved
+- [ ] PR is labelled **either** `cx:required` **or** `cx:exempt` (with justification)
+
+### Additional blocking requirements for `cx:required` work
+
+> These only apply when the PR or linked issue carries the `cx:required` label.
+
+- [ ] **CX capture spec exists** — `RecordingStudio/capture-specs/<feature-slug>.yaml` with `source_app`, `pass_criteria`, and real product selectors
+- [ ] **CX synthetic test passes** — Playwright automation runs against the real running product; all `pass_criteria` assertions succeed
+- [ ] **CX demo capture exists** — at least one screenshot or screen recording showing the feature from a customer perspective (real product only, no mocks)
+- [ ] **Demo slug added to `cx-capture.yml`** — so the feature stays validated on every weekly CX synthetic run going forward
+
+Full tooling instructions: `AgentCraftworks/RecordingStudio/AGENTS.md`
+
 ## Coding Conventions
 
 - **Runtime**: Node.js 22+ with CommonJS in scripts, ES Modules in src/
