@@ -70,6 +70,38 @@ AgentCraftworks-Hub/
 └── AGENTS.md
 ```
 
+## Definition of Done — Customer Experience (MANDATORY)
+
+> **⚠️ API tests passing alone does NOT constitute "done."**
+> A feature is only complete when a real customer can experience it and that experience has been validated with real product screenshots.
+
+### How CX validation is triggered — the `cx:required` label
+
+Not every PR produces a tangible customer-facing outcome. To keep the standard meaningful without blocking unrelated work:
+
+- **Label issues and PRs with `cx:required`** when the work directly produces or modifies a customer-visible experience.
+- Work **without** `cx:required` must carry `cx:exempt` **and** a one-line justification in the PR description (e.g., "backend-only refactor", "partial implementation — CX tracked in #456").
+- Author or maintainer can apply `cx:exempt`. **When in doubt, apply `cx:required`.**
+
+### Blocking requirements for all PRs
+
+- [ ] Unit tests pass
+- [ ] TypeScript compiles clean
+- [ ] ESLint passes
+- [ ] PR reviewed and approved
+- [ ] PR is labelled **either** `cx:required` **or** `cx:exempt` (with justification)
+
+### Additional blocking requirements for `cx:required` work
+
+> These only apply when the PR or linked issue carries the `cx:required` label.
+
+- [ ] **CX capture spec exists** — `RecordingStudio/capture-specs/<feature-slug>.yaml` with `source_app`, `pass_criteria`, and real product selectors
+- [ ] **CX synthetic test passes** — Playwright automation runs against the real running product; all `pass_criteria` assertions succeed
+- [ ] **CX demo capture exists** — at least one screenshot or screen recording showing the feature from a customer perspective (real product only, no mocks)
+- [ ] **Demo slug added to `cx-capture.yml`** — so the feature stays validated on every weekly CX synthetic run going forward
+
+Full tooling instructions: `AgentCraftworks/RecordingStudio/AGENTS.md`
+
 ## Coding Conventions
 
 - **Runtime**: Node.js 22+ with CommonJS in scripts, ES Modules in src/
@@ -98,6 +130,42 @@ For in-terminal / VS Code integrated terminal use, run:
 hub monitor    # Full Ink TUI (refreshes every 30s)
 hub status     # Single-line summary
 ```
+
+## Branching Policy (MANDATORY)
+
+This repo follows the org-standard promotion flow:
+
+```
+feature/|feat/|fix/|hotfix/|chore/|docs/* → staging → main → v* tag → GitHub Release
+```
+
+| Branch | Purpose | Protection |
+|--------|---------|------------|
+| `main` | Production-ready code; tags trigger releases | PRs from staging only, 1 review required |
+| `staging` | Integration testing; pushes trigger cross-platform builds | PRs from branches starting with `feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, or `docs/`; 1 review required |
+| `feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, `docs/` | Development work | No restrictions |
+
+### Accepted branch prefixes for PRs to staging
+
+`feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, `docs/`
+
+### Release process
+
+1. Feature branch → PR to staging (CI runs, review required)
+2. Push to staging triggers cross-platform staging builds (artifacts)
+3. Test staging artifacts internally
+4. staging → PR to main (policy guard enforces this)
+5. After merge, staging-refresh recreates staging from main
+6. Tag main with `vX.Y.Z` to trigger release to GitHub Releases
+
+### Workflows
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | Push to non-main/staging branches; PRs to staging/main | Lint + build validation |
+| `ghaw-branch-policy-guard.yml` | PRs to staging/main | Enforces branch flow |
+| `ghaw-build-deploy.yml` | Push to staging/main, `v*` tags, or manual dispatch | Unified build: staging (unpacked dirs), production (full installers), or release (publish to GitHub Releases) |
+| `ghaw-staging-refresh.yml` | staging→main PR merged | Resets staging to match main |
 
 ## Build & Run
 
