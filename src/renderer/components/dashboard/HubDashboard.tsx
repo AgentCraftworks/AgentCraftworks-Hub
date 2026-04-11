@@ -28,6 +28,21 @@ interface Props {
 
 export type DashboardFocusSection = 'overview' | 'activity' | 'workflows' | 'billing' | 'auth' | 'audit' | 'requests'
 
+function canApproveRequests(authority: ActionAuthoritySnapshot | null): boolean {
+  if (!authority || typeof authority !== 'object') {
+    return false
+  }
+
+  const value = authority as Record<string, unknown>
+  const capabilities = value.capabilities
+  if (Array.isArray(capabilities)) {
+    return capabilities.includes('approve_action')
+  }
+
+  const tier = typeof value.currentTier === 'string' ? value.currentTier : null
+  return tier === 'T3' || tier === 'T4' || tier === 'T5'
+}
+
 export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialFocus = 'overview', initialFilters, onClose }: Props) {
   const { snapshot, history, loading, error, lastUpdated, refresh: refreshMonitor } = useHubMonitor(enterprise)
   const [showAuth, setShowAuth] = useState(false)
@@ -340,7 +355,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
           <div ref={requestsRef} className="xl:col-span-2">
             <ActionRequestPanel
               requests={actionRequests}
-              canApprove={authority?.capabilities.includes('approve_action') ?? false}
+              canApprove={canApproveRequests(authority)}
               loading={actionRequestsLoading}
               onApprove={handleApprove}
               onReject={handleReject}
