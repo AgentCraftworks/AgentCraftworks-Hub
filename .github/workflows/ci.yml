@@ -2,13 +2,28 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches-ignore:
+      - main
+      - staging
+    tags-ignore:
+      - '**'
   pull_request:
-    branches: [main]
+    branches:
+      - staging
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   build-packages:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +44,7 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 

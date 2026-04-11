@@ -1,5 +1,6 @@
-﻿// HubDashboard.tsx — Main dashboard container (Task Manager style)
+// HubDashboard.tsx — Main dashboard container (Task Manager style)
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { makeStyles, Spinner } from '@fluentui/react-components'
 import { useHubMonitor } from '@/hooks/useHubMonitor'
 import { RateLimitPanel } from './RateLimitPanel'
 import { TokenActivityPanel } from './TokenActivityPanel'
@@ -13,7 +14,7 @@ import { WorkflowHealthPanel } from './WorkflowHealthPanel'
 import { RateGovernorPanel } from './RateGovernorPanel'
 import { HandoffFlowPanel } from './HandoffFlowPanel'
 import { SquadCoordinatorPanel } from './SquadCoordinatorPanel'
-import { RefreshCw, Loader, Settings, ShieldAlert } from 'lucide-react'
+import { RefreshCw, Settings, ShieldAlert } from 'lucide-react'
 import type { ActionRequest, ActionAuthoritySnapshot, OperationLogEntry } from '@shared/hub-types'
 import { buildDeepLink } from '@shared/hub-contracts'
 import type { HubDeepLinkFilters } from '@shared/hub-contracts'
@@ -43,7 +44,129 @@ function canApproveRequests(authority: ActionAuthoritySnapshot | null): boolean 
   return tier === 'T3' || tier === 'T4' || tier === 'T5'
 }
 
+const useStyles = makeStyles({
+  root: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    overflow: 'hidden',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingLeft: '24px',
+    paddingRight: '24px',
+    paddingTop: '10px',
+    paddingBottom: '10px',
+    borderBottomWidth: '1px',
+    borderBottomStyle: 'solid',
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+    flexShrink: 0,
+  },
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  headerRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  headerTitle: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  headerEnterprise: {
+    fontSize: '12px',
+    color: 'rgba(255,255,255,0.3)',
+  },
+  headerScope: {
+    fontSize: '12px',
+    color: 'rgba(147,197,253,0.8)',
+  },
+  headerBtn: {
+    fontSize: '12px',
+    color: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    transitionProperty: 'color',
+    transitionDuration: '150ms',
+    ':hover': {
+      color: 'rgba(255,255,255,0.7)',
+    },
+  },
+  pendingBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '10px',
+    backgroundColor: 'rgba(234,179,8,0.15)',
+    color: 'rgb(253,224,71)',
+    borderRadius: '999px',
+    paddingLeft: '8px',
+    paddingRight: '8px',
+    paddingTop: '2px',
+    paddingBottom: '2px',
+    cursor: 'pointer',
+    borderWidth: 0,
+    transitionProperty: 'background-color',
+    transitionDuration: '150ms',
+    ':hover': {
+      backgroundColor: 'rgba(234,179,8,0.25)',
+    },
+  },
+  timestamp: {
+    fontSize: '10px',
+    color: 'rgba(255,255,255,0.3)',
+  },
+  errorBanner: {
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderBottomWidth: '1px',
+    borderBottomStyle: 'solid',
+    borderBottomColor: 'rgba(239,68,68,0.2)',
+    paddingLeft: '16px',
+    paddingRight: '16px',
+    paddingTop: '8px',
+    paddingBottom: '8px',
+    fontSize: '12px',
+    color: 'rgb(248,113,113)',
+  },
+  scrollArea: {
+    flex: 1,
+    overflowY: 'auto',
+    paddingLeft: '24px',
+    paddingRight: '24px',
+    paddingTop: '16px',
+    paddingBottom: '16px',
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gap: '16px',
+    maxWidth: '1152px',
+    marginLeft: 'auto',
+    marginRight: 'auto',
+    '@media (min-width: 1280px)': {
+      gridTemplateColumns: 'repeat(2, 1fr)',
+    },
+  },
+  fullWidth: {
+    '@media (min-width: 1280px)': {
+      gridColumn: 'span 2',
+    },
+  },
+})
+
 export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialFocus = 'overview', initialFilters, onClose }: Props) {
+  const s = useStyles()
   const { snapshot, history, loading, error, lastUpdated, refresh: refreshMonitor } = useHubMonitor(enterprise)
   const [showAuth, setShowAuth] = useState(false)
   const [operationLog, setOperationLog] = useState<OperationLogEntry[]>([])
@@ -80,12 +203,8 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
     try {
       const reqs = await window.hubAPI.listActionRequests({ limit: 100 })
       const filtered = reqs.filter((request) => {
-        if (initialFilters?.state && request.state !== initialFilters.state) {
-          return false
-        }
-        if (initialFilters?.actor && request.actor !== initialFilters.actor) {
-          return false
-        }
+        if (initialFilters?.state && request.state !== initialFilters.state) return false
+        if (initialFilters?.actor && request.actor !== initialFilters.actor) return false
         return true
       })
       setActionRequests(filtered)
@@ -111,17 +230,13 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
       void refreshOperationLog()
       void refreshActionRequests()
     }, 5000)
-
     return () => clearInterval(timer)
   }, [refreshOperationLog, refreshActionRequests])
 
   useEffect(() => {
     return window.hubAPI.onOperationLogUpdated((entry) => {
       setOperationLog((current) => {
-        if (scopeLabel && entry.scope !== scopeLabel) {
-          return current
-        }
-
+        if (scopeLabel && entry.scope !== scopeLabel) return current
         const deduped = current.filter((item) => item.id !== entry.id)
         return [entry, ...deduped].slice(0, 100)
       })
@@ -148,37 +263,19 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
   }, [refreshActionRequests])
 
   const handleCopyShareLink = useCallback(async () => {
-    const link = buildDeepLink({
-      panel: initialFocus,
-      scopeRaw: scopeLabel || '',
-      filters: initialFilters,
-    })
-    try {
-      await navigator.clipboard.writeText(link)
-    } catch {
-      return
-    }
+    const link = buildDeepLink({ panel: initialFocus, scopeRaw: scopeLabel || '', filters: initialFilters })
+    try { await navigator.clipboard.writeText(link) } catch { return }
     setShareCopied(true)
-    if (shareCopiedTimerRef.current) {
-      clearTimeout(shareCopiedTimerRef.current)
-    }
-    shareCopiedTimerRef.current = setTimeout(() => {
-      setShareCopied(false)
-    }, 2000)
+    if (shareCopiedTimerRef.current) clearTimeout(shareCopiedTimerRef.current)
+    shareCopiedTimerRef.current = setTimeout(() => setShareCopied(false), 2000)
   }, [initialFocus, initialFilters, scopeLabel])
 
   useEffect(() => () => {
-    if (shareCopiedTimerRef.current) {
-      clearTimeout(shareCopiedTimerRef.current)
-    }
+    if (shareCopiedTimerRef.current) clearTimeout(shareCopiedTimerRef.current)
   }, [])
 
   useEffect(() => {
-    if (initialFocus === 'auth') {
-      setShowAuth(true)
-      return
-    }
-
+    if (initialFocus === 'auth') { setShowAuth(true); return }
     const targetRef =
       initialFocus === 'activity' ? activityRef
       : initialFocus === 'workflows' ? workflowsRef
@@ -186,125 +283,83 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
       : initialFocus === 'audit' ? auditRef
       : initialFocus === 'requests' ? requestsRef
       : overviewRef
-
     targetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [initialFocus])
 
+  const pendingCount = actionRequests.filter((r) => r.state === 'pending').length
+
   return (
-    <div className="flex flex-col h-full bg-black/20 overflow-hidden">
+    <div className={s.root}>
       {/* Header bar */}
-      <div className="flex items-center justify-between px-6 py-2.5 border-b border-white/10 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-white/80">AgentCraftworks Hub</span>
-          <span className="text-xs text-white/30">{enterprise} Enterprise</span>
-          {scopeLabel && <span className="text-xs text-blue-300/80">Scope: {scopeLabel}</span>}
+      <div className={s.header}>
+        <div className={s.headerLeft}>
+          <span className={s.headerTitle}>AgentCraftworks Hub</span>
+          <span className={s.headerEnterprise}>{enterprise} Enterprise</span>
+          {scopeLabel && <span className={s.headerScope}>Scope: {scopeLabel}</span>}
         </div>
-        <div className="flex items-center gap-3">
+        <div className={s.headerRight}>
           {onClose && (
-            <button
-              onClick={onClose}
-              className="text-xs text-white/50 hover:text-white/80 transition-colors"
-              title="Return to main view"
-            >
+            <button type="button" onClick={onClose} className={s.headerBtn} title="Return to main view">
               Back to Main
             </button>
           )}
-          {actionRequests.filter((r) => r.state === 'pending').length > 0 && (
-            <button
-              onClick={() => requestsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="flex items-center gap-1 text-[10px] bg-yellow-500/15 text-yellow-300 rounded-full px-2 py-0.5 hover:bg-yellow-500/25 transition-colors"
-              title="Scroll to pending action requests"
-            >
+          {pendingCount > 0 && (
+            <button type="button" onClick={() => requestsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className={s.pendingBadge} title="Scroll to pending action requests">
               <ShieldAlert size={10} />
-              {actionRequests.filter((r) => r.state === 'pending').length} pending
+              {pendingCount} pending
             </button>
           )}
           {lastUpdated && (
-            <span className="text-[10px] text-white/30">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
+            <span className={s.timestamp}>Updated {lastUpdated.toLocaleTimeString()}</span>
           )}
           <button
-            onClick={() => setShowAuth(s => !s)}
-            className={`flex items-center gap-1.5 text-xs transition-colors ${showAuth ? 'text-blue-400' : 'text-white/40 hover:text-white/70'}`}
+            type="button"
+            onClick={() => setShowAuth(prev => !prev)}
+            className={s.headerBtn}
+            style={{ color: showAuth ? 'rgb(96,165,250)' : undefined }}
             title="Configure GitHub token"
           >
             <Settings size={12} />
             Auth
           </button>
-          <button
-            onClick={handleCopyShareLink}
-            className="text-xs text-white/40 hover:text-white/70 transition-colors"
-            title="Copy deep-link"
-          >
+          <button type="button" onClick={handleCopyShareLink} className={s.headerBtn} title="Copy deep-link">
             {shareCopied ? 'Copied' : 'Share'}
           </button>
-          <button
-            onClick={refreshAll}
-            disabled={loading}
-            className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors disabled:opacity-40"
-          >
-            {loading
-              ? <Loader size={12} className="animate-spin" />
-              : <RefreshCw size={12} />}
+          <button type="button" onClick={refreshAll} disabled={loading} className={s.headerBtn} style={{ opacity: loading ? 0.4 : undefined }}>
+            {loading ? <Spinner size="extra-small" /> : <RefreshCw size={12} />}
             Refresh
           </button>
         </div>
       </div>
 
-      {/* Error banner */}
-      {error && (
-        <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-2 text-xs text-red-400">
-          {error}
-        </div>
-      )}
+      {error && <div className={s.errorBanner}>{error}</div>}
 
       {/* Dashboard grid */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-w-6xl mx-auto">
-
-          {/* Auth settings panel — shown when settings gear is clicked */}
+      <div className={s.scrollArea}>
+        <div className={s.grid}>
           {showAuth && (
-            <div className="xl:col-span-2">
+            <div className={s.fullWidth}>
               <TokenAuthPanel onSaved={() => setShowAuth(false)} />
             </div>
           )}
 
-          {/* Rate Limit — always full width on smaller, left col on xl */}
-          <div ref={overviewRef} className="xl:col-span-1">
-            <RateLimitPanel
-              data={snapshot?.rateLimit ?? null}
-              history={history}
-              onRefresh={refreshAll}
-            />
+          <div ref={overviewRef}>
+            <RateLimitPanel data={snapshot?.rateLimit ?? null} history={history} onRefresh={refreshAll} />
           </div>
 
-          {/* Rate Governor — governance layer beside raw rate limit */}
-          <div className="xl:col-span-1">
-            <RateGovernorPanel
-              data={snapshot?.rateGovernor ?? null}
-              onRefresh={refreshAll}
-            />
+          <div>
+            <RateGovernorPanel data={snapshot?.rateGovernor ?? null} onRefresh={refreshAll} />
           </div>
 
-          {/* Agent Handoff Flow — full width */}
-          <div className="xl:col-span-2">
-            <HandoffFlowPanel
-              data={snapshot?.handoffs ?? null}
-              onRefresh={refreshAll}
-            />
+          <div className={s.fullWidth}>
+            <HandoffFlowPanel data={snapshot?.handoffs ?? null} onRefresh={refreshAll} />
           </div>
 
-          {/* Squad Coordinator — full width */}
-          <div className="xl:col-span-2">
-            <SquadCoordinatorPanel
-              data={snapshot?.squadState ?? null}
-              onRefresh={refreshAll}
-            />
+          <div className={s.fullWidth}>
+            <SquadCoordinatorPanel data={snapshot?.squadState ?? null} onRefresh={refreshAll} />
           </div>
 
-          {/* Token Activity */}
-          <div ref={activityRef} className="xl:col-span-1">
+          <div ref={activityRef}>
             <TokenActivityPanel
               topCallers={snapshot?.topCallers ?? []}
               topCallers1h={snapshot?.topCallers1h ?? []}
@@ -314,45 +369,27 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
             />
           </div>
 
-          {/* Actions Minutes */}
-          <div className="xl:col-span-1">
+          <div>
             <ActionsMinutesPanel data={snapshot?.billing ?? null} />
           </div>
 
-          {/* Copilot Usage */}
-          <div className="xl:col-span-1">
+          <div>
             <CopilotUsagePanel data={snapshot?.copilot ?? null} />
           </div>
 
-          {/* Workflow Health */}
-          <div ref={workflowsRef} className="xl:col-span-2">
-            <WorkflowHealthPanel
-              entries={operationLog}
-              actionRequests={actionRequests}
-              lastUpdated={lastUpdated}
-              onRefresh={refreshAll}
-            />
+          <div ref={workflowsRef} className={s.fullWidth}>
+            <WorkflowHealthPanel entries={operationLog} actionRequests={actionRequests} lastUpdated={lastUpdated} onRefresh={refreshAll} />
           </div>
 
-          {/* Billing — spans full width */}
-          <div ref={billingRef} className="xl:col-span-2">
-            <BillingPanel
-              billing={snapshot?.billing ?? null}
-              copilot={snapshot?.copilot ?? null}
-            />
+          <div ref={billingRef} className={s.fullWidth}>
+            <BillingPanel billing={snapshot?.billing ?? null} copilot={snapshot?.copilot ?? null} />
           </div>
 
-          {/* Operation Log */}
-          <div ref={auditRef} className="xl:col-span-2">
-            <OperationLogPanel
-              entries={operationLog}
-              loading={operationLogLoading}
-              onRefresh={refreshOperationLog}
-            />
+          <div ref={auditRef} className={s.fullWidth}>
+            <OperationLogPanel entries={operationLog} loading={operationLogLoading} onRefresh={refreshOperationLog} />
           </div>
 
-          {/* Action Request Queue */}
-          <div ref={requestsRef} className="xl:col-span-2">
+          <div ref={requestsRef} className={s.fullWidth}>
             <ActionRequestPanel
               requests={actionRequests}
               canApprove={canApproveRequests(authority)}

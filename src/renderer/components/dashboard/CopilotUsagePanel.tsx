@@ -2,6 +2,7 @@
 import type { CopilotUsageData } from '@shared/hub-types'
 import { Bot, AlertTriangle } from 'lucide-react'
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import * as ps from './panel-styles'
 
 interface Props {
   data: CopilotUsageData | null
@@ -26,7 +27,7 @@ export function CopilotUsagePanel({ data }: Props) {
   if (!data) {
     return (
       <Panel>
-        <div className="text-white/30 text-xs flex items-center justify-center h-16">Loading…</div>
+        <div style={{ ...ps.loadingState, height: '64px' }}>Loading…</div>
       </Panel>
     )
   }
@@ -34,10 +35,10 @@ export function CopilotUsagePanel({ data }: Props) {
   if (data.error) {
     return (
       <Panel>
-        <div className="flex flex-col items-center justify-center h-24 gap-2 text-white/30">
+        <div style={{ ...ps.errorState, height: '96px' }}>
           <AlertTriangle size={18} />
-          <p className="text-xs text-center">
-            Requires <span className="text-white/60">manage_billing:copilot</span> scope
+          <p style={ps.errorDetail}>
+            Requires <span style={ps.scopeHighlight}>manage_billing:copilot</span> scope
           </p>
         </div>
       </Panel>
@@ -55,7 +56,7 @@ export function CopilotUsagePanel({ data }: Props) {
   return (
     <Panel>
       {/* Stats row */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div style={{ ...ps.grid2, marginBottom: '16px' }}>
         {seats ? (
           <>
             <Stat label="Total Seats" value={seats.total} />
@@ -70,22 +71,19 @@ export function CopilotUsagePanel({ data }: Props) {
           </>
         )}
         <Stat label="Premium Requests" value={data.premiumRequestsUsed} highlight />
-        <Stat
-          label="Plan"
-          value={data.planType ?? '—'}
-        />
+        <Stat label="Plan" value={data.planType ?? '—'} />
       </div>
 
       {/* Model breakdown chart */}
       {chartData.length > 0 && (
         <div>
-          <div className="text-[10px] text-white/30 mb-2">Suggestions by model (latest day)</div>
+          <div style={{ ...ps.finePrint, marginBottom: '8px' }}>Suggestions by model (latest day)</div>
           <ResponsiveContainer width="100%" height={80}>
             <BarChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
               <XAxis dataKey="name" tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} />
               <Tooltip
                 contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 4, fontSize: 11 }}
-                formatter={(v: number, _: string, p: { payload: { fullName: string } }) => [v.toLocaleString(), p.payload.fullName]}
+                formatter={(v: number, _: string, p: { payload?: { fullName?: string } }) => [v.toLocaleString(), p.payload?.fullName ?? '']}
               />
               <Bar dataKey="suggestions" radius={[2, 2, 0, 0]}>
                 {chartData.map((entry) => (
@@ -102,9 +100,9 @@ export function CopilotUsagePanel({ data }: Props) {
 
 function Stat({ label, value, highlight }: { label: string; value: number | string; highlight?: boolean }) {
   return (
-    <div className="bg-white/5 rounded-lg px-3 py-2">
-      <div className="text-[10px] text-white/40">{label}</div>
-      <div className={`text-lg font-bold tabular-nums ${highlight ? 'text-blue-400' : 'text-white/80'}`}>
+    <div style={ps.statBox}>
+      <div style={ps.statLabel}>{label}</div>
+      <div style={highlight ? ps.statValueHighlight : ps.statValue}>
         {typeof value === 'number' ? value.toLocaleString() : value}
       </div>
     </div>
@@ -113,8 +111,8 @@ function Stat({ label, value, highlight }: { label: string; value: number | stri
 
 function Panel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-      <div className="flex items-center gap-2 text-sm font-semibold text-white/80 mb-3">
+    <div style={ps.panelCard}>
+      <div style={ps.panelHeader}>
         <Bot size={14} />
         Copilot Usage
       </div>
