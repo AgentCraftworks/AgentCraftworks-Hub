@@ -1,7 +1,7 @@
 name: "GH-AW: Branch Policy Guard"
 
-# Enforces promotion flow: any branch -> staging -> main.
-# Staging accepts PRs from any branch; main only accepts staging.
+# Enforces only the final promotion step: staging -> main.
+# PRs into staging are unrestricted; PRs into main must come from staging.
 # Engagement Level: T1 (Observer) - validates PR branch topology only.
 
 on:
