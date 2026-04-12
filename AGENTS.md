@@ -147,7 +147,7 @@ any branch → staging → main → v* tag → GitHub Release
 
 ### Release process
 
-1. Feature branch → PR to staging (CI runs, review required)
+1. Any branch → PR to staging (CI runs, review required)
 2. Push to staging triggers cross-platform staging builds (artifacts)
 3. Test staging artifacts internally
 4. staging → PR to main (policy guard enforces this)
