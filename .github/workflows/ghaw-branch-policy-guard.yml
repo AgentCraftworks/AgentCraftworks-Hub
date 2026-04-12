@@ -1,7 +1,7 @@
 name: "GH-AW: Branch Policy Guard"
 
-# Enforces only the final promotion step: staging -> main.
-# PRs into staging are unrestricted; PRs into main must come from staging.
+# Enforces promotion flow: any branch -> staging -> main.
+# Staging accepts PRs from any branch; main only accepts staging.
 # Engagement Level: T1 (Observer) - validates PR branch topology only.
 
 on:
@@ -33,7 +33,7 @@ jobs:
 
           echo "PR flow: ${HEAD} -> ${BASE}"
 
-          # Only enforce: main <- staging
+          # Only enforce: PRs into main must come from staging
           if [[ "${BASE}" == "main" ]]; then
             if [[ "${HEAD}" != "staging" ]]; then
               echo "::error::PRs into main must come from staging. Got ${HEAD} -> main."

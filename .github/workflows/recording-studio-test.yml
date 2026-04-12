@@ -1,0 +1,61 @@
+name: "Recording Studio: Cross-Repo Test (Hub)"
+
+# Tests that RecordingStudio workflow_call triggers work from AgentCraftworks-Hub.
+# Validates pipeline validation and SkillUp script generation workflows.
+#
+# SECURITY: Reusable workflows below are pinned to an immutable commit SHA from
+# RecordingStudio's main branch (pinned 2026-04-02). A manual-approval gate is
+# also enforced via the `recording-studio-external` GitHub environment.
+# To activate the gate: Settings → Environments → recording-studio-external →
+# add required reviewers. To update the pinned SHA, run:
+#   git ls-remote https://github.com/AgentCraftworks/RecordingStudio.git refs/heads/main
+# and replace the SHA on each `uses:` line, keeping the `# main` trailing comment.
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_scope:
+        description: "Which test to run"
+        required: true
+        type: choice
+        options:
+          - pipeline-validate
+          - skillup-script
+          - all
+        default: pipeline-validate
+
+permissions:
+  contents: read
+
+jobs:
+  gate-external-call:
+    name: "Gate: Approve external workflow_call"
+    runs-on: ubuntu-latest
+    # Requires manual approval — configure required reviewers in
+    # Settings → Environments → recording-studio-external
+    environment: recording-studio-external
+    steps:
+      - run: echo "External workflow_call approved."
+
+  test-pipeline-validate:
+    name: "Test: Pipeline Validate"
+    needs: gate-external-call
+    if: inputs.test_scope == 'pipeline-validate' || inputs.test_scope == 'all'
+    uses: AgentCraftworks/RecordingStudio/.github/workflows/recording-studio-pipeline.yml@b91943ffa818c0e06f087fb08afd9e18e496bd87 # main
+    with:
+      slug: "all"
+      run_voice: false
+      voice: "stock"
+
+  test-skillup-script:
+    name: "Test: SkillUp Script Generation"
+    needs: gate-external-call
+    if: inputs.test_scope == 'skillup-script' || inputs.test_scope == 'all'
+    uses: AgentCraftworks/RecordingStudio/.github/workflows/skillup.yml@b91943ffa818c0e06f087fb08afd9e18e496bd87 # main
+    with:
+      topic: "AgentCraftworks Hub MCP Server Architecture"
+      format: "video"
+      skill_level: "intermediate"
+      tech_stack: "TypeScript, Electron, MCP"
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

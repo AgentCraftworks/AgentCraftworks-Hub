@@ -1,8 +1,9 @@
-﻿// RateLimitPanel.tsx — GitHub API rate limit gauge, sparkline, and countdown
+// RateLimitPanel.tsx — GitHub API rate limit gauge, sparkline, and countdown
 import { useState } from 'react'
 import type { RateLimitData, RateLimitSample } from '@shared/hub-types'
 import { AreaChart, Area, Tooltip, ResponsiveContainer, XAxis } from 'recharts'
 import { RefreshCw, Zap, Clock } from 'lucide-react'
+import * as ps from './panel-styles'
 
 type TimeRange = '1h' | '6h' | 'all'
 
@@ -25,14 +26,13 @@ function formatTime(ts: number): string {
 
 function UsageBar({ used, limit, color }: { used: number; limit: number; color: string }) {
   const pct = limit > 0 ? Math.round((used / limit) * 100) : 0
-  const barColor =
-    pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : color
+  const barColor = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : color
   return (
-    <div className="flex items-center gap-2 text-xs">
-      <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+    <div style={{ ...ps.flexRow, fontSize: '12px' }}>
+      <div style={{ ...ps.thinBarTrack, flex: 1, height: '6px' }}>
+        <div style={{ height: '100%', borderRadius: '999px', transition: 'width 300ms', backgroundColor: barColor, width: `${pct}%` }} />
       </div>
-      <span className="tabular-nums text-white/60 w-20 text-right">
+      <span style={{ fontVariantNumeric: 'tabular-nums', color: 'rgba(255,255,255,0.6)', width: '80px', textAlign: 'right' }}>
         {used.toLocaleString()} / {limit.toLocaleString()}
       </span>
     </div>
@@ -52,79 +52,59 @@ export function RateLimitPanel({ data, history, onRefresh }: Props) {
   if (!data) {
     return (
       <PanelShell title="API Rate Limits" icon={<Zap size={14} />} onRefresh={onRefresh}>
-        <div className="text-white/40 text-sm flex items-center justify-center h-24">Loading…</div>
+        <div style={{ ...ps.loadingState, height: '96px' }}>Loading…</div>
       </PanelShell>
     )
   }
 
   const { core, search, graphql, codeSearch } = data
   const corePct = Math.round((core.used / core.limit) * 100)
-
-  // Merge in-memory data.history (number[]) with persisted RateLimitSample[] history
-  // data.history is just coreUsed values without timestamps — use for live tail only when full history is empty
   const fullHistory = filterHistory(history, range)
   const chartData = fullHistory.length > 1
     ? fullHistory.map(s => ({ ts: s.ts, used: s.coreUsed, label: formatTime(s.ts) }))
     : data.history.map((used, i) => ({ ts: i, used, label: '' }))
-
-  // Tick labels: show every ~10th point to avoid crowding
   const tickInterval = Math.max(1, Math.floor(chartData.length / 6))
 
   return (
     <PanelShell title="API Rate Limits" icon={<Zap size={14} />} onRefresh={onRefresh}>
-      {/* Core gauge + current stats */}
-      <div className="flex items-center gap-4 mb-4">
-        <div className="relative flex-shrink-0 w-20 h-20">
-          <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+      {/* Core gauge + stats */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+        <div style={{ position: 'relative', flexShrink: 0, width: '80px', height: '80px' }}>
+          <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
             <circle cx="18" cy="18" r="15" fill="none" stroke="white" strokeOpacity="0.1" strokeWidth="3" />
-            <circle
-              cx="18" cy="18" r="15" fill="none"
+            <circle cx="18" cy="18" r="15" fill="none"
               stroke={corePct >= 90 ? '#ef4444' : corePct >= 70 ? '#f59e0b' : '#22c55e'}
-              strokeWidth="3"
-              strokeDasharray={`${corePct * 0.942} 94.2`}
-              strokeLinecap="round"
-            />
+              strokeWidth="3" strokeDasharray={`${corePct * 0.942} 94.2`} strokeLinecap="round" />
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-lg font-bold leading-none">{corePct}%</span>
-            <span className="text-[9px] text-white/50 mt-0.5">used</span>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+            <span style={{ fontSize: '18px', fontWeight: 700, lineHeight: 1 }}>{corePct}%</span>
+            <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>used</span>
           </div>
         </div>
-
-        <div className="flex-1 space-y-1.5">
-          <div className="text-xs text-white/50">Core REST</div>
-          <UsageBar used={core.used} limit={core.limit} color="bg-blue-500" />
-          <div className="text-xs text-white/40">
-            {core.remaining.toLocaleString()} remaining · resets in{' '}
-            <span className="text-white/70 font-mono">{formatEta(core.resetEtaMs)}</span>
+        <div style={{ flex: 1, ...ps.stackSm, gap: '6px' }}>
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Core REST</div>
+          <UsageBar used={core.used} limit={core.limit} color="#3b82f6" />
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>
+            {core.remaining.toLocaleString()} remaining · resets in <span style={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace' }}>{formatEta(core.resetEtaMs)}</span>
           </div>
-          <div className="text-xs text-white/30 flex items-center gap-1">
-            <Clock size={9} />
-            {core.limit.toLocaleString()} calls/hr · enterprise quota
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Clock size={9} /> {core.limit.toLocaleString()} calls/hr · enterprise quota
           </div>
         </div>
       </div>
 
-      {/* History chart with range selector */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-1">
-          <div className="text-[10px] text-white/30">
-            Core usage history ({chartData.length} samples)
-          </div>
-          <div className="flex gap-1">
+      {/* History chart */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+          <div style={ps.finePrint}>Core usage history ({chartData.length} samples)</div>
+          <div style={{ display: 'flex', gap: '4px' }}>
             {(['1h', '6h', 'all'] as TimeRange[]).map(r => (
-              <button
-                key={r}
-                onClick={() => setRange(r)}
-                className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${range === r ? 'bg-blue-500/30 text-blue-300' : 'text-white/30 hover:text-white/60'}`}
-              >
-                {r}
-              </button>
+              <button key={r} type="button" onClick={() => setRange(r)} style={range === r ? ps.tabActive : ps.tabInactive}>{r}</button>
             ))}
           </div>
         </div>
         {chartData.length > 1 ? (
-          <div className="h-16">
+          <div style={{ height: '64px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
                 <defs>
@@ -133,45 +113,26 @@ export function RateLimitPanel({ data, history, onRefresh }: Props) {
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis
-                  dataKey="label"
-                  tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 9 }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={tickInterval}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="used"
-                  stroke="#3b82f6"
-                  strokeWidth={1.5}
-                  fill="url(#rateGrad)"
-                  dot={false}
-                />
-                <Tooltip
-                  contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 4, fontSize: 11 }}
-                  formatter={(v: number) => [`${v.toLocaleString()} used`, '']}
-                  labelFormatter={(label) => label || ''}
-                />
+                <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 9 }} tickLine={false} axisLine={false} interval={tickInterval} />
+                <Area type="monotone" dataKey="used" stroke="#3b82f6" strokeWidth={1.5} fill="url(#rateGrad)" dot={false} />
+                <Tooltip contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 4, fontSize: 11 }} formatter={(v: number) => [`${v.toLocaleString()} used`, '']} labelFormatter={(label) => label || ''} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="h-8 flex items-center text-[10px] text-white/20">
-            Collecting history… (polls every 30s)
-          </div>
+          <div style={{ height: '32px', display: 'flex', alignItems: 'center', ...ps.finePrint }}>Collecting history… (polls every 30s)</div>
         )}
       </div>
 
       {/* Secondary endpoints */}
-      <div className="space-y-2 border-t border-white/5 pt-3">
+      <div style={{ ...ps.stackSm, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
         {[
-          { label: 'Search', ep: search, color: 'bg-purple-500' },
-          { label: 'GraphQL', ep: graphql, color: 'bg-cyan-500' },
-          { label: 'Code Search', ep: codeSearch, color: 'bg-orange-500' },
+          { label: 'Search', ep: search, color: '#a855f7' },
+          { label: 'GraphQL', ep: graphql, color: '#06b6d4' },
+          { label: 'Code Search', ep: codeSearch, color: '#f97316' },
         ].map(({ label, ep, color }) => (
           <div key={label}>
-            <div className="text-[10px] text-white/40 mb-0.5">{label}</div>
+            <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginBottom: '2px' }}>{label}</div>
             <UsageBar used={ep.used} limit={ep.limit} color={color} />
           </div>
         ))}
@@ -180,28 +141,12 @@ export function RateLimitPanel({ data, history, onRefresh }: Props) {
   )
 }
 
-// Shared panel shell
-function PanelShell({
-  title,
-  icon,
-  onRefresh,
-  children,
-}: {
-  title: string
-  icon: React.ReactNode
-  onRefresh: () => void
-  children: React.ReactNode
-}) {
+function PanelShell({ title, icon, onRefresh, children }: { title: string; icon: React.ReactNode; onRefresh: () => void; children: React.ReactNode }) {
   return (
-    <div className="bg-white/5 rounded-xl p-4 flex flex-col gap-1 border border-white/10">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 text-sm font-semibold text-white/80">
-          {icon}
-          {title}
-        </div>
-        <button onClick={onRefresh} className="text-white/30 hover:text-white/70 transition-colors">
-          <RefreshCw size={12} />
-        </button>
+    <div style={ps.panelCardFlex}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <div style={{ ...ps.flexRow, fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>{icon}{title}</div>
+        <button type="button" onClick={onRefresh} style={ps.refreshBtn}><RefreshCw size={12} /></button>
       </div>
       {children}
     </div>
