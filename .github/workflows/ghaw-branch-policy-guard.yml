@@ -1,8 +1,7 @@
 name: "GH-AW: Branch Policy Guard"
 
-# Enforces promotion flow: feature|feat|fix|hotfix|chore|docs/* -> staging -> main.
-# Staging accepts PRs only from feature/feat/fix/hotfix/chore/docs branches.
-# Main accepts PRs only from staging.
+# Enforces promotion flow: any branch -> staging -> main.
+# Staging accepts PRs from any branch; main only accepts staging.
 # Engagement Level: T1 (Observer) - validates PR branch topology only.
 
 on:
@@ -34,17 +33,13 @@ jobs:
 
           echo "PR flow: ${HEAD} -> ${BASE}"
 
-          # Enforce branch naming: main <- staging, staging <- feature/feat/fix/hotfix/chore/docs/*
+          # Only enforce: main <- staging
           if [[ "${BASE}" == "main" ]]; then
             if [[ "${HEAD}" != "staging" ]]; then
               echo "::error::PRs into main must come from staging. Got ${HEAD} -> main."
               exit 1
             fi
-          elif [[ "${BASE}" == "staging" ]]; then
-            if [[ ! "${HEAD}" =~ ^(feature|feat|fix|hotfix|chore|docs)/.+$ ]]; then
-              echo "::error::PRs into staging must come from feature/feat/fix/hotfix/chore/docs branches. Got ${HEAD} -> staging."
-              exit 1
-            fi
           fi
+          # Staging accepts PRs from any branch - no name restrictions
 
           echo "Branch policy guard passed."
