@@ -29,6 +29,42 @@ interface Props {
 
 export type DashboardFocusSection = 'overview' | 'activity' | 'workflows' | 'billing' | 'auth' | 'audit' | 'requests'
 
+function isObjectLike(value: unknown): value is object {
+  return typeof value === 'object' && value !== null
+}
+
+function getAuthorityCapabilities(authority: unknown): string[] | null {
+  if (!isObjectLike(authority) || !('capabilities' in authority)) {
+    return null
+  }
+
+  const { capabilities } = authority
+  if (!Array.isArray(capabilities) || !capabilities.every((capability) => typeof capability === 'string')) {
+    return null
+  }
+
+  return capabilities
+}
+
+function getAuthorityTier(authority: unknown): string | null {
+  if (!isObjectLike(authority) || !('currentTier' in authority)) {
+    return null
+  }
+
+  const { currentTier } = authority
+  return typeof currentTier === 'string' ? currentTier : null
+}
+
+function canApproveRequests(authority: ActionAuthoritySnapshot | null): boolean {
+  const capabilities = getAuthorityCapabilities(authority)
+  if (capabilities !== null) {
+    return capabilities.includes('approve_action')
+  }
+
+  const tier = getAuthorityTier(authority)
+  return tier === 'T3' || tier === 'T4' || tier === 'T5'
+}
+
 const useStyles = makeStyles({
   root: {
     display: 'flex',
@@ -377,7 +413,7 @@ export function HubDashboard({ enterprise = 'AICraftWorks', scopeLabel, initialF
           <div ref={requestsRef} className={s.fullWidth}>
             <ActionRequestPanel
               requests={actionRequests}
-              canApprove={authority?.capabilities.includes('approve_action') ?? false}
+              canApprove={canApproveRequests(authority)}
               loading={actionRequestsLoading}
               onApprove={handleApprove}
               onReject={handleReject}
