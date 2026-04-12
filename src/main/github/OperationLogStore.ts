@@ -2,6 +2,7 @@
 // Store: ~/.agentcraftworks-hub/operation-log.json
 // Mirrors the CLI implementation in scripts/hub-cli.js.
 
+import { randomUUID } from 'crypto'
 import { join } from 'path'
 import { homedir } from 'os'
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'fs'
@@ -10,6 +11,7 @@ import type { OperationLogEntry, OperationLogQuery, OperationLogAppendInput } fr
 const DATA_DIR = join(homedir(), '.agentcraftworks-hub')
 const OPLOG_PATH = join(DATA_DIR, 'operation-log.json')
 const MAX_ENTRIES = 2000
+const DEFAULT_QUERY_LIMIT = 100
 
 function ensureDir(): void {
   mkdirSync(DATA_DIR, { recursive: true })
@@ -38,7 +40,7 @@ function saveEntries(entries: OperationLogEntry[]): void {
  */
 export function appendOperationLog(input: OperationLogAppendInput): OperationLogEntry {
   const entry: OperationLogEntry = {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+    id: randomUUID(),
     ts: new Date().toISOString(),
     actor: input.actor ?? 'hub-desktop',
     action: input.action,
@@ -61,7 +63,7 @@ export function appendOperationLog(input: OperationLogAppendInput): OperationLog
  * Lists operation log entries, most recent first, with optional filtering.
  */
 export function listOperationLog(query: OperationLogQuery): OperationLogEntry[] {
-  const limit = query.limit != null && query.limit > 0 ? Math.min(query.limit, MAX_ENTRIES) : 100
+  const limit = query.limit != null && query.limit > 0 ? Math.min(query.limit, MAX_ENTRIES) : DEFAULT_QUERY_LIMIT
   const entries = loadEntries()
 
   const filtered = entries.filter((entry) => {

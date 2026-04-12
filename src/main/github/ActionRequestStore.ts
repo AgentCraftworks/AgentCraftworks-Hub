@@ -2,6 +2,7 @@
 // Store: ~/.agentcraftworks-hub/action-requests.json
 // Mirrors the CLI implementation in scripts/hub-cli.js.
 
+import { randomUUID } from 'crypto'
 import { join } from 'path'
 import { homedir } from 'os'
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'fs'
@@ -10,6 +11,7 @@ import type { ActionRequest, ActionRequestSubmitInput, ActionRequestQuery } from
 const DATA_DIR = join(homedir(), '.agentcraftworks-hub')
 const ACTION_REQUEST_PATH = join(DATA_DIR, 'action-requests.json')
 const MAX_REQUESTS = 1000
+const DEFAULT_QUERY_LIMIT = 100
 
 function ensureDir(): void {
   mkdirSync(DATA_DIR, { recursive: true })
@@ -38,7 +40,7 @@ function saveRequests(requests: ActionRequest[]): void {
  */
 export function submitActionRequest(input: ActionRequestSubmitInput): ActionRequest {
   const request: ActionRequest = {
-    id: `req-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+    id: `req-${randomUUID()}`,
     ts: new Date().toISOString(),
     actor: input.actor ?? 'unknown',
     action: input.action,
@@ -62,7 +64,7 @@ export function submitActionRequest(input: ActionRequestSubmitInput): ActionRequ
  * Lists action requests with optional state/scope filtering, most recent first.
  */
 export function listActionRequests(query: ActionRequestQuery): ActionRequest[] {
-  const limit = query.limit != null && query.limit > 0 ? Math.min(query.limit, MAX_REQUESTS) : 100
+  const limit = query.limit != null && query.limit > 0 ? Math.min(query.limit, MAX_REQUESTS) : DEFAULT_QUERY_LIMIT
   const requests = loadRequests()
 
   const filtered = requests.filter((req) => {
