@@ -136,22 +136,18 @@ hub status     # Single-line summary
 This repo follows the org-standard promotion flow:
 
 ```
-feature/|feat/|fix/|hotfix/|chore/|docs/* → staging → main → v* tag → GitHub Release
+any branch → staging → main → v* tag → GitHub Release
 ```
 
 | Branch | Purpose | Protection |
 |--------|---------|------------|
 | `main` | Production-ready code; tags trigger releases | PRs from staging only, 1 review required |
-| `staging` | Integration testing; pushes trigger cross-platform builds | PRs from branches starting with `feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, or `docs/`; 1 review required |
-| `feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, `docs/` | Development work | No restrictions |
-
-### Accepted branch prefixes for PRs to staging
-
-`feature/`, `feat/`, `fix/`, `hotfix/`, `chore/`, `docs/`
+| `staging` | Integration testing; pushes trigger cross-platform builds | PRs from any branch; 1 review required |
+| Any branch | Development work | No restrictions |
 
 ### Release process
 
-1. Feature branch → PR to staging (CI runs, review required)
+1. Any branch → PR to staging (CI runs, review required)
 2. Push to staging triggers cross-platform staging builds (artifacts)
 3. Test staging artifacts internally
 4. staging → PR to main (policy guard enforces this)
