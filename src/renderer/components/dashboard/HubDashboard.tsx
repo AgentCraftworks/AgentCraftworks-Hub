@@ -57,8 +57,8 @@ function getAuthorityTier(authority: unknown): string | null {
 
 function canApproveRequests(authority: ActionAuthoritySnapshot | null): boolean {
   const capabilities = getAuthorityCapabilities(authority)
-  if (capabilities?.includes('approve_action')) {
-    return true
+  if (capabilities !== null) {
+    return capabilities.includes('approve_action')
   }
 
   const tier = getAuthorityTier(authority)
