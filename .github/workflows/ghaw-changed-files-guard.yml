@@ -1,4 +1,4 @@
-name: ghaw-changed-files-guard
+name: "GH-AW: Changed Files Guard"
 
 on:
   pull_request:
