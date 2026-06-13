@@ -16,11 +16,10 @@ permissions:
 
 jobs:
   pr-readiness:
-    uses: AgentCraftworks/.github/.github/workflows/acw-pr-readiness-reusable.yml@main
+    uses: AgentCraftworks/.github/.github/workflows/acw-pr-readiness-reusable.yml@abe88f1a0dd7da73306bd06bf837f684789bde5e
     with:
       required_human_reviewer: jenperret
       enforced_base_branches: staging,main
       request_copilot_review: true
       copilot_reviewer_candidates: copilot,github-copilot[bot]
       escalation_label: needs-human-decision
-    secrets: inherit
