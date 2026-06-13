@@ -1,0 +1,3 @@
+Phase 1 pilot validation marker for Hub.
+Purpose: trigger PR readiness workflow checks on staging PR.
+Timestamp: 2026-06-13T09:43:33
