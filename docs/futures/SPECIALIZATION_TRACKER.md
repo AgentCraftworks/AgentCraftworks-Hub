@@ -70,13 +70,13 @@
 | MS-700 Teams Administrator | 2 | ❓ | ❓ | Modern Work core |
 | MS-102 M365 Administrator Expert | 1 | ❓ | ❓ | High |
 | SC-401 Implement Information Protection | 1 | ❓ | ❓ | Also needed for M365 Copilot Spec |
-| APL-4002 Prepare security and compliance for Copilot | 1 | ❓ | ❓ | ⚠️ Retiring — get before Jun 30, 2026 |
+| APL-4002 Prepare security and compliance for Copilot | 1 | ❓ | ❓ | ⛔ Already retired (Jun 30, 2026) — confirm replacement via Partner Center; SC-401 is the recommended path |
 
 ### Current Gaps
 
 - [ ] **Immediate:** Log in to Partner Center → Solutions → Modern Work → review current score and point breakdown
 - [ ] **Certifications:** Conduct skills audit across all staff; identify who needs which cert
-- [ ] **APL-4002 URGENT:** Retiring Jun 30, 2026 — required for M365 Copilot Spec; schedule exam within 30 days
+- [ ] ~~**APL-4002 URGENT:** Retiring Jun 30, 2026~~ **APL-4002 already retired.** Confirm via Partner Center if any completions before Jun 30 are still credited (see Item #1 above). Pursue SC-401 as replacement.
 - [ ] **Performance uplift:** Enroll 3–5 SMB customers in Copilot 30 trial (launching Aug 1, 2026) — each activation contributes to Modern Work performance score
 - [ ] **ASPX:** Register on ASPX (AI Business Solutions & Security Partner eXperience) to track Cowork MAU signals
 
@@ -84,7 +84,7 @@
 
 1. Audit Partner Center Modern Work score → document exact gap
 2. Register all staff certifications in Partner Center profile
-3. Schedule APL-4002 exams for 1–2 people (free retake via MAICPP benefits)
+3. ~~Schedule APL-4002 exams~~ — APL-4002 already retired. Pursue SC-401 as replacement (free retake vouchers via MAICPP still apply to SC-401)
 4. Enroll in Frontier Accelerate for Copilot motion (pre-sales funded Discovery Workshops count toward performance)
 5. Contact PDM to nominate for **Founder Circle / SMB Copilot Council** (deadline Aug 31, 2026)
 
@@ -101,7 +101,7 @@
 | Requirement | Target | Current | Gap |
 |---|---|---|---|
 | **SC-401** (Implement Information Protection in M365) | 5 people | ❓ | ❓ |
-| **APL-4002** (Prepare security and compliance to support Copilot) | 5 people | ❓ | ⚠️ Retiring Jun 30 — URGENT |
+| **APL-4002** (Prepare security and compliance to support Copilot) | 5 people | ❓ | ⛔ Already retired (Jun 30, 2026) — see §CRITICAL section above; confirm via Partner Center if completions still credited |
 | **AB-620** (AI Agent Builder Associate) | 5 people | ❓ | ❓ |
 | **AB-100** (Agentic AI Business Solutions Architect) | 5 people | ❓ | ❓ |
 | **Paid MAU growth** (net new M365 Copilot seats) | +1,000 MAU | ❓ | ❓ |
@@ -142,7 +142,7 @@
 
 - [ ] **BC Practice:** BC-focused certifications needed. Nominate for **BC Practice Accelerator** ($20K+ enablement) — `aka.ms/YourBusinessCentralPracticeNomination`
 - [ ] **Performance:** Business Apps score requires active D365/BC customer deployments. Priority: Customer Zero (internal D365 Sales deployment) counts toward performance score.
-- [ ] **PL-600 URGENT:** Power Platform Solution Architect retiring Jun '26 — get before cutoff if anyone can sit it
+- [ ] **PL-600:** Already retired (Jun 2026) — confirm current replacement path; PL-400 is the active substitute. Do not schedule PL-600.
 
 ### Next Actions
 
@@ -298,7 +298,7 @@ Hub is the **evidence engine** for the Frontier Partner audit:
 
 | Month | Focus | Certs targeted |
 |---|---|---|
-| **NOW (Jul–Aug 2026)** | ⚠️ **CRITICAL — replace expired certs** | SC-401 replaces APL-4002 (all 5 people); PL-400 replaces PL-500/PL-600 (affected staff) |
+| **NOW (Jul–Aug 2026)** | ⛔ **CRITICAL — certs already retired** | Confirm Partner Center credit status for APL-4002 / APL-7008 (retired Jun 30); schedule SC-401 as APL-4002 replacement (all 5 people); schedule PL-400 as PL-500/PL-600 replacement (affected staff) |
 | Sep 2026 | Quick wins | GH-300 (all 5), MS-900 (2), MB-910/MB-920 (2) |
 | Oct–Nov 2026 | Core Frontier | AI-103 (5), SC-401 (5) |
 | Dec 2026–Jan 2027 | New certs | AB-620 (5), AB-100 (5) when available |

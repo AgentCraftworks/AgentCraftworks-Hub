@@ -25,7 +25,7 @@ This is the central listing: AgentCraftworks-Hub packaged as a subscription SaaS
 
 ### Subscription Plans
 
-| Plan ID | Plan name | Target buyer | Seats | Price (PUPM) |
+| Plan ID | Plan name | Target buyer | Included agents | Price (PUPM) |
 |---|---|---|---|---|
 | `starter` | Starter | SMB (25–150 seats) | Up to 50 managed agents | $49/tenant/month |
 | `professional` | Professional | SMB-Corporate (150–500) | Up to 200 managed agents | $99/tenant/month |

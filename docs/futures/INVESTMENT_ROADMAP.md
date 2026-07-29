@@ -69,7 +69,7 @@ src/main/github/Agent365Poller.ts
 src/main/github/KillSwitchService.ts
 ```
 - Hard-stop contract: `killSwitch(agentId, reason, actor)` → suspend via Agent 365 API + append `OperationLogStore` entry with `tier: 'T1'` + emit `kill-switch:fired` event.
-- **Global kill**: `killSwitchAll(scope, reason, actor)` → suspend all agents in scope; creates a `ActionRequest` with `state: 'approved'` immediately (emergency bypass).
+- **Global kill**: `killSwitchAll(scope, reason, actor)` → suspend all agents in scope; creates an `ActionRequest` with `state: 'approved'` immediately (emergency bypass).
 - Cooldown: 5-minute re-activation window enforced locally; cannot be overridden without `ADMIN` role (see RBAC below).
 - **UI surface:** Red "Emergency Stop" button in `HubDashboard.tsx`, always visible, keyboard shortcut `Ctrl+Shift+K`.
 
