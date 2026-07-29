@@ -115,7 +115,7 @@
 
 ### Next Actions
 
-1. **After APL-4002 (urgent):** Schedule SC-401 for same cohort — both certs needed for the same 5 people
+1. **SC-401 (replaces APL-4002):** Schedule SC-401 for all 5 target staff — APL-4002 is already retired; SC-401 satisfies the same Copilot Spec requirement and also counts toward the Data Security Specialization
 2. **AB-620 / AB-100:** New certs — monitor Microsoft Learn for availability dates; register as soon as beta opens
 3. **MAU pipeline:** Build MAU tracking dashboard in AgentCraftworks-Hub (Copilot Usage panel already exists — extend to track customer-level MAU contribution)
 4. **Customer tracking:** Add "Copilot customer" field to CRM (AgentCraftworks-BizOps) — track net new separately from expansion

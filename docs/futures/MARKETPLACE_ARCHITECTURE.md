@@ -42,10 +42,10 @@ Per the [Azure Marketplace custom metering API](https://learn.microsoft.com/azur
 
 | Dimension ID | Description | Unit | Included in plan | Overage price |
 |---|---|---|---|---|
-| `agent_run` | Individual agent execution (Agent 365 run event) | per 1,000 runs | 50K / month (Professional) | $0.005 / run |
+| `agent_run` | Individual agent execution (Agent 365 run event) | per run | 50M runs / month (Professional) | $0.005 / 1,000 runs |
 | `audit_export` | Signed audit package export | per export | 5 / month | $10 / export |
 | `kill_switch_event` | Emergency kill-switch invocation (T1 action) | per event | Unlimited | Free |
-| `purview_scan` | Purview DLP scan of agent output | per 1,000 scans | 10K / month | $0.003 / scan |
+| `purview_scan` | Purview DLP scan of agent output | per scan | 10M scans / month | $0.003 / 1,000 scans |
 | `rai_report` | RAI Playbook status report (MCP tool call) | per report | 10 / month | $2 / report |
 | `foundry_token` | Azure AI Foundry tokens proxied through Hub | per 1M tokens | None (pass-through) | Cost + 12% margin |
 
