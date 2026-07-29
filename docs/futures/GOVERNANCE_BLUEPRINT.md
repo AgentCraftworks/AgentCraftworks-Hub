@@ -170,10 +170,25 @@ Establish Microsoft-native AI governance in 4 weeks. Purview labels, Agent 365 c
 | No standalone Summary field in doc | ✅ Added above (191 chars) | Copy to Partner Center "Search results summary" field |
 | Description uses Markdown bold | ⚠️ Needs conversion before submission | Convert `**text**` → `<strong>text</strong>` in Partner Center HTML editor |
 | Description has 1,571 chars of unused space | 🟡 Optional | Consider adding a 2nd "What happens next" paragraph covering the managed services add-on |
-| Logo assets not created | ❌ Blocker | Need 5 logo sizes: 48×48, 90×90, 216×216, 255×115, 815×290 (PNG, transparent background) |
-| Screenshots not captured | ❌ Blocker | Need ≥ 5 × 1280×720 real-product screenshots (Hub dashboard, Purview panel, Agent Control Tower) |
-| Privacy Policy URL not set | ❌ Blocker | Publish privacy policy at `hub.agentcraftworks.com/privacy` before submission |
-| Terms of Use URL not set | ❌ Blocker | Publish ToU at `hub.agentcraftworks.com/terms` before submission |
+| Logo assets not created | ❌ Blocker | See Pre-Submission Checklist below |
+| Screenshots not captured | ❌ Blocker | See Pre-Submission Checklist below |
+| Privacy Policy URL not set | ❌ Blocker | See Pre-Submission Checklist below |
+| Terms of Use URL not set | ❌ Blocker | See Pre-Submission Checklist below |
+
+---
+
+## Pre-Submission Checklist (Jennifer's Actions — not engineering tasks)
+
+These four items are **hard blockers** for AppSource submission. Partner Center will reject the listing without them. None require engineering work — they are content, design, and legal tasks.
+
+| # | Blocker | Owner | Effort estimate | Where to publish / submit |
+|---|---|---|---|---|
+| A | **Logo assets** — Partner Center requires logos in multiple sizes. Minimum required: 216×216 PNG (listing thumbnail). Full set: 48×48 (icon), 90×90 (small), 216×216 (medium), 255×115 (wide), 815×290 (hero). All must be PNG with transparent or white background; no text in icon/small sizes. | Jennifer (or designer) | 2–4 hours (if using Canva or similar) | Upload directly in Partner Center → Offer listing → Logos |
+| B | **Privacy Policy URL** — A publicly accessible Privacy Policy page is required before submission. Must cover: data collected, how it's used, third-party sharing (Azure, Microsoft Graph), user rights (GDPR/CCPA). | Jennifer | 2–3 hours (use a privacy policy generator as a starting point) | Publish to **AgentCraftworks-WebSite** repo at `/privacy`. Final URL: `https://agentcraftworks.com/privacy` (or `hub.agentcraftworks.com/privacy`) |
+| C | **Terms of Use URL** — A publicly accessible Terms of Use / Terms of Service page is required. Must cover: acceptable use, liability limitations, SaaS subscription terms, data handling. | Jennifer | 1–2 hours (adapt from standard SaaS ToU template) | Publish to **AgentCraftworks-WebSite** repo at `/terms`. Final URL: `https://agentcraftworks.com/terms` (or `hub.agentcraftworks.com/terms`) |
+| D | **Markdown → HTML conversion in description** — The 1,429-char description draft above uses Markdown bold (`**text**`) and bullet points (`-`). Partner Center's description field accepts HTML only; Markdown syntax will appear as literal characters on the live listing. | Jennifer (copy-paste task) | 30 minutes | In Partner Center: paste the description into the HTML editor, use the toolbar to apply bold/bullets, or manually replace `**text**` with `<strong>text</strong>` and `- item` with `<li>item</li>` wrapped in `<ul>` tags |
+
+**Suggested sequencing:** B and C can be done in a single sitting (3–4 hours total). A requires a designer touch or a Canva session. D is the last step — do it directly inside Partner Center after completing A, B, and C.
 
 ---
 

@@ -22,7 +22,7 @@
 
 ### Immediate Action Items (next 30 days — owner: Jen)
 
-- [ ] **TODAY:** Confirm with Partner Center whether APL-4002 completions earned before Jun 30 are still credited toward the M365 Copilot Specialization headcount requirement. If yes, check if any staff completed it in time.
+- [ ] **TODAY — Item #1 (same-day):** Go to **https://partner.microsoft.com/en-us/training/assets** → review each staff member's completed certifications. Confirm whether APL-4002 and APL-7008 completions earned before Jun 30, 2026 are still credited toward specialization headcount requirements. If any staff completed them in time, document the names and cert dates in this tracker immediately.
 - [ ] **TODAY:** Confirm whether APL-7008 completions before Jun 30 still count toward Agentic Biz Solutions Specialization evidence. Document in this tracker.
 - [ ] **Week 1:** Schedule **SC-401** for all 5 target staff — this replaces APL-4002 for the Copilot Spec and also satisfies the Data Security Specialization requirement (highest-ROI single cert).
 - [ ] **Week 1:** Schedule **PL-400** for anyone who was planning to sit PL-500 or PL-600.

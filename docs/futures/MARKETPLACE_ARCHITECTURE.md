@@ -27,10 +27,12 @@ This is the central listing: AgentCraftworks-Hub packaged as a subscription SaaS
 
 | Plan ID | Plan name | Target buyer | Seats | Price (PUPM) |
 |---|---|---|---|---|
-| `starter` | Starter | SMB (25–150 seats) | Up to 50 managed agents | $49 |
-| `professional` | Professional | SMB-Corporate (150–500) | Up to 200 managed agents | $99 |
-| `enterprise` | Enterprise | Corporate / Majors | Unlimited; SLA | $249 |
+| `starter` | Starter | SMB (25–150 seats) | Up to 50 managed agents | $49/tenant/month |
+| `professional` | Professional | SMB-Corporate (150–500) | Up to 200 managed agents | $99/tenant/month |
+| `enterprise` | Enterprise | Corporate / Majors | Unlimited; SLA | $249/tenant/month |
 | `gov` | Government | Public sector / Sovereign | Custom pricing | Contact sales |
+
+> **Billing unit: per-tenant flat fee.** All plans are priced per tenant per month — one price for the whole organization, regardless of user count. Overage charges apply via the 6 metering dimensions below (agent_run, audit_export, etc.). This model simplifies buyer psychology and maps cleanly to Azure Marketplace SaaS metering.
 
 > Price anchored to Microsoft's `$104 PUPM per SMB customer` services benchmark (SMB100) and `$47.2 PUPM` M365 Copilot Deployment Accelerator floor (M365 Copilot Spec).
 
@@ -243,32 +245,32 @@ Based on Microsoft OD211 benchmarks and SMB101 economics.
 | Co-sell lift factor | **3×** customer count, **80% larger** average deal | Microsoft OD211 published benchmarks for Azure IP co-sell partners | If co-sell lifts customer count by 2× not 3×, Year 2 target ~$500K |
 | Time to first co-sell customer | **Q3 FY27** (9 months after transactable listing) | Conservative; requires Azure IP co-sell status ($100K ACR threshold) | If slips to Q4, Year 2 ARR target moves to Year 3 |
 
-### Base Revenue Model (no co-sell, conservative)
+### Base Revenue Model (flat-fee per tenant, no co-sell, conservative)
 
-| Scenario | Customers | Monthly ARPU | Year 1 revenue | Year 2 ARR (10% churn) |
+| Scenario | Customers | Monthly fee (flat) | Year 1 revenue | Year 2 ARR (10% churn) |
 |---|---|---|---|---|
-| SMB (Starter plan, 25 agents × $49) | 10 | $1,225 | **$147,000** | **$158,340** |
-| Professional (10 seats × $99) | 5 | $990 | **$59,400** | **$64,152** |
-| Enterprise (12 seats × $249) | 2 | $2,988 | **$71,712** | **$77,449** |
+| SMB (Starter plan, $49/tenant/month) | 10 | $49 | **$5,880** | **$6,350** |
+| Professional ($99/tenant/month) | 5 | $99 | **$5,940** | **$6,415** |
+| Enterprise ($249/tenant/month) | 2 | $249 | **$5,976** | **$6,454** |
 | Overage metering (conservative) | All | $1,500/mo avg | **$18,000** | **$36,000** |
-| **Base total** | **17** | | **$296,112** | **$335,941** |
+| **Base total** | **17** | | **$35,796** | **$55,219** |
 
-> **Note:** The original table showed $14,700 for 10 SMB customers (Year 1). That figure computed $49 × 25 agents × 12 months = $14,700 for 1 customer. The table above treats this as $1,225/month × 10 customers × 12 = $147,000. **Clarify the billing unit (per-tenant flat fee vs per-agent) before publishing the listing** — this is the single largest model assumption.
+> **Billing unit confirmed:** per-tenant flat fee (not per-agent, not per-seat). Year 1 Starter revenue is $5,880 (10 tenants × $49 × 12). The previous $14,700 figure was incorrect — it computed $49 × 25 agents and has been removed.
 
 ### Year 2 Target with Co-sell (3× lift per OD211)
 
-| Scenario | Customers (co-sell) | Monthly ARPU | Year 2 ARR |
+| Scenario | Customers (co-sell) | Monthly fee (flat) | Year 2 ARR |
 |---|---|---|---|
-| SMB (Starter) | 20 | $1,225 | $294,000 |
-| Professional | 15 | $990 | $178,200 |
-| Enterprise | 5 | $2,988 | $179,280 |
+| SMB (Starter) | 20 | $49 | $11,760 |
+| Professional | 15 | $99 | $17,820 |
+| Enterprise | 5 | $249 | $14,940 |
 | Overage metering | All | $2,500/mo avg | $30,000 |
-| Churn offset (8% blended) | — | — | -$54,518 |
-| **Year 2 ARR with co-sell** | **40** | | **~$627K** |
+| Churn offset (8% blended) | — | — | -$5,940 |
+| **Year 2 ARR with co-sell** | **40** | | **~$68,580** |
 
-> The original **~$750K ARR** figure assumed higher enterprise seat counts or additional overage. Range: **$600K–$800K** depending on seat utilization and overage volume. The $750K midpoint is achievable but requires co-sell status by Q3 FY27 and avg 15+ enterprise seats.
+> **Important:** The flat-fee model produces a modest ARR baseline from Hub SaaS subscriptions alone. The **primary revenue engine is consulting + managed services + Microsoft incentives** (see GOVERNANCE_BLUEPRINT.md: ~$100K–$130K per Governance Blueprint engagement). Hub SaaS subscriptions are a recurring attachment to the consulting motion, not the standalone revenue driver. The ~$750K ARR target from the prior version was a blended figure that included managed services; pure SaaS ARR at these price points with 40 tenants is ~$69K. Revisit pricing (seat-based or agent-based tiers) if pure SaaS ARR is a primary goal.
 
-With co-sell and Multiparty Private Offers, Microsoft's benchmark projects 3× faster sales cycles and 80% larger deals → Year 2 target with 5 Enterprise + 15 Professional + 20 SMB = **~$627K–$750K ARR** (range reflects seat utilization uncertainty).
+With co-sell and Multiparty Private Offers, the SaaS offer's primary value is **co-sell eligibility and deal differentiation** (3× faster sales cycles, 80% larger MPO deals) rather than direct SaaS subscription revenue at current list prices.
 
 ---
 
