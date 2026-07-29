@@ -9,6 +9,28 @@
 
 ---
 
+## 🚨 CRITICAL — EXPIRED / EXPIRING CERTIFICATIONS (Action Required Immediately)
+
+> **As of July 28, 2026:** Four certifications that unlock key specializations have already retired or are past their retirement date. Their expiration creates gaps in the specialization attainment plan. Review impact and alternative paths below — **do not wait for the monthly review cycle.**
+
+| Certification | Retirement date | Status | Impact | Alternative / Replacement |
+|---|---|---|---|---|
+| **APL-4002** — Prepare security and compliance to support Copilot | **Jun 30, 2026** | ⛔ EXPIRED | Required for M365 Copilot Specialization (5 people). Gap confirmed. | **SC-401** (Implement Information Protection in M365) satisfies the same requirement for the Copilot Spec — confirm with Partner Center. Prioritize SC-401 for all 5 people immediately. |
+| **APL-7008** — Create custom agents with Copilot Studio | **Jun 30, 2026** | ⛔ EXPIRED | Applied Skills cert for Copilot Studio agent building — supports Agentic Biz Solutions Specialization evidence. | **PL-7008** (Create and manage automated processes with Power Automate) or **APL-7001** if still active; monitor Microsoft Learn for replacement Applied Skills. Copilot Studio experience can be demonstrated via customer references instead. |
+| **PL-500** — Power Automate RPA Developer Associate | **Jun 2026** | ⛔ EXPIRED | Supported Solutions Partner for Business Applications skilling score. | **PL-400** (Power Platform Developer Associate) is the active replacement — equivalent or higher skilling score. Schedule immediately for anyone who was targeting PL-500. |
+| **PL-600** — Power Platform Solution Architect Expert | **Jun 2026** | ⛔ EXPIRED | Highest-value Power Platform cert for Business Applications designation. | **PL-400** + **PL-200** combination covers the skilling points. No direct replacement at Expert level currently announced — monitor Partner Skilling Hub. |
+
+### Immediate Action Items (next 30 days — owner: Jen)
+
+- [ ] **TODAY:** Confirm with Partner Center whether APL-4002 completions earned before Jun 30 are still credited toward the M365 Copilot Specialization headcount requirement. If yes, check if any staff completed it in time.
+- [ ] **TODAY:** Confirm whether APL-7008 completions before Jun 30 still count toward Agentic Biz Solutions Specialization evidence. Document in this tracker.
+- [ ] **Week 1:** Schedule **SC-401** for all 5 target staff — this replaces APL-4002 for the Copilot Spec and also satisfies the Data Security Specialization requirement (highest-ROI single cert).
+- [ ] **Week 1:** Schedule **PL-400** for anyone who was planning to sit PL-500 or PL-600.
+- [ ] **Week 2:** Update the Certification Sprint Plan below to reflect the retired certs and replacements.
+- [ ] **Week 4:** Re-audit Partner Center skilling scores for Modern Work and Business Applications with updated cert list.
+
+---
+
 ## Overall Status Dashboard
 
 | # | Item | Target quarter | Status | Blocking gaps |
@@ -276,7 +298,7 @@ Hub is the **evidence engine** for the Frontier Partner audit:
 
 | Month | Focus | Certs targeted |
 |---|---|---|
-| Aug 2026 | **URGENT:** retiring certs | APL-4002 (all 5 people), PL-600 (1 person if applicable) |
+| **NOW (Jul–Aug 2026)** | ⚠️ **CRITICAL — replace expired certs** | SC-401 replaces APL-4002 (all 5 people); PL-400 replaces PL-500/PL-600 (affected staff) |
 | Sep 2026 | Quick wins | GH-300 (all 5), MS-900 (2), MB-910/MB-920 (2) |
 | Oct–Nov 2026 | Core Frontier | AI-103 (5), SC-401 (5) |
 | Dec 2026–Jan 2027 | New certs | AB-620 (5), AB-100 (5) when available |
@@ -313,5 +335,4 @@ Hub is the **evidence engine** for the Frontier Partner audit:
 ---
 
 *Document owner: Jen (Founder) + Skilling Lead*  
-*Last updated: 2026-07-28*  
-*Strategy reference: AICraftworks FY27 Strategic Analysis, Sections 1.7, 3.4*
+*Last updated: 2026-07-28 (rev 2 — CRITICAL expired cert section added; Certification Sprint Plan updated)*  

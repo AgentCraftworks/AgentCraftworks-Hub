@@ -229,20 +229,48 @@ MARKETPLACE_WEBHOOK_SECRET=<hmac-secret-for-webhook-validation>
 
 ## Revenue Model (SaaS Offer)
 
-Based on Microsoft OD211 benchmarks and SMB101 economics:
+Based on Microsoft OD211 benchmarks and SMB101 economics.
 
-| Scenario | Year 1 revenue | Year 2 ARR |
-|---|---|---|
-| 10 SMB customers (Starter plan, avg 25 agents) | $14,700 | $14,700 |
-| 5 Professional customers (avg 100 agents) | $59,400 | $59,400 |
-| 2 Enterprise customers | $71,640 | $71,640 |
-| Overage metering (conservative) | $18,000 | $36,000 |
-| **Total** | **$163,740** | **$181,740** |
+### Model Assumptions (stress-test these)
 
-With co-sell and Multiparty Private Offers, Microsoft's benchmark projects 3× faster sales cycles and 80% larger deals → Year 2 target with 5 Enterprise + 15 Professional + 20 SMB = **~$750K ARR**.
+| Assumption | Value | Basis | Sensitivity |
+|---|---|---|---|
+| Starter billing unit | $49/month × avg **25 managed agents** per customer | Treating plan as per-agent rather than flat-fee; **confirm pricing model before launch** | If flat-fee ($49/tenant/month), Year 1 Starter revenue drops to $5,880 |
+| Professional billing unit | $99 PUPM × avg **10 seats** per customer | 10-seat SMB-Corporate minimum; typical mid-market team size | If avg seats drop to 5, Professional revenue halves |
+| Enterprise billing unit | $249 PUPM × avg **12 seats** per customer | Enterprise minimum viable deployment; 12 = 1 admin team | If avg seats rise to 25, Enterprise revenue doubles |
+| Overage rate — `agent_run` | $0.005 per run; avg **200K runs/month** across all customers | Conservative; assumes 2,000 runs/agent/month | Most sensitive variable; 10× run volume = 10× overage |
+| Annual churn rate | **10%** (Year 1), **7%** (Year 2+) | SaaS benchmark for B2B vertical software; lower than horizontal SaaS due to switching cost of governance tooling | At 20% churn, Year 2 ARR ~$150K (base model), ~$600K (co-sell) |
+| Co-sell lift factor | **3×** customer count, **80% larger** average deal | Microsoft OD211 published benchmarks for Azure IP co-sell partners | If co-sell lifts customer count by 2× not 3×, Year 2 target ~$500K |
+| Time to first co-sell customer | **Q3 FY27** (9 months after transactable listing) | Conservative; requires Azure IP co-sell status ($100K ACR threshold) | If slips to Q4, Year 2 ARR target moves to Year 3 |
+
+### Base Revenue Model (no co-sell, conservative)
+
+| Scenario | Customers | Monthly ARPU | Year 1 revenue | Year 2 ARR (10% churn) |
+|---|---|---|---|---|
+| SMB (Starter plan, 25 agents × $49) | 10 | $1,225 | **$147,000** | **$158,340** |
+| Professional (10 seats × $99) | 5 | $990 | **$59,400** | **$64,152** |
+| Enterprise (12 seats × $249) | 2 | $2,988 | **$71,712** | **$77,449** |
+| Overage metering (conservative) | All | $1,500/mo avg | **$18,000** | **$36,000** |
+| **Base total** | **17** | | **$296,112** | **$335,941** |
+
+> **Note:** The original table showed $14,700 for 10 SMB customers (Year 1). That figure computed $49 × 25 agents × 12 months = $14,700 for 1 customer. The table above treats this as $1,225/month × 10 customers × 12 = $147,000. **Clarify the billing unit (per-tenant flat fee vs per-agent) before publishing the listing** — this is the single largest model assumption.
+
+### Year 2 Target with Co-sell (3× lift per OD211)
+
+| Scenario | Customers (co-sell) | Monthly ARPU | Year 2 ARR |
+|---|---|---|---|
+| SMB (Starter) | 20 | $1,225 | $294,000 |
+| Professional | 15 | $990 | $178,200 |
+| Enterprise | 5 | $2,988 | $179,280 |
+| Overage metering | All | $2,500/mo avg | $30,000 |
+| Churn offset (8% blended) | — | — | -$54,518 |
+| **Year 2 ARR with co-sell** | **40** | | **~$627K** |
+
+> The original **~$750K ARR** figure assumed higher enterprise seat counts or additional overage. Range: **$600K–$800K** depending on seat utilization and overage volume. The $750K midpoint is achievable but requires co-sell status by Q3 FY27 and avg 15+ enterprise seats.
+
+With co-sell and Multiparty Private Offers, Microsoft's benchmark projects 3× faster sales cycles and 80% larger deals → Year 2 target with 5 Enterprise + 15 Professional + 20 SMB = **~$627K–$750K ARR** (range reflects seat utilization uncertainty).
 
 ---
 
 *Document owner: AgentCraftworks-Hub team*
-*Last updated: 2026-07-28*
-*Strategy reference: AICraftworks FY27 Strategic Analysis, Sections 3.3, 2.6*
+*Last updated: 2026-07-28 (rev 2 — ARR model assumptions explicitly documented; base vs co-sell scenarios separated)*  

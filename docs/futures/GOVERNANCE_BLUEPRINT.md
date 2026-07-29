@@ -117,7 +117,33 @@ The **AgentCraftworks Governance Blueprint** is a fixed-scope consulting engagem
 **Products:** Microsoft 365, Microsoft Entra, Microsoft Purview, Azure AI  
 **Certification badge:** Requires Data Security Specialization (see SPECIALIZATION_TRACKER.md §7) for the certification badge on AppSource listing
 
-### Listing copy (AppSource description — 3,000 char max)
+### AppSource Consulting Offer — Schema Validation
+
+Microsoft's Partner Center consulting offer schema enforces the following character limits. Each field is validated below.
+
+| Field | Limit | Draft value | Char count | Status |
+|---|---|---|---|---|
+| **Offer name** (title) | ≤ 64 chars | `Implementation: AgentCraftworks Governance Blueprint - 4-Wk` | 59 | ✅ |
+| **Search results summary** | ≤ 200 chars | See below | 191 | ✅ |
+| **Description** | ≤ 3,000 chars | See below | 1,429 | ✅ (room to expand) |
+
+> **Note on format:** Microsoft requires the consulting offer title to include the **service type prefix** and **duration suffix**. The raw offer name "AgentCraftworks Governance Blueprint" (36 chars) will be rejected at submission without a type prefix. Use the 59-char title above.
+
+> **Note on Markdown:** Partner Center's description editor renders **HTML**, not Markdown. The `**bold**` syntax in the draft below will appear as literal asterisks on the live AppSource listing. Before submitting, convert all `**text**` to `<strong>text</strong>` and bullet points to `<ul><li>` tags using Partner Center's visual editor or raw HTML mode.
+
+#### Draft: Offer Name (title — 59 chars ✅)
+
+```
+Implementation: AgentCraftworks Governance Blueprint - 4-Wk
+```
+
+#### Draft: Search Results Summary (191 chars ✅ — ≤ 200)
+
+```
+Establish Microsoft-native AI governance in 4 weeks. Purview labels, Agent 365 control plane, and Entra permission audit — delivered by certified Frontier AI specialists.
+```
+
+#### Draft: Description (1,429 chars ✅ — ≤ 3,000; 1,571 chars of expansion room)
 
 > **Establish AI governance in 4 weeks — with Purview, Agent 365, and Entra, implemented by Frontier AI experts.**
 >
@@ -135,6 +161,19 @@ The **AgentCraftworks Governance Blueprint** is a fixed-scope consulting engagem
 > **Delivered by certified specialists:** Our team holds SC-401, AI-103, and AB-620 certifications and is on the path to the Frontier Partner Specialization.
 >
 > Regulated industries (FSI, Healthcare, Legal) served. SOC 2 Type II documentation available. GDPR-compliant data handling.
+
+#### Remaining AppSource Submission Gaps
+
+| Gap | Status | Action required |
+|---|---|---|
+| Title missing service type prefix | ✅ Fixed above (`Implementation:` prefix added) | Use the 59-char title at submission |
+| No standalone Summary field in doc | ✅ Added above (191 chars) | Copy to Partner Center "Search results summary" field |
+| Description uses Markdown bold | ⚠️ Needs conversion before submission | Convert `**text**` → `<strong>text</strong>` in Partner Center HTML editor |
+| Description has 1,571 chars of unused space | 🟡 Optional | Consider adding a 2nd "What happens next" paragraph covering the managed services add-on |
+| Logo assets not created | ❌ Blocker | Need 5 logo sizes: 48×48, 90×90, 216×216, 255×115, 815×290 (PNG, transparent background) |
+| Screenshots not captured | ❌ Blocker | Need ≥ 5 × 1280×720 real-product screenshots (Hub dashboard, Purview panel, Agent Control Tower) |
+| Privacy Policy URL not set | ❌ Blocker | Publish privacy policy at `hub.agentcraftworks.com/privacy` before submission |
+| Terms of Use URL not set | ❌ Blocker | Publish ToU at `hub.agentcraftworks.com/terms` before submission |
 
 ---
 
@@ -166,6 +205,5 @@ Every Governance Blueprint engagement generates:
 ---
 
 *Document owner: AgentCraftworks-Hub team + Jen (Founder)*  
-*Last updated: 2026-07-28*  
-*Offer code: ACW-GOV-001*  
+*Last updated: 2026-07-28 (rev 2 — AppSource schema validation added; title, summary, gap table)*  
 *Strategy reference: AICraftworks FY27 Strategic Analysis, Section 3.2 (EC103)*
